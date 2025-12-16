@@ -17,7 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Project, Person, Company, Expense, CustomProperty, BankAccount } from '@/types';
+import { Project, Person, Company, Expense, CustomProperty, BankAccount, User as Profile } from '@/types';
 import { CurrencyInput } from '../ui/currency-input';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Label } from '../ui/label';
@@ -28,9 +28,11 @@ import CompanyFormDialog from '../people/CompanyFormDialog';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
 import FileUploader, { UploadedFile } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
+import { Progress } from '../ui/progress';
 
 const expenseSchema = z.object({
   project_id: z.string().uuid("Project is required."),
+  created_by: z.string().uuid().optional(),
   purpose_payment: z.string().optional(),
   beneficiary: z.string().min(1, "Beneficiary is required."),
   tf_amount: z.number().min(1, "Amount must be greater than 0."),
@@ -72,18 +74,41 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
   const [isLoadingBankAccounts, setIsLoadingBankAccounts] = useState(false);
   const [isBankAccountFormOpen, setIsBankAccountFormOpen] = useState(false);
   const [beneficiarySearch, setBeneficiarySearch] = useState('');
+  const [analysisProgress, setAnalysisProgress] = useState(0);
 
   const [isBeneficiaryTypeDialogOpen, setIsBeneficiaryTypeDialogOpen] = useState(false);
   const [isPersonFormOpen, setIsPersonFormOpen] = useState(false);
   const [isCompanyFormOpen, setIsCompanyFormOpen] = useState(false);
   const [newBeneficiaryName, setNewBeneficiaryName] = useState('');
   
+  // PIC Selection State
+  const [projectMembers, setProjectMembers] = useState<Profile[]>([]);
+  
   const { extractData, isExtracting } = useExpenseExtractor();
+
+  // Simulate progress when extracting
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isExtracting) {
+      setAnalysisProgress(0);
+      interval = setInterval(() => {
+        setAnalysisProgress((prev) => {
+          if (prev >= 90) return prev; 
+          const diff = Math.random() * 10;
+          return Math.min(prev + diff, 90);
+        });
+      }, 300);
+    } else {
+      setAnalysisProgress(100);
+    }
+    return () => clearInterval(interval);
+  }, [isExtracting]);
 
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery<ProjectOption[]>({
     queryKey: ['projectsForExpenses'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('projects').select('id, name');
+      const { data, error } = await supabase
+        .rpc('get_dashboard_projects', { p_limit: 1000, p_offset: 0, p_search_term: null, p_exclude_other_personal: false });
       if (error) throw error;
       return data;
     },
@@ -126,6 +151,72 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
 
   const paymentTerms = watch("payment_terms");
   const totalAmount = watch("tf_amount");
+  const selectedProjectId = watch("project_id");
+
+  // Fetch full expense details to get `created_by` (PIC) which might not be in the list view
+  useEffect(() => {
+    const fetchFullExpense = async () => {
+      if (expense && open) {
+        const { data: fullExpense, error } = await supabase
+          .from('expenses')
+          .select('*')
+          .eq('id', expense.id)
+          .single();
+        
+        if (fullExpense) {
+            // Find beneficiary object
+            const foundBeneficiary = beneficiaries.find(b => b.name === fullExpense.beneficiary);
+            if (foundBeneficiary) {
+                setBeneficiary(foundBeneficiary);
+            }
+            
+            reset({
+                project_id: fullExpense.project_id,
+                created_by: fullExpense.created_by,
+                purpose_payment: fullExpense.purpose_payment || '',
+                beneficiary: fullExpense.beneficiary,
+                tf_amount: fullExpense.tf_amount,
+                status_expense: fullExpense.status_expense,
+                remarks: fullExpense.remarks || "",
+                payment_terms: (fullExpense.payment_terms as any)?.map((t: any) => ({
+                    ...t,
+                    request_date: t.request_date ? new Date(t.request_date) : undefined,
+                    release_date: t.release_date ? new Date(t.release_date) : undefined,
+                })) || [{ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Pending' }],
+                bank_account_id: fullExpense.bank_account_id || null,
+                custom_properties: fullExpense.custom_properties || {},
+                attachments_jsonb: (fullExpense.attachments_jsonb as any) || [], 
+            });
+        }
+      }
+    };
+    fetchFullExpense();
+  }, [expense, open, beneficiaries, reset]);
+
+  // Fetch project members for PIC selection
+  useEffect(() => {
+    const fetchMembers = async () => {
+        if (!selectedProjectId) {
+            setProjectMembers(user ? [user] : []);
+            return;
+        }
+        
+        // Find project in the loaded list (which contains member info from RPC)
+        const projectData = projects.find(p => p.id === selectedProjectId);
+        
+        if (projectData && (projectData as any).assignedTo) {
+            let members = [...(projectData as any).assignedTo];
+            // Include project creator if not in members list
+            if ((projectData as any).created_by && !members.find(m => m.id === (projectData as any).created_by.id)) {
+                members.push({ ...(projectData as any).created_by, role: 'owner' });
+            }
+            setProjectMembers(members);
+        } else {
+             setProjectMembers(user ? [user] : []);
+        }
+    };
+    fetchMembers();
+  }, [selectedProjectId, projects, user]);
 
   const remainingBalance = useMemo(() => {
     const totalAllocated = (paymentTerms || []).reduce((sum, term) => sum + (Number(term.amount) || 0), 0);
@@ -137,31 +228,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
       .filter(term => term.status === 'Paid')
       .reduce((sum, term) => sum + (Number(term.amount) || 0), 0);
   }, [paymentTerms]);
-
-  useEffect(() => {
-    if (expense && beneficiaries.length > 0 && projects.length > 0) {
-      const foundBeneficiary = beneficiaries.find(b => b.name === expense.beneficiary);
-      if (foundBeneficiary) {
-        setBeneficiary(foundBeneficiary);
-      }
-      reset({
-        project_id: expense.project_id,
-        purpose_payment: (expense as any).purpose_payment || '',
-        beneficiary: expense.beneficiary,
-        tf_amount: expense.tf_amount,
-        status_expense: expense.status_expense,
-        remarks: expense.remarks || "",
-        payment_terms: (expense as any).payment_terms?.map((t: any) => ({
-          ...t,
-          request_date: t.request_date ? new Date(t.request_date) : undefined,
-          release_date: t.release_date ? new Date(t.release_date) : undefined,
-        })) || [{ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Pending' }],
-        bank_account_id: (expense as any).bank_account_id || null,
-        custom_properties: expense.custom_properties || {},
-        attachments_jsonb: (expense as any).attachments_jsonb || [], 
-      });
-    }
-  }, [expense, beneficiaries, projects, reset, open]);
 
   useEffect(() => {
     const fetchBankAccounts = async () => {
@@ -179,7 +245,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
         const currentBankId = form.getValues('bank_account_id');
         if (!currentBankId || !currentBankId.startsWith('temp-')) {
             setBankAccounts([]);
-            // Don't auto clear bank_account_id if we have data there, potentially from expense load or manual entry
         }
       }
     };
@@ -217,7 +282,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
       if (extractedData.amount && extractedData.amount > 0) {
         setValue('tf_amount', extractedData.amount, { shouldValidate: true });
         
-        // Update first payment term if it exists and is default/incomplete
         const terms = form.getValues('payment_terms');
         if (terms && terms.length === 1 && !terms[0].amount) {
             setValue('payment_terms.0.amount', extractedData.amount);
@@ -250,7 +314,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
         const extractedBank = extractedData.bank_details;
         
         if (currentBeneficiary) {
-          // If we have a real beneficiary, try to check/create real account
           try {
             const { data: existingAccounts } = await supabase.from('bank_accounts')
               .select('*')
@@ -281,7 +344,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
               if (newAccount) {
                 setBankAccounts(prev => [...prev, newAccount as unknown as BankAccount]);
                 setValue('bank_account_id', newAccount.id);
-                toast.success(`Created and selected new bank account: ${extractedBank.bank_name} ${extractedBank.swift_code ? `(${extractedBank.swift_code})` : ''}`);
+                toast.success(`Created and selected new bank account: ${extractedBank.bank_name}`);
               }
             }
           } catch (err) {
@@ -295,7 +358,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
             account_number: extractedBank.account_number,
             bank_name: extractedBank.bank_name || 'Unknown Bank',
             swift_code: extractedBank.swift_code || null,
-            is_legacy: true, // Mark as legacy/temp
+            is_legacy: true, 
             owner_id: 'temp',
             owner_type: 'person'
           };
@@ -337,6 +400,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
 
       const { error } = await supabase.from('expenses').update({
         project_id: values.project_id,
+        created_by: values.created_by, // Update PIC
         purpose_payment: values.purpose_payment,
         beneficiary: values.beneficiary,
         tf_amount: values.tf_amount,
@@ -364,10 +428,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
     }
   };
 
-  const nameParts = newBeneficiaryName.split(' ');
-  const firstName = nameParts[0] || '';
-  const lastName = nameParts.slice(1).join(' ') || '';
-  
   const isFormDisabled = isSubmitting || isExtracting;
 
   return (
@@ -417,6 +477,35 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                   </FormItem>
                 )}
               />
+
+              {/* PIC Selector */}
+              <FormField
+                control={form.control}
+                name="created_by"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>PIC (Person In Charge)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || undefined} disabled={isFormDisabled || projectMembers.length === 0}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select PIC" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {projectMembers.length > 0 ? (
+                           projectMembers.map(member => (
+                              <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
+                           ))
+                        ) : (
+                           user && <SelectItem value={user.id}>{user.name}</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="purpose_payment"
@@ -439,11 +528,11 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                       <FormLabel className="flex items-center gap-2">
                         <FileText className="h-4 w-4" /> Attachments
                       </FormLabel>
-                      {isExtracting && <span className="text-xs text-primary animate-pulse flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin"/> Analyzing document...</span>}
+                      {isExtracting && <span className="text-xs text-primary animate-pulse flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin"/> Analyzing... {Math.round(analysisProgress)}%</span>}
                     </div>
                     {isExtracting && (
-                      <div className="w-full h-1 bg-muted rounded-full overflow-hidden mb-2">
-                        <div className="h-full bg-primary animate-pulse w-full origin-left" />
+                      <div className="space-y-1 mb-2">
+                        <Progress value={analysisProgress} className="h-1.5" />
                       </div>
                     )}
                     <div className="text-xs text-muted-foreground mb-1">
@@ -451,10 +540,10 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                     </div>
                     <FormControl>
                       <FileUploader
-                        bucket="expense" // Updated bucket name here too
+                        bucket="expense"
                         value={field.value || []}
                         onChange={field.onChange}
-                        maxFiles={5}
+                        maxFiles={1}
                         maxSize={20971520} // 20MB
                         accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'], 'application/pdf': ['.pdf'] }}
                         disabled={isFormDisabled}
@@ -535,7 +624,9 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                           </div>
                         ))
                       ) : (
-                        <div className="text-center text-sm text-muted-foreground py-4 border-2 border-dashed rounded-lg">No bank accounts found for this beneficiary.</div>
+                        <div className="text-center text-sm text-muted-foreground py-4 border-2 border-dashed rounded-lg">
+                            {beneficiary ? "No bank accounts found." : "Select a beneficiary or upload an invoice."}
+                        </div>
                       )}
                     </div>
                   </FormControl>
@@ -559,7 +650,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                           <FormItem><FormLabel className="text-xs">Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} placeholder="Amount" disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name={`payment_terms.${index}.request_date`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Requested/Due Date</FormLabel><div className="flex gap-1">
+                          <FormItem><FormLabel className="text-xs">Requested Date</FormLabel><div className="flex gap-1">
                             <FormField control={form.control} name={`payment_terms.${index}.request_type`} render={({ field: typeField }) => (
                               <FormItem><Select onValueChange={typeField.onChange} defaultValue={typeField.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="w-[110px] bg-background"><SelectValue placeholder="Type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Requested">Requested</SelectItem><SelectItem value="Due">Due</SelectItem></SelectContent></Select></FormItem>
                             )} />
@@ -577,18 +668,14 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                       </div>
                     </div>
                   ))}
-                  <Button type="button" variant="outline" size="sm" onClick={() => append({ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Pending' })} disabled={isFormDisabled}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => append({ amount: null, request_type: 'Requested', request_date: new Date(), release_date: undefined, status: 'Pending' })} disabled={isFormDisabled}>
                     <Plus className="mr-2 h-4 w-4" /> Add Term
                   </Button>
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Paid (Rp)</Label>
-                <Input value={paidAmount.toLocaleString('id-ID')} className="col-span-3 bg-muted" readOnly />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Remaining (Rp)</Label>
-                <Input value={remainingBalance.toLocaleString('id-ID')} className={cn("col-span-3 bg-muted", remainingBalance !== 0 && "text-red-500 font-semibold")} readOnly />
+                <Label className="text-right">Balance (Rp)</Label>
+                <Input value={balance.toLocaleString('id-ID')} className={cn("col-span-3 bg-muted", balance !== 0 && "text-red-500 font-semibold")} readOnly />
               </div>
               <FormField control={form.control} name="remarks" render={({ field }) => (
                 <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
@@ -608,7 +695,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                             property={prop}
                             control={form.control}
                             name={`custom_properties.${prop.name}`}
-                            bucket="expense" // Updated bucket name here too
+                            bucket="expense"
                             disabled={isFormDisabled}
                           />
                           <FormMessage />
