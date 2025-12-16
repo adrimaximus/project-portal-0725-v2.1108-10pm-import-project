@@ -98,11 +98,14 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     queryFn: async () => {
       // We need client names, dates, and venue for matching
       const { data, error } = await supabase
-        .rpc('get_dashboard_projects', { 
+        .rpc('get_dashboard_projects_v2', { 
             p_limit: 1000,
             p_offset: 0,
-            p_search_term: '',
-            p_exclude_other_personal: false 
+            p_search_term: null,
+            p_exclude_other_personal: false,
+            p_year: null,
+            p_timeframe: null,
+            p_sort_direction: 'desc'
         });
       
       if (error) throw error;
@@ -558,10 +561,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                         <Command>
                           <CommandInput placeholder="Search project..." value={projectSearch} onValueChange={setProjectSearch} />
                           {isLoadingProjects ? (
-                            <div className="p-4 text-center text-sm text-muted-foreground">
-                              <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
-                              Loading projects...
-                            </div>
+                            <div className="p-4 text-center text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-2" />Loading projects...</div>
                           ) : (
                             <CommandList>
                               <CommandEmpty>
@@ -667,7 +667,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                       <FileUploader
                         bucket="expense"
                         value={field.value || []}
-                        onChange={field.onChange}
+                        onChange={(files) => handleFilesChange(files)}
                         maxFiles={5}
                         maxSize={20971520} // 20MB
                         accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'], 'application/pdf': ['.pdf'] }}
@@ -784,7 +784,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                         )} />
                         <div className="grid grid-cols-2 gap-4">
                           <FormField control={form.control} name={`payment_terms.${index}.release_date`} render={({ field }) => (
-                            <FormItem><FormLabel className="text-xs">Payment Schedule (Due Date)</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+                            <FormItem><FormLabel className="text-xs">Payment Schedule</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
                           )} />
                           <FormField control={form.control} name={`payment_terms.${index}.status`} render={({ field }) => (
                             <FormItem><FormLabel className="text-xs">Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="bg-background"><SelectValue placeholder="Status" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Rejected">Rejected</SelectItem></SelectContent></Select><FormMessage /></FormItem>
@@ -866,7 +866,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         />
       )}
       <BeneficiaryTypeDialog open={isBeneficiaryTypeDialogOpen} onOpenChange={setIsBeneficiaryTypeDialogOpen} onSelect={handleSelectBeneficiaryType} />
-      <PersonFormDialog open={isPersonFormOpen} onOpenChange={setIsPersonFormOpen} person={null} initialValues={{ first_name: firstName, last_name: lastName }} onSuccess={(newPerson) => handleBeneficiaryCreated(newPerson, 'person')} />
+      <PersonFormDialog open={isPersonFormOpen} onOpenChange={setIsPersonFormOpen} person={null} initialValues={{ first_name: newBeneficiaryName.split(' ')[0], last_name: newBeneficiaryName.split(' ').slice(1).join(' ') }} onSuccess={(newPerson) => handleBeneficiaryCreated(newPerson, 'person')} />
       <CompanyFormDialog open={isCompanyFormOpen} onOpenChange={setIsCompanyFormOpen} company={null} initialValues={{ name: newBeneficiaryName }} onSuccess={(newCompany) => handleBeneficiaryCreated(newCompany, 'company')} />
       <CreateProjectDialog
         open={isCreateProjectDialogOpen}

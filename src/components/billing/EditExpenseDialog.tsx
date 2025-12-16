@@ -131,11 +131,14 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
     queryKey: ['projectsForExpenseForm'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .rpc('get_dashboard_projects', { 
+        .rpc('get_dashboard_projects_v2', { 
             p_limit: 1000,
             p_offset: 0,
             p_search_term: null,
-            p_exclude_other_personal: false 
+            p_exclude_other_personal: false,
+            p_year: null,
+            p_timeframe: null,
+            p_sort_direction: 'desc'
         });
       if (error) throw error;
       return data;
