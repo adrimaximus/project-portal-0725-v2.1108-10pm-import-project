@@ -552,7 +552,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                     <Popover open={projectPopoverOpen} onOpenChange={setProjectPopoverOpen} modal={true}>
                       <PopoverTrigger asChild>
                         <FormControl>
-                          <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")} disabled={isLoadingProjects || isFormDisabled}>
+                          <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>
                             {field.value ? projects.find((project) => project.id === field.value)?.name : "Select a project"}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
@@ -562,21 +562,34 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                         <Command>
                           <CommandInput placeholder="Search project..." value={projectSearch} onValueChange={setProjectSearch} />
                           <CommandList>
-                            <CommandEmpty>
-                              <Button variant="ghost" className="w-full justify-start" onClick={() => { setIsCreateProjectDialogOpen(true); setProjectPopoverOpen(false); }}>
-                                <Plus className="mr-2 h-4 w-4" />
-                                Create "{projectSearch}"
-                              </Button>
-                            </CommandEmpty>
-                            <CommandGroup className="max-h-60 overflow-y-auto">
-                              {projects.map((project) => (
-                                <CommandItem value={project.name} key={project.id} onSelect={() => { form.setValue("project_id", project.id); setProjectPopoverOpen(false); setProjectSearch(''); }}>
-                                  <Check className={cn("mr-2 h-4 w-4", project.id === field.value ? "opacity-100" : "opacity-0")} />
-                                  <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
-                                  {project.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
+                            {isLoadingProjects && <div className="p-4 text-center text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-2" />Loading projects...</div>}
+                            {!isLoadingProjects && (
+                              <>
+                                <CommandEmpty>
+                                  <Button variant="ghost" className="w-full justify-start" onClick={() => { setIsCreateProjectDialogOpen(true); setProjectPopoverOpen(false); }}>
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Create "{projectSearch}"
+                                  </Button>
+                                </CommandEmpty>
+                                <CommandGroup className="max-h-60 overflow-y-auto">
+                                  {projects.map((project) => (
+                                    <CommandItem 
+                                      value={`${project.name} ${project.id}`} // Ensure uniqueness for filtering
+                                      key={project.id} 
+                                      onSelect={() => { 
+                                        form.setValue("project_id", project.id); 
+                                        setProjectPopoverOpen(false); 
+                                        setProjectSearch(''); 
+                                      }}
+                                    >
+                                      <Check className={cn("mr-2 h-4 w-4", project.id === field.value ? "opacity-100" : "opacity-0")} />
+                                      <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
+                                      {project.name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </>
+                            )}
                           </CommandList>
                         </Command>
                       </PopoverContent>
