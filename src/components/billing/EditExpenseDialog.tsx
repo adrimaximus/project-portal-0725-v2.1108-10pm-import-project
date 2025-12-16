@@ -207,6 +207,11 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
   };
 
   const handleFileProcessed = async (file: UploadedFile) => {
+    if (file.type === 'application/pdf') {
+        toast.info("PDF uploaded. Note: Auto-extraction is currently only supported for images.");
+        return;
+    }
+
     const extractedData = await extractData(file);
     if (extractedData) {
       if (extractedData.amount && extractedData.amount > 0) {
@@ -430,12 +435,19 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: { open: boolean, onO
                 name="attachments_jsonb"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <FileText className="h-4 w-4" /> Attachments (Invoices, Receipts)
-                      {isExtracting && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
-                    </FormLabel>
+                    <div className="flex justify-between items-center mb-1">
+                      <FormLabel className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" /> Attachments
+                      </FormLabel>
+                      {isExtracting && <span className="text-xs text-primary animate-pulse flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin"/> Analyzing document...</span>}
+                    </div>
+                    {isExtracting && (
+                      <div className="w-full h-1 bg-muted rounded-full overflow-hidden mb-2">
+                        <div className="h-full bg-primary animate-pulse w-full origin-left" />
+                      </div>
+                    )}
                     <div className="text-xs text-muted-foreground mb-1">
-                        Upload invoice or receipt to auto-fill details (Image Only)
+                        Upload invoice or receipt to auto-fill details (Images or PDF)
                     </div>
                     <FormControl>
                       <FileUploader
