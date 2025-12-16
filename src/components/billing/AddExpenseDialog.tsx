@@ -101,12 +101,12 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         .rpc('get_dashboard_projects', { 
             p_limit: 1000,
             p_offset: 0,
-            p_search_term: null,
+            p_search_term: '',
             p_exclude_other_personal: false 
         });
       
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: open,
   });
@@ -557,54 +557,44 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                         <Command>
                           <CommandInput placeholder="Search project..." value={projectSearch} onValueChange={setProjectSearch} />
-                          <CommandList>
-                            {isLoadingProjects && (
-                              <div className="p-4 text-center text-sm text-muted-foreground">
-                                <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
-                                Loading projects...
-                              </div>
-                            )}
-                            
-                            {!isLoadingProjects && projects.length === 0 && (
-                               <div className="p-4 text-center text-sm text-muted-foreground">
-                                 No projects found.
-                               </div>
-                            )}
-
-                            {!isLoadingProjects && (
-                              <>
-                                <CommandEmpty>
-                                  <Button variant="ghost" className="w-full justify-start" onClick={() => { setIsCreateProjectDialogOpen(true); setProjectPopoverOpen(false); }}>
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Create "{projectSearch}"
-                                  </Button>
-                                </CommandEmpty>
-                                <CommandGroup>
-                                  {projects.map((project) => (
-                                    <CommandItem 
-                                      value={`${project.name} ${project.id}`}
-                                      key={project.id} 
-                                      onSelect={() => { 
-                                        form.setValue("project_id", project.id); 
-                                        setProjectPopoverOpen(false); 
-                                        setProjectSearch(''); 
-                                      }}
-                                    >
-                                      <Check className={cn("mr-2 h-4 w-4", project.id === field.value ? "opacity-100" : "opacity-0")} />
-                                      <div className="flex flex-col">
-                                          <span>{project.name}</span>
-                                          {(project.client_company_name || project.client_name) && (
-                                            <span className="text-xs text-muted-foreground">
-                                              {project.client_company_name || project.client_name}
-                                            </span>
-                                          )}
-                                      </div>
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </>
-                            )}
-                          </CommandList>
+                          {isLoadingProjects ? (
+                            <div className="p-4 text-center text-sm text-muted-foreground">
+                              <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                              Loading projects...
+                            </div>
+                          ) : (
+                            <CommandList>
+                              <CommandEmpty>
+                                <Button variant="ghost" className="w-full justify-start" onClick={() => { setIsCreateProjectDialogOpen(true); setProjectPopoverOpen(false); }}>
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Create "{projectSearch}"
+                                </Button>
+                              </CommandEmpty>
+                              <CommandGroup className="max-h-60 overflow-y-auto">
+                                {projects.map((project) => (
+                                  <CommandItem 
+                                    value={`${project.name} ${project.id}`}
+                                    key={project.id} 
+                                    onSelect={() => { 
+                                      form.setValue("project_id", project.id); 
+                                      setProjectPopoverOpen(false); 
+                                      setProjectSearch(''); 
+                                    }}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4", project.id === field.value ? "opacity-100" : "opacity-0")} />
+                                    <div className="flex flex-col">
+                                        <span>{project.name}</span>
+                                        {(project.client_company_name || project.client_name) && (
+                                          <span className="text-xs text-muted-foreground">
+                                            {project.client_company_name || project.client_name}
+                                          </span>
+                                        )}
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          )}
                         </Command>
                       </PopoverContent>
                     </Popover>
