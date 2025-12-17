@@ -40,7 +40,8 @@ export const convertPdfToImage = async (file: File): Promise<File | null> => {
             viewport: viewport,
         };
         
-        await page.render(renderContext).promise;
+        // Use 'as any' to bypass strict type checking for RenderParameters which might mismatch between versions
+        await page.render(renderContext as any).promise;
         
         // Convert canvas to blob/file
         return new Promise((resolve) => {

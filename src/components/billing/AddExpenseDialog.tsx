@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, FileText, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, isWithinInterval } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -263,8 +263,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
               const end = p.due_date ? new Date(p.due_date) : new Date(start);
               const bufferStart = new Date(start); bufferStart.setDate(start.getDate() - 7);
               const bufferEnd = new Date(end); bufferEnd.setDate(end.getDate() + 60);
-              // @ts-ignore
-              const isWithinInterval = (date, interval) => date >= interval.start && date <= interval.end;
+              
               if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) score += 5;
           }
 
