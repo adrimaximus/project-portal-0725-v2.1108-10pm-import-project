@@ -905,9 +905,9 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
           </Form>
           <DialogFooter className="pt-4">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isFormDisabled}>Cancel</Button>
-            <Button type="submit" form="expense-form" disabled={isFormDisabled}>
+            <Button type="submit" form="edit-expense-form" disabled={isFormDisabled}>
               {(isSubmitting || isExtracting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isExtracting ? 'Analyzing...' : 'Add Expense'}
+              {isExtracting ? 'Analyzing...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -952,4 +952,4 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
   );
 };
 
-export default AddExpenseDialog;
+export default EditExpenseDialog;
