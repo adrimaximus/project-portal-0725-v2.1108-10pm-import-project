@@ -261,7 +261,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           if (exDate && !isNaN(exDate.getTime()) && p.start_date) {
               const start = new Date(p.start_date);
               const end = p.due_date ? new Date(p.due_date) : new Date(start);
-              // Allow date to be within project range with some buffer
               const bufferStart = new Date(start); bufferStart.setDate(start.getDate() - 7);
               const bufferEnd = new Date(end); bufferEnd.setDate(end.getDate() + 60);
               // @ts-ignore
@@ -411,8 +410,11 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
             if (imageFile) {
                 fileToProcess = imageFile;
                 finalUrl = URL.createObjectURL(imageFile);
+                toast.success("PDF successfully converted to image for analysis");
             } else {
-                toast.warning("Could not convert PDF to image for AI analysis. Trying with original file.");
+                toast.error("Could not convert PDF to image. AI analysis skipped.");
+                // We stop here for analysis, but the file is still uploaded below in onSubmit if saved
+                return;
             }
         }
 
@@ -443,6 +445,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         }
     } catch (e) {
         console.error("Processing failed", e);
+        toast.error("An error occurred during file processing.");
     } finally {
         setCurrentProcessingFile(null);
     }
@@ -472,6 +475,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       
       const newFiles = files.filter((f): f is File => f instanceof File);
       if (newFiles.length > 0) {
+          // Process the most recently added file
           handleFileProcessed(newFiles[newFiles.length - 1]);
       }
   };
