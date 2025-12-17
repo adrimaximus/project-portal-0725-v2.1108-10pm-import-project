@@ -547,37 +547,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     }
   };
 
-  const handleGeneratePurpose = async () => {
-    const attachments = form.getValues('attachments_jsonb');
-    if (!attachments || attachments.length === 0) {
-       toast.error("No attachments found to analyze.");
-       return;
-    }
-    
-    const file = attachments[attachments.length - 1]; 
-    setCurrentProcessingFile(file.name);
-    
-    try {
-        const extractedData = await extractData({ 
-            url: file.url, 
-            type: file.type, 
-            instructions: "Identify the main purpose of this payment/invoice. Return a short string in a JSON field named 'purpose' (e.g. 'Web Hosting', 'Office Supplies')." 
-        });
-        
-        if (extractedData) {
-            const purpose = extractedData.purpose || extractedData.description || extractedData.summary;
-
-            if (purpose) {
-              setValue('purpose_payment', purpose, { shouldValidate: true, shouldDirty: true });
-              toast.success("Purpose payment updated.");
-            } else {
-              toast.info("Could not extract purpose. Try adding instructions in AI Review Notes.");
-            }
-        }
-    } finally {
-        setCurrentProcessingFile(null);
-    }
-  };
+  // Removed handleGeneratePurpose function
 
   // Handle File List Changes (Sync with Form)
   const handleFilesChange = (files: any[]) => {
@@ -774,17 +744,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                   <FormItem>
                     <div className="flex justify-between items-center">
                       <FormLabel>Purpose Payment</FormLabel>
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-6 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50 p-0 px-2"
-                        onClick={handleGeneratePurpose}
-                        disabled={isExtracting || !watch('attachments_jsonb')?.length}
-                      >
-                        <Wand2 className="mr-1 h-3 w-3" />
-                        Auto-fill with AI
-                      </Button>
+                      {/* Removed Auto-fill with AI button */}
                     </div>
                     <FormControl>
                       <Input placeholder="Enter purpose of payment" {...field} value={field.value || ''} disabled={isFormDisabled} />
