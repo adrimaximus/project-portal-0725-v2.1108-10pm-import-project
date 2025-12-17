@@ -916,29 +916,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 <FormItem><FormLabel>Total Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
               )} />
               
-              {/* 9. Status */}
-              <FormField
-                control={form.control}
-                name="status_expense"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {['Pending', 'Reviewed', 'Approved', 'Paid', 'Rejected'].map(status => (
-                          <SelectItem key={status} value={status}>{status}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Status field removed as requested */}
               
               {/* 10. Payment Terms */}
               <div>

@@ -281,7 +281,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                 purpose_payment: fullExpense.purpose_payment || '',
                 beneficiary: fullExpense.beneficiary,
                 tf_amount: fullExpense.tf_amount,
-                status_expense: fullExpense.status_expense,
+                // Removed status_expense from reset as it's not in the form anymore
                 remarks: fullExpense.remarks || "",
                 payment_terms: (fullExpense.payment_terms as any)?.map((t: any) => ({
                     ...t,
@@ -690,6 +690,8 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
       }
 
       // 3. Update DB
+      // We removed status_expense from form values, so it's not updated here.
+      // Supabase will keep the existing value.
       const { error } = await supabase.from('expenses').update({
         project_id: values.project_id,
         created_by: values.created_by, // Update PIC
@@ -704,7 +706,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
         bank_account_id: (selectedAccount && !isTempAccount) ? selectedAccount.id : null,
         account_bank: bankDetails,
         remarks: values.remarks,
-        status_expense: values.status_expense,
+        // Removed status_expense update to preserve existing status
         custom_properties: {
             ...values.custom_properties,
             ai_review_notes: values.ai_review_notes
@@ -997,29 +999,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                 <FormItem><FormLabel>Total Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
               )} />
               
-              {/* 9. Status */}
-              <FormField
-                control={form.control}
-                name="status_expense"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {['Pending', 'Reviewed', 'Approved', 'Paid', 'Rejected'].map(status => (
-                          <SelectItem key={status} value={status}>{status}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Status field removed as requested */}
               
               {/* 10. Payment Terms */}
               <div>
@@ -1059,19 +1039,13 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                   </Button>
                 </div>
               </div>
-              
-              {/* 11. Balance */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Balance (Rp)</Label>
                 <Input value={balance.toLocaleString('id-ID')} className={cn("col-span-3 bg-muted", balance !== 0 && "text-red-500 font-semibold")} readOnly />
               </div>
-              
-              {/* 12. Remarks */}
               <FormField control={form.control} name="remarks" render={({ field }) => (
                 <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
               )} />
-              
-              {/* 13. Custom Properties */}
               {isLoadingProperties ? (
                 <div className="flex justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
               ) : customProperties.length > 0 && (
