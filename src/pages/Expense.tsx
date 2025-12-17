@@ -200,6 +200,7 @@ const ExpensePage = () => {
                     <TableHead>PIC</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Remaining</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Remarks</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -207,7 +208,7 @@ const ExpensePage = () => {
                 <TableBody>
                   {filteredExpenses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center">
+                      <TableCell colSpan={9} className="h-24 text-center">
                         No expenses found.
                       </TableCell>
                     </TableRow>
@@ -305,6 +306,11 @@ const ExpensePage = () => {
                             <p className={cn("font-medium", remainingAmount > 0 ? "text-red-500" : "text-green-600")}>
                               {formatCurrency(remainingAmount)}
                             </p>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={cn("capitalize", getStatusBadgeStyle(expense.status_expense))}>
+                              {expense.status_expense}
+                            </Badge>
                           </TableCell>
                           <TableCell>{expense.remarks}</TableCell>
                           <TableCell className="text-right">
