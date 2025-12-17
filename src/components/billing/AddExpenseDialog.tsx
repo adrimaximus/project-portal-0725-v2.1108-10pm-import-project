@@ -565,13 +565,13 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full sm:max-w-lg md:max-w-xl max-h-[95vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="w-full h-[100dvh] sm:h-auto sm:max-w-lg md:max-w-xl sm:max-h-[95vh] flex flex-col p-0 sm:p-6 sm:rounded-lg">
+          <DialogHeader className="p-4 sm:p-0">
             <DialogTitle>Add New Expense</DialogTitle>
             <DialogDescription>Record a new expense for a project.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form id="expense-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto p-4">
+            <form id="expense-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex-1 overflow-y-auto p-4 sm:p-0">
               
               <FormField
                 control={form.control}
@@ -853,7 +853,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                       </div>
                     </div>
                   ))}
-                  <Button type="button" variant="outline" size="sm" onClick={() => append({ amount: null, request_type: 'Requested', request_date: new Date(), release_date: undefined, status: 'Requested' })} disabled={isFormDisabled}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => append({ amount: null, request_type: 'Requested', request_date: new Date(), release_date: undefined, status: 'Requested', status_remarks: null })} disabled={isFormDisabled}>
                     <Plus className="mr-2 h-4 w-4" /> Add Term
                   </Button>
                 </div>
@@ -895,7 +895,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
               )}
             </form>
           </Form>
-          <DialogFooter className="pt-4">
+          <DialogFooter className="p-4 sm:p-0 sm:pt-4 border-t sm:border-t-0 mt-auto">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isFormDisabled}>Cancel</Button>
             <Button type="submit" form="expense-form" disabled={isFormDisabled}>
               {(isSubmitting || isExtracting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

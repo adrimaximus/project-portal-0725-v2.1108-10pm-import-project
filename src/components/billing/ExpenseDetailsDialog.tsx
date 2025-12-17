@@ -334,16 +334,16 @@ Account Name: ${bankDetails.name || '-'}
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full max-w-2xl max-h-[95vh] overflow-y-auto">
+        <DialogContent className="w-full h-[100dvh] sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <div className="flex justify-between items-start gap-4 pr-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-2 sm:gap-4 pr-8">
               <div>
                 <DialogTitle className="text-xl">{expense.beneficiary}</DialogTitle>
                 <DialogDescription className="mt-1">
                   {expense.project_name}
                 </DialogDescription>
               </div>
-              <Badge className={cn("text-sm px-3 py-1", getStatusBadgeStyle(derivedStatus))}>
+              <Badge className={cn("text-sm px-3 py-1 self-start sm:self-auto", getStatusBadgeStyle(derivedStatus))}>
                 {derivedStatus}
               </Badge>
             </div>

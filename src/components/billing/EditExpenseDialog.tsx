@@ -486,7 +486,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
   };
 
   const onSubmit = async (values: ExpenseFormValues) => {
-    if (!expense) return;
     setIsSubmitting(true);
     try {
       const currentFiles = values.attachments_jsonb || [];
@@ -497,7 +496,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
 
       for (const file of newFilesToUpload) {
           const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-          const filePath = `expense-attachments/${expense.id}/${Date.now()}-${sanitizedFileName}`;
+          const filePath = `expense-attachments/${values.project_id}/${Date.now()}-${sanitizedFileName}`;
           
           const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, file);
           if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
@@ -576,13 +575,13 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full sm:max-w-lg md:max-w-xl max-h-[95vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="w-full h-[100dvh] sm:h-auto sm:max-w-lg md:max-w-xl sm:max-h-[95vh] flex flex-col p-0 sm:p-6 sm:rounded-lg">
+          <DialogHeader className="p-4 sm:p-0">
             <DialogTitle>Edit Expense</DialogTitle>
             <DialogDescription>Update expense details.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form id="edit-expense-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto p-4">
+            <form id="edit-expense-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex-1 overflow-y-auto p-4 sm:p-0">
               
               <FormField
                 control={form.control}
@@ -942,7 +941,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
               )}
             </form>
           </Form>
-          <DialogFooter className="pt-4">
+          <DialogFooter className="p-4 sm:p-0 sm:pt-4 border-t sm:border-t-0 mt-auto">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isFormDisabled}>Cancel</Button>
             <Button type="submit" form="edit-expense-form" disabled={isFormDisabled}>
               {(isSubmitting || isExtracting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
