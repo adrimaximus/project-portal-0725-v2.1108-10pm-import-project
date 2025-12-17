@@ -77,15 +77,17 @@ export function ProjectCombobox({ projects, value, onChange, isLoading, disabled
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between"
+          className="w-full justify-between h-auto whitespace-normal text-left"
           disabled={isLoading || disabled}
         >
-          {isLoading ? "Loading projects..." : (
-            value && selectedProject
-              ? selectedProject.name
-              : "Select a project..."
-          )}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <span className="truncate flex-1">
+            {isLoading ? "Loading projects..." : (
+              value && selectedProject
+                ? selectedProject.name
+                : "Select a project..."
+            )}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 flex-shrink-0" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0" align="start">
