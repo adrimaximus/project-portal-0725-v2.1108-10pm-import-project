@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, FileText, Wand2 } from 'lucide-react';
+import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, FileText, Wand2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isWithinInterval, parseISO } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -355,194 +355,325 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       return maxScore > 0 ? bestMatch : null;
   };
 
-  const handleFileProcessed = async (file: UploadedFile) => {
-    setCurrentProcessingFile(file.name);
+  const applyExtractedData = async (extractedData: any) => {
+    if (extractedData.amount && extractedData.amount > 0) {
+      setValue('tf_amount', extractedData.amount, { shouldValidate: true });
+      
+      const terms = form.getValues('payment_terms');
+      const invoiceDate = extractedData.date ? new Date(extractedData.date) : new Date();
+      const dueDate = extractedData.due_date ? new Date(extractedData.due_date) : invoiceDate;
+
+      if (terms && terms.length === 1) {
+           setValue('payment_terms.0.amount', extractedData.amount);
+           setValue('payment_terms.0.request_date', new Date());
+           setValue('payment_terms.0.release_date', dueDate);
+           setValue('payment_terms.0.status', 'Pending');
+      } else {
+           setValue('payment_terms', [{
+               amount: extractedData.amount,
+               request_type: 'Requested',
+               request_date: new Date(),
+               release_date: dueDate,
+               status: 'Pending'
+           }]);
+      }
+    }
     
-    const extractedData = await extractData({ url: file.url, type: file.type });
+    const explicitDescription = extractedData.description || extractedData.purpose;
+    const itemsDescription = Array.isArray(extractedData.items) && extractedData.items.length > 0 
+        ? extractedData.items.map((i: any) => i.description || i.name).filter(Boolean).join(', ') 
+        : null;
+    const purpose = itemsDescription || explicitDescription || extractedData.summary;
+
+    if (purpose) {
+      setValue('purpose_payment', purpose, { shouldValidate: true });
+    }
+
+    let currentBeneficiary = beneficiary;
+    
+    if (extractedData.beneficiary && !watch('beneficiary')) {
+      const matchedBeneficiary = beneficiaries.find(b => 
+        b.name.toLowerCase() === extractedData.beneficiary?.toLowerCase() ||
+        b.name.toLowerCase().includes(extractedData.beneficiary?.toLowerCase() || '') ||
+        (extractedData.beneficiary && b.name.toLowerCase().includes(extractedData.beneficiary.toLowerCase()))
+      );
+      
+      if (matchedBeneficiary) {
+        currentBeneficiary = matchedBeneficiary;
+        setBeneficiary(matchedBeneficiary);
+        setValue('beneficiary', matchedBeneficiary.name, { shouldValidate: true });
+      } else {
+        setValue('beneficiary', extractedData.beneficiary, { shouldValidate: true });
+      }
+    }
+
+    if (!watch('project_id')) {
+        const matchedProject = findMatchingProject(extractedData);
+        if (matchedProject) {
+            setValue('project_id', matchedProject.id);
+            toast.success(`Matched to project: ${matchedProject.name}`);
+        }
+    }
+
+    if (extractedData.bank_details && extractedData.bank_details.account_number) {
+      const extractedBank = extractedData.bank_details;
+      
+      if (currentBeneficiary) {
+        try {
+          const { data: existingAccounts } = await supabase.from('bank_accounts')
+            .select('*')
+            .eq('owner_id', currentBeneficiary.id)
+            .eq('account_number', extractedBank.account_number)
+            .maybeSingle();
+
+          if (existingAccounts) {
+            setBankAccounts(prev => {
+              const exists = prev.find(p => p.id === existingAccounts.id);
+              return exists ? prev : [...prev, existingAccounts as unknown as BankAccount];
+            });
+            setValue('bank_account_id', existingAccounts.id);
+            toast.info(`Selected existing bank account: ${extractedBank.bank_name}`);
+          } else {
+            const { data: newAccount, error: createError } = await supabase.from('bank_accounts').insert({
+              owner_id: currentBeneficiary.id,
+              owner_type: currentBeneficiary.type,
+              bank_name: extractedBank.bank_name || 'Unknown Bank',
+              account_number: extractedBank.account_number,
+              account_name: extractedBank.account_name || currentBeneficiary.name,
+              swift_code: extractedBank.swift_code || null,
+              created_by: user?.id
+            }).select().single();
+
+            if (createError) throw createError;
+
+            if (newAccount) {
+              setBankAccounts(prev => [...prev, newAccount as unknown as BankAccount]);
+              setValue('bank_account_id', newAccount.id);
+              toast.success(`Automatically added and selected new bank account: ${extractedBank.bank_name} ${extractedBank.swift_code ? `(${extractedBank.swift_code})` : ''}`);
+            }
+          }
+        } catch (err) {
+          console.error('Error auto-creating bank account:', err);
+        }
+      } else {
+        const tempId = `temp-${Date.now()}`;
+        const tempAccount: BankAccount = {
+          id: tempId,
+          account_name: extractedBank.account_name || extractedData.beneficiary || 'Unknown Name',
+          account_number: extractedBank.account_number,
+          bank_name: extractedBank.bank_name || 'Unknown Bank',
+          swift_code: extractedBank.swift_code || null,
+          is_legacy: true,
+          owner_id: 'temp',
+          owner_type: 'person'
+        };
+        
+        setBankAccounts([tempAccount]);
+        setValue('bank_account_id', tempId);
+        toast.info(`Set temporary bank details: ${extractedBank.bank_name}`);
+      }
+    }
+
+    if (extractedData.remarks) {
+      const currentRemarks = watch('remarks') || '';
+      const newRemarks = currentRemarks ? `${currentRemarks}\n\n--- AI Extracted Notes ---\n${extractedData.remarks}` : extractedData.remarks;
+      setValue('remarks', newRemarks, { shouldValidate: true });
+    }
+    
+    toast.success("Data extracted from document!");
+  };
+
+  // Handle Files & AI
+  const handleFileProcessed = async (file: UploadedFile) => {
+    let finalUrl = file.url;
+    
+    // Check if it's a blob URL (new file)
+    if (file.url.startsWith('blob:')) {
+      try {
+        toast.info("Uploading image for analysis...");
+        const response = await fetch(file.url);
+        const blob = await response.blob();
+        const fileObj = new File([blob], file.name, { type: file.type });
+
+        const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+        const filePath = `temp-analysis/${Date.now()}-${sanitizedFileName}`;
+        
+        const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, fileObj);
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage.from('expense').getPublicUrl(filePath);
+        finalUrl = urlData.publicUrl;
+      } catch (error) {
+        console.error("Pre-analysis upload failed:", error);
+        toast.error("Failed to upload image for analysis.");
+        return;
+      }
+    }
+    
+    setCurrentProcessingFile(file.name);
+    const extractedData = await extractData({ url: finalUrl, type: file.type });
     
     if (extractedData) {
-      if (extractedData.amount && extractedData.amount > 0) {
-        setValue('tf_amount', extractedData.amount, { shouldValidate: true });
-        
-        const terms = form.getValues('payment_terms');
-        const invoiceDate = extractedData.date ? new Date(extractedData.date) : new Date();
-        const dueDate = extractedData.due_date ? new Date(extractedData.due_date) : invoiceDate;
-
-        if (terms && terms.length === 1) {
-             setValue('payment_terms.0.amount', extractedData.amount);
-             setValue('payment_terms.0.request_date', new Date());
-             setValue('payment_terms.0.release_date', dueDate);
-             setValue('payment_terms.0.status', 'Pending');
-        } else {
-             setValue('payment_terms', [{
-                 amount: extractedData.amount,
-                 request_type: 'Requested',
-                 request_date: new Date(),
-                 release_date: dueDate,
-                 status: 'Pending'
-             }]);
-        }
-      }
-      
-      const explicitDescription = extractedData.description || extractedData.purpose;
-      const itemsDescription = Array.isArray(extractedData.items) && extractedData.items.length > 0 
-          ? extractedData.items.map((i: any) => i.description || i.name).filter(Boolean).join(', ') 
-          : null;
-      const purpose = itemsDescription || explicitDescription || extractedData.summary;
-
-      if (purpose) {
-        setValue('purpose_payment', purpose, { shouldValidate: true });
-      }
-
-      let currentBeneficiary = beneficiary;
-      
-      if (extractedData.beneficiary && !watch('beneficiary')) {
-        const matchedBeneficiary = beneficiaries.find(b => 
-          b.name.toLowerCase() === extractedData.beneficiary?.toLowerCase() ||
-          b.name.toLowerCase().includes(extractedData.beneficiary?.toLowerCase() || '') ||
-          (extractedData.beneficiary && b.name.toLowerCase().includes(extractedData.beneficiary.toLowerCase()))
-        );
-        
-        if (matchedBeneficiary) {
-          currentBeneficiary = matchedBeneficiary;
-          setBeneficiary(matchedBeneficiary);
-          setValue('beneficiary', matchedBeneficiary.name, { shouldValidate: true });
-        } else {
-          setValue('beneficiary', extractedData.beneficiary, { shouldValidate: true });
-        }
-      }
-
-      if (!watch('project_id')) {
-          const matchedProject = findMatchingProject(extractedData);
-          if (matchedProject) {
-              setValue('project_id', matchedProject.id);
-              toast.success(`Matched to project: ${matchedProject.name}`);
-          }
-      }
-
-      if (extractedData.bank_details && extractedData.bank_details.account_number) {
-        const extractedBank = extractedData.bank_details;
-        
-        if (currentBeneficiary) {
-          try {
-            const { data: existingAccounts } = await supabase.from('bank_accounts')
-              .select('*')
-              .eq('owner_id', currentBeneficiary.id)
-              .eq('account_number', extractedBank.account_number)
-              .maybeSingle();
-
-            if (existingAccounts) {
-              setBankAccounts(prev => {
-                const exists = prev.find(p => p.id === existingAccounts.id);
-                return exists ? prev : [...prev, existingAccounts as unknown as BankAccount];
-              });
-              setValue('bank_account_id', existingAccounts.id);
-              toast.info(`Selected existing bank account: ${extractedBank.bank_name}`);
-            } else {
-              const { data: newAccount, error: createError } = await supabase.from('bank_accounts').insert({
-                owner_id: currentBeneficiary.id,
-                owner_type: currentBeneficiary.type,
-                bank_name: extractedBank.bank_name || 'Unknown Bank',
-                account_number: extractedBank.account_number,
-                account_name: extractedBank.account_name || currentBeneficiary.name,
-                swift_code: extractedBank.swift_code || null,
-                created_by: user?.id
-              }).select().single();
-
-              if (createError) throw createError;
-
-              if (newAccount) {
-                setBankAccounts(prev => [...prev, newAccount as unknown as BankAccount]);
-                setValue('bank_account_id', newAccount.id);
-                toast.success(`Added new bank account: ${extractedBank.bank_name}`);
-              }
-            }
-          } catch (err) {
-            console.error('Error auto-creating bank account:', err);
-          }
-        } else {
-          const tempId = `temp-${Date.now()}`;
-          const tempAccount: BankAccount = {
-            id: tempId,
-            account_name: extractedBank.account_name || extractedData.beneficiary || 'Unknown Name',
-            account_number: extractedBank.account_number,
-            bank_name: extractedBank.bank_name || 'Unknown Bank',
-            swift_code: extractedBank.swift_code || null,
-            is_legacy: true,
-            owner_id: 'temp',
-            owner_type: 'person'
-          };
-          setBankAccounts([tempAccount]);
-          setValue('bank_account_id', tempId);
-          toast.info(`Set temporary bank details: ${extractedBank.bank_name}`);
-        }
-      }
-
-      if (extractedData.remarks) {
-        const currentRemarks = watch('remarks') || '';
-        const newRemarks = currentRemarks ? `${currentRemarks}\n\n--- AI Notes ---\n${extractedData.remarks}` : extractedData.remarks;
-        setValue('remarks', newRemarks, { shouldValidate: true });
-      }
-      
-      toast.success("Data extracted successfully!");
+      await applyExtractedData(extractedData);
     }
+    
     setCurrentProcessingFile(null);
   };
 
+  const handleRunAiCheck = async () => {
+    const attachments = form.getValues('attachments_jsonb');
+    const instructions = form.getValues('ai_review_notes');
+    
+    if (!attachments || attachments.length === 0) {
+       toast.error("No attachments found to analyze.");
+       return;
+    }
+    
+    const file = attachments[attachments.length - 1]; // Use last file
+    setCurrentProcessingFile(file.name);
+    
+    try {
+        const extractedData = await extractData({ 
+            url: file.url, 
+            type: file.type, 
+            instructions: instructions 
+        });
+        
+        if (extractedData) {
+            await applyExtractedData(extractedData);
+        }
+    } finally {
+        setCurrentProcessingFile(null);
+    }
+  };
+
+  const handleGeneratePurpose = async () => {
+    const attachments = form.getValues('attachments_jsonb');
+    if (!attachments || attachments.length === 0) {
+       toast.error("No attachments found to analyze.");
+       return;
+    }
+    
+    const file = attachments[attachments.length - 1]; 
+    setCurrentProcessingFile(file.name);
+    
+    try {
+        const extractedData = await extractData({ 
+            url: file.url, 
+            type: file.type, 
+            instructions: "Identify the main purpose of this payment/invoice. Return a short string in a JSON field named 'purpose' (e.g. 'Web Hosting', 'Office Supplies')." 
+        });
+        
+        if (extractedData) {
+            const purpose = extractedData.purpose || extractedData.description || extractedData.summary;
+
+            if (purpose) {
+              setValue('purpose_payment', purpose, { shouldValidate: true, shouldDirty: true });
+              toast.success("Purpose payment updated.");
+            } else {
+              toast.info("Could not extract purpose. Try adding instructions in AI Review Notes.");
+            }
+        }
+    } finally {
+        setCurrentProcessingFile(null);
+    }
+  };
+
+  // Handle File List Changes (Sync with Form)
   const handleFilesChange = (files: any[]) => {
       setValue('attachments_jsonb', files as any, { shouldDirty: true });
   };
 
   const onSubmit = async (values: ExpenseFormValues) => {
-    if (!user) {
-      toast.error("You must be logged in.");
-      return;
-    }
+    if (!expense) return;
     setIsSubmitting(true);
     try {
+      // 1. Handle File Uploads/Deletions
+      const currentFiles = values.attachments_jsonb || [];
+      const newFilesToUpload = currentFiles.filter((f: any) => f.originalFile instanceof File);
+      const existingFilesKept = currentFiles.filter((f: any) => !(f.originalFile instanceof File));
+
+      // Calculate files to delete (Initial - Kept)
+      const filesToDelete = initialAttachments.filter(initFile => 
+          !existingFilesKept.some((kept: any) => kept.url === initFile.url)
+      );
+
+      // Delete removed files from storage
+      if (filesToDelete.length > 0) {
+          const paths = filesToDelete.map(f => f.storagePath).filter(Boolean);
+          if (paths.length > 0) {
+              await supabase.storage.from('expense').remove(paths);
+          }
+      }
+
+      // Upload new files
+      const uploadedFilesMetadata = [];
+      for (const fileItem of newFilesToUpload) {
+          const file = (fileItem as any).originalFile as File;
+          const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+          const filePath = `expense-attachments/${expense.id}/${Date.now()}-${sanitizedFileName}`;
+          
+          const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, file);
+          if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+          
+          const { data: urlData } = supabase.storage.from('expense').getPublicUrl(filePath);
+          
+          uploadedFilesMetadata.push({
+              name: file.name,
+              url: urlData.publicUrl,
+              size: file.size,
+              type: file.type,
+              storagePath: filePath
+          });
+      }
+
+      const finalAttachments = [...existingFilesKept, ...uploadedFilesMetadata];
+
+      // 2. Prepare Data
       const selectedAccount = bankAccounts.find(acc => acc.id === values.bank_account_id);
       const isTempAccount = selectedAccount && (selectedAccount.id.startsWith('temp-') || selectedAccount.is_legacy);
-      
-      const bankDetails = selectedAccount ? {
-        name: selectedAccount.account_name,
-        account: selectedAccount.account_number,
-        bank: selectedAccount.bank_name,
-        swift_code: selectedAccount.swift_code,
-      } : null;
 
-      const { error } = await supabase.from('expenses').insert({
+      let bankDetails = null;
+      if (selectedAccount) {
+        bankDetails = { 
+          name: selectedAccount.account_name, 
+          account: selectedAccount.account_number, 
+          bank: selectedAccount.bank_name,
+          swift_code: selectedAccount.swift_code 
+        };
+      } else if (values.bank_account_id && expense?.account_bank) {
+        bankDetails = expense.account_bank;
+      }
+
+      // 3. Update DB
+      const { error } = await supabase.from('expenses').update({
         project_id: values.project_id,
-        created_by: values.created_by || user.id,
+        created_by: values.created_by, // Update PIC
         purpose_payment: values.purpose_payment,
         beneficiary: values.beneficiary,
         tf_amount: values.tf_amount,
         payment_terms: values.payment_terms?.map(term => ({
-            amount: term.amount || 0,
-            request_type: term.request_type,
+            ...term,
             request_date: term.request_date ? term.request_date.toISOString() : null,
             release_date: term.release_date ? term.release_date.toISOString() : null,
-            status: term.status || 'Pending',
         })),
         bank_account_id: (selectedAccount && !isTempAccount) ? selectedAccount.id : null,
         account_bank: bankDetails,
         remarks: values.remarks,
+        status_expense: values.status_expense,
         custom_properties: {
             ...values.custom_properties,
             ai_review_notes: values.ai_review_notes
         },
-        attachments_jsonb: values.attachments_jsonb,
-      });
+        attachments_jsonb: finalAttachments, 
+      }).eq('id', expense.id);
 
       if (error) throw error;
-
-      toast.success("Expense added successfully.");
+      toast.success("Expense updated successfully.");
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       onOpenChange(false);
-      form.reset();
-      setBeneficiary(null);
-      setBankAccounts([]);
     } catch (error: any) {
-      toast.error("Failed to add expense.", { description: error.message });
+      toast.error("Failed to update expense.", { description: error.message });
     } finally {
       setIsSubmitting(false);
     }
@@ -550,13 +681,15 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
   const isFormDisabled = isSubmitting || isExtracting;
 
+  if (!expense) return null;
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add New Expense</DialogTitle>
-            <DialogDescription>Fill in the details for the new expense record.</DialogDescription>
+            <DialogTitle>Edit Expense</DialogTitle>
+            <DialogDescription>Update details for this expense record.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form id="expense-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto p-4">
@@ -620,7 +753,8 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                   </FormItem>
                 )}
               />
-              
+
+              {/* PIC Selector */}
               <FormField
                 control={form.control}
                 name="created_by"
@@ -653,7 +787,20 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 name="purpose_payment"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Purpose Payment</FormLabel>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Purpose Payment</FormLabel>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50 p-0 px-2"
+                        onClick={handleGeneratePurpose}
+                        disabled={isExtracting || !watch('attachments_jsonb')?.length}
+                      >
+                        <Wand2 className="mr-1 h-3 w-3" />
+                        Auto-fill with AI
+                      </Button>
+                    </div>
                     <FormControl>
                       <Input placeholder="Enter purpose of payment" {...field} value={field.value || ''} disabled={isFormDisabled} />
                     </FormControl>
@@ -667,13 +814,25 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 name="ai_review_notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                        <Wand2 className="h-4 w-4 text-purple-500" />
-                        AI Review Instructions
-                    </FormLabel>
+                    <div className="flex justify-between items-center">
+                        <FormLabel className="flex items-center gap-2">
+                            <Wand2 className="h-4 w-4 text-purple-500" />
+                            AI Review Instructions
+                        </FormLabel>
+                        <Button 
+                          type="button" 
+                          size="sm" 
+                          className="h-7 bg-purple-600 hover:bg-purple-700 text-white"
+                          disabled={isExtracting || !watch('attachments_jsonb')?.length}
+                          onClick={handleRunAiCheck}
+                        >
+                          <Sparkles className="mr-2 h-3 w-3" />
+                          Check Now
+                        </Button>
+                    </div>
                     <FormControl>
                       <Textarea 
-                        placeholder="Instruct AI to check specific details (e.g., 'Verify tax amount', 'Check if date is correct')" 
+                        placeholder="Instruct AI to check for missing details or documents (e.g. 'Check if invoice number is missing', 'Verify tax calculation')" 
                         {...field} 
                         value={field.value || ''}
                         disabled={isFormDisabled} 
@@ -797,6 +956,28 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
               <FormField control={form.control} name="tf_amount" render={({ field }) => (
                 <FormItem><FormLabel>Total Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
               )} />
+              <FormField
+                control={form.control}
+                name="status_expense"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {['Pending', 'Reviewed', 'Approved', 'Paid', 'Rejected'].map(status => (
+                          <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <div>
                 <FormLabel>Payment Terms</FormLabel>
                 <div className="space-y-3 mt-2">
@@ -811,7 +992,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                           <FormItem><FormLabel className="text-xs">Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} placeholder="Amount" disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name={`payment_terms.${index}.request_date`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Requested Date (Auto-filled)</FormLabel><div className="flex gap-1">
+                          <FormItem><FormLabel className="text-xs">Requested Date</FormLabel><div className="flex gap-1">
                             <FormField control={form.control} name={`payment_terms.${index}.request_type`} render={({ field: typeField }) => (
                               <FormItem><Select onValueChange={typeField.onChange} defaultValue={typeField.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="w-[110px] bg-background"><SelectValue placeholder="Type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Requested">Requested</SelectItem><SelectItem value="Due">Due</SelectItem></SelectContent></Select></FormItem>
                             )} />
@@ -872,7 +1053,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isFormDisabled}>Cancel</Button>
             <Button type="submit" form="expense-form" disabled={isFormDisabled}>
               {(isSubmitting || isExtracting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isExtracting ? 'Analyzing...' : 'Add Expense'}
+              {isExtracting ? 'Analyzing...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -917,4 +1098,4 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   );
 };
 
-export default AddExpenseDialog;
+export default EditExpenseDialog;
