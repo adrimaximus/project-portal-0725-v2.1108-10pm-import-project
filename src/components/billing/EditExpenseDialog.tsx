@@ -234,48 +234,58 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
   const selectedProjectId = watch("project_id");
   const currentAttachments = watch("attachments_jsonb") || [];
 
-  // Initialize form with expense data
-  useEffect(() => {
-    const fetchFullExpense = async () => {
-      if (expense && open) {
-        const { data: fullExpense, error } = await supabase
-          .from('expenses')
-          .select('*')
-          .eq('id', expense.id)
-          .single();
-        
-        if (fullExpense) {
-            // Find beneficiary object
-            const foundBeneficiary = beneficiaries.find(b => b.name === fullExpense.beneficiary);
-            if (foundBeneficiary) {
-                setBeneficiary(foundBeneficiary);
-            }
-            
-            const attachments = (fullExpense.attachments_jsonb as any) || [];
-            setInitialAttachments(attachments);
+  // 1. Fetch Expense Details with React Query (Stable)
+  const { data: fullExpense, isLoading: isLoadingFullExpense } = useQuery({
+    queryKey: ['expense_details', expense?.id],
+    queryFn: async () => {
+      if (!expense?.id) return null;
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('id', expense.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!expense?.id && open,
+    staleTime: 0, // Always fetch fresh data on open
+  });
 
-            reset({
-                project_id: fullExpense.project_id,
-                created_by: fullExpense.created_by,
-                purpose_payment: fullExpense.purpose_payment || '',
-                beneficiary: fullExpense.beneficiary,
-                tf_amount: fullExpense.tf_amount,
-                remarks: fullExpense.remarks || "",
-                payment_terms: (fullExpense.payment_terms as any)?.map((t: any) => ({
-                    ...t,
-                    request_date: t.request_date ? new Date(t.request_date) : undefined,
-                    release_date: t.release_date ? new Date(t.release_date) : undefined,
-                })) || [{ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Requested' }],
-                bank_account_id: fullExpense.bank_account_id || null,
-                ai_review_notes: (fullExpense.custom_properties as any)?.ai_review_notes || '',
-                custom_properties: fullExpense.custom_properties || {},
-                attachments_jsonb: attachments, 
-            });
+  // 2. Initialize form when data is loaded (Only once per expense change)
+  useEffect(() => {
+    if (fullExpense) {
+        const attachments = (fullExpense.attachments_jsonb as any) || [];
+        setInitialAttachments(attachments);
+
+        reset({
+            project_id: fullExpense.project_id,
+            created_by: fullExpense.created_by,
+            purpose_payment: fullExpense.purpose_payment || '',
+            beneficiary: fullExpense.beneficiary,
+            tf_amount: fullExpense.tf_amount,
+            remarks: fullExpense.remarks || "",
+            payment_terms: (fullExpense.payment_terms as any)?.map((t: any) => ({
+                ...t,
+                request_date: t.request_date ? new Date(t.request_date) : undefined,
+                release_date: t.release_date ? new Date(t.release_date) : undefined,
+            })) || [{ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Requested' }],
+            bank_account_id: fullExpense.bank_account_id || null,
+            ai_review_notes: (fullExpense.custom_properties as any)?.ai_review_notes || '',
+            custom_properties: fullExpense.custom_properties || {},
+            attachments_jsonb: attachments, 
+        });
+    }
+  }, [fullExpense, reset]);
+
+  // 3. Set beneficiary object state separately (No form reset involved)
+  useEffect(() => {
+    if (fullExpense && beneficiaries.length > 0) {
+        const found = beneficiaries.find(b => b.name === fullExpense.beneficiary);
+        if (found) {
+            setBeneficiary(found);
         }
-      }
-    };
-    fetchFullExpense();
-  }, [expense, open, beneficiaries, reset]);
+    }
+  }, [fullExpense, beneficiaries]);
 
   // Fetch project members for PIC selection
   useEffect(() => {
@@ -703,7 +713,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
     }
   };
 
-  const isFormDisabled = isSubmitting || isExtracting;
+  const isFormDisabled = isSubmitting || isExtracting || isLoadingFullExpense;
 
   if (!expense) return null;
 
