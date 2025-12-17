@@ -42,7 +42,7 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
   const [replyingTermIndex, setReplyingTermIndex] = useState<number | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // Removed [previewFile, setPreviewFile] state
+  const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
 
   const { data: userProfile } = useQuery({
     queryKey: ['profile'],
@@ -184,9 +184,16 @@ Account Name: ${bankDetails.name || '-'}
     });
   };
 
-  // Simplified handler to open URL directly
-  const handleViewOrDownload = (url: string) => {
+  const handleDownload = (url: string) => {
     window.open(url, '_blank');
+  };
+  
+  const handleView = (file: FileMetadata) => {
+    if (file.type === 'application/pdf' || file.type.startsWith('image/')) {
+        setPreviewFile(file);
+    } else {
+        window.open(file.url, '_blank');
+    }
   };
 
   const handleReplyClick = (index: number) => {
@@ -354,17 +361,21 @@ Account Name: ${bankDetails.name || '-'}
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button 
-                                    type="button" 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-8 w-8" 
-                                    onClick={() => handleViewOrDownload(file.url)}
-                                  >
+                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleView(file)}>
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>View</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(file.url)}>
                                     <Download className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>View / Download</TooltipContent>
+                                <TooltipContent>Download</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                           </div>
@@ -539,7 +550,34 @@ Account Name: ${bankDetails.name || '-'}
             </div>
         </DialogContent>
       </Dialog>
-      {/* Removed Preview Dialog */}
+      <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
+        <DialogContent className="max-w-4xl w-full h-[80vh] flex flex-col p-0">
+          <DialogHeader className="p-4 border-b flex-shrink-0 flex flex-row items-center justify-between space-y-0">
+            <DialogTitle className="truncate pr-8">{previewFile?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 bg-muted/20 relative overflow-hidden flex items-center justify-center p-4">
+             {previewFile?.type === 'application/pdf' ? (
+                 <iframe 
+                    src={`${previewFile.url}#view=FitH`} 
+                    title={previewFile.name}
+                    className="w-full h-full border-none rounded-md" 
+                 />
+             ) : (
+                 <img 
+                    src={previewFile?.url} 
+                    alt={previewFile?.name} 
+                    className="max-w-full max-h-full object-contain rounded-md shadow-sm" 
+                 />
+             )}
+          </div>
+          <div className="p-4 border-t flex justify-end gap-2 flex-shrink-0">
+            <Button variant="outline" onClick={() => window.open(previewFile?.url, '_blank')}>
+                Open Original
+            </Button>
+            <Button onClick={() => setPreviewFile(null)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
