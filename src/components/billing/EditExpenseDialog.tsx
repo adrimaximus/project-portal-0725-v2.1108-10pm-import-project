@@ -12,7 +12,7 @@ import { CurrencyInput } from '../ui/currency-input';
 import { Input } from '../ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Paperclip, X, Loader2, Plus, Wand2, BellRing, ChevronsUpDown, Check, Briefcase, FileText, Copy, User, Building } from 'lucide-react';
+import { Paperclip, X, Loader2, Plus, Wand2, BellRing, ChevronsUpDown, Check, Briefcase, FileText, Copy, User, Building, Sparkles } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -73,62 +73,6 @@ interface ProjectOption extends Project {
     client_name?: string | null;
     client_company_name?: string | null;
 }
-
-// Helper function to extract date ranges from project names
-const extractDateFromProjectName = (name: string): { start: Date, end: Date } | null => {
-  // 1. Range: dd-ddmmyy (e.g. 05-071225 -> 5 Dec 2025 to 7 Dec 2025)
-  // Look for pattern: 2 digits, hyphen, 6 digits
-  const rangeMatch = name.match(/\b(\d{2})-(\d{2})(\d{2})(\d{2})\b/);
-  if (rangeMatch) {
-    const startDay = parseInt(rangeMatch[1]);
-    const endDay = parseInt(rangeMatch[2]);
-    const month = parseInt(rangeMatch[3]) - 1; // JS months are 0-indexed
-    const year = 2000 + parseInt(rangeMatch[4]);
-    
-    // Basic validation
-    if (month >= 0 && month <= 11) {
-      const start = new Date(year, month, startDay);
-      const end = new Date(year, month, endDay);
-      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-        return { start, end };
-      }
-    }
-  }
-
-  // 2. Full Date: ddmmyy (e.g. 081125 -> 8 Nov 2025)
-  // Look for pattern: 6 digits exactly at a boundary
-  const fullDateMatch = name.match(/\b(\d{2})(\d{2})(\d{2})\b/);
-  if (fullDateMatch) {
-    const day = parseInt(fullDateMatch[1]);
-    const month = parseInt(fullDateMatch[2]) - 1;
-    const year = 2000 + parseInt(fullDateMatch[3]);
-    
-    if (month >= 0 && month <= 11) {
-      const date = new Date(year, month, day);
-      if (!isNaN(date.getTime())) {
-        return { start: date, end: date };
-      }
-    }
-  }
-
-  // 3. Month Year: mmyy (e.g. 1025 -> Oct 2025)
-  // Look for pattern: 4 digits exactly at a boundary
-  const monthYearMatch = name.match(/\b(\d{2})(\d{2})\b/);
-  if (monthYearMatch) {
-    const month = parseInt(monthYearMatch[1]) - 1;
-    const year = 2000 + parseInt(monthYearMatch[2]);
-    
-    if (month >= 0 && month <= 11) {
-      const start = new Date(year, month, 1);
-      const end = new Date(year, month + 1, 0); // Last day of month
-      if (!isNaN(start.getTime())) {
-        return { start, end };
-      }
-    }
-  }
-
-  return null;
-};
 
 const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogProps) => {
   const { user } = useAuth();
@@ -372,6 +316,115 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
     setIsBankAccountFormOpen(true);
   };
 
+  const applyExtractedData = async (extractedData: any) => {
+    if (extractedData.amount && extractedData.amount > 0) {
+      setValue('tf_amount', extractedData.amount, { shouldValidate: true });
+      
+      const terms = form.getValues('payment_terms');
+      if (terms && terms.length === 1 && !terms[0].amount) {
+          setValue('payment_terms.0.amount', extractedData.amount);
+      }
+    }
+    
+    const explicitDescription = extractedData.description || extractedData.purpose;
+    const itemsDescription = Array.isArray(extractedData.items) && extractedData.items.length > 0 
+        ? extractedData.items.map((i: any) => i.description || i.name).filter(Boolean).join(', ') 
+        : null;
+    
+    const purpose = itemsDescription || explicitDescription || extractedData.summary;
+
+    if (purpose) {
+      setValue('purpose_payment', purpose, { shouldValidate: true });
+    }
+
+    // Beneficiary Matching
+    let currentBeneficiary = beneficiary;
+    
+    if (extractedData.beneficiary && !watch('beneficiary')) {
+      const matchedBeneficiary = beneficiaries.find(b => 
+        b.name.toLowerCase() === extractedData.beneficiary?.toLowerCase() ||
+        b.name.toLowerCase().includes(extractedData.beneficiary?.toLowerCase() || '') ||
+        (extractedData.beneficiary && b.name.toLowerCase().includes(extractedData.beneficiary.toLowerCase()))
+      );
+      
+      if (matchedBeneficiary) {
+        currentBeneficiary = matchedBeneficiary;
+        setBeneficiary(matchedBeneficiary);
+        setValue('beneficiary', matchedBeneficiary.name, { shouldValidate: true });
+      } else {
+        setValue('beneficiary', extractedData.beneficiary, { shouldValidate: true });
+      }
+    }
+
+    // Bank Details
+    if (extractedData.bank_details && extractedData.bank_details.account_number) {
+      const extractedBank = extractedData.bank_details;
+      
+      if (currentBeneficiary) {
+        try {
+          const { data: existingAccounts } = await supabase.from('bank_accounts')
+            .select('*')
+            .eq('owner_id', currentBeneficiary.id)
+            .eq('account_number', extractedBank.account_number)
+            .maybeSingle();
+
+          if (existingAccounts) {
+            setBankAccounts(prev => {
+              const exists = prev.find(p => p.id === existingAccounts.id);
+              return exists ? prev : [...prev, existingAccounts as unknown as BankAccount];
+            });
+            setValue('bank_account_id', existingAccounts.id);
+            toast.info(`Selected existing bank account: ${extractedBank.bank_name}`);
+          } else {
+            const { data: newAccount, error: createError } = await supabase.from('bank_accounts').insert({
+              owner_id: currentBeneficiary.id,
+              owner_type: currentBeneficiary.type,
+              bank_name: extractedBank.bank_name || 'Unknown Bank',
+              account_number: extractedBank.account_number,
+              account_name: extractedBank.account_name || currentBeneficiary.name,
+              swift_code: extractedBank.swift_code || null,
+              created_by: user?.id
+            }).select().single();
+
+            if (createError) throw createError;
+
+            if (newAccount) {
+              setBankAccounts(prev => [...prev, newAccount as unknown as BankAccount]);
+              setValue('bank_account_id', newAccount.id);
+              toast.success(`Automatically added and selected new bank account: ${extractedBank.bank_name} ${extractedBank.swift_code ? `(${extractedBank.swift_code})` : ''}`);
+            }
+          }
+        } catch (err) {
+          console.error('Error auto-creating bank account:', err);
+        }
+      } else {
+        const tempId = `temp-${Date.now()}`;
+        const tempAccount: BankAccount = {
+          id: tempId,
+          account_name: extractedBank.account_name || extractedData.beneficiary || 'Unknown Name',
+          account_number: extractedBank.account_number,
+          bank_name: extractedBank.bank_name || 'Unknown Bank',
+          swift_code: extractedBank.swift_code || null,
+          is_legacy: true,
+          owner_id: 'temp',
+          owner_type: 'person'
+        };
+        
+        setBankAccounts([tempAccount]);
+        setValue('bank_account_id', tempId);
+        toast.info(`Set temporary bank details: ${extractedBank.bank_name}`);
+      }
+    }
+
+    if (extractedData.remarks) {
+      const currentRemarks = watch('remarks') || '';
+      const newRemarks = currentRemarks ? `${currentRemarks}\n\n--- AI Extracted Notes ---\n${extractedData.remarks}` : extractedData.remarks;
+      setValue('remarks', newRemarks, { shouldValidate: true });
+    }
+    
+    toast.success("Data extracted from document!");
+  };
+
   // Handle Files & AI
   const handleFileProcessed = async (file: UploadedFile) => {
     let finalUrl = file.url;
@@ -403,120 +456,37 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
     const extractedData = await extractData({ url: finalUrl, type: file.type });
     
     if (extractedData) {
-      if (extractedData.amount && extractedData.amount > 0) {
-        setValue('tf_amount', extractedData.amount, { shouldValidate: true });
-        
-        const terms = form.getValues('payment_terms');
-        if (terms && terms.length === 1 && !terms[0].amount) {
-            setValue('payment_terms.0.amount', extractedData.amount);
-        }
-      }
-      
-      const explicitDescription = extractedData.description || extractedData.purpose;
-      const itemsDescription = Array.isArray(extractedData.items) && extractedData.items.length > 0 
-          ? extractedData.items.map((i: any) => i.description || i.name).filter(Boolean).join(', ') 
-          : null;
-      
-      const purpose = itemsDescription || explicitDescription || extractedData.summary;
-
-      if (purpose) {
-        setValue('purpose_payment', purpose, { shouldValidate: true });
-      }
-
-      // 2. Beneficiary Matching
-      let currentBeneficiary = beneficiary;
-      
-      if (extractedData.beneficiary && !watch('beneficiary')) {
-        const matchedBeneficiary = beneficiaries.find(b => 
-          b.name.toLowerCase() === extractedData.beneficiary?.toLowerCase() ||
-          b.name.toLowerCase().includes(extractedData.beneficiary?.toLowerCase() || '') ||
-          (extractedData.beneficiary && b.name.toLowerCase().includes(extractedData.beneficiary.toLowerCase()))
-        );
-        
-        if (matchedBeneficiary) {
-          currentBeneficiary = matchedBeneficiary;
-          setBeneficiary(matchedBeneficiary);
-          setValue('beneficiary', matchedBeneficiary.name, { shouldValidate: true });
-        } else {
-          setValue('beneficiary', extractedData.beneficiary, { shouldValidate: true });
-        }
-      }
-
-      // 3. Project Matching
-      if (!watch('project_id')) {
-          // Matching logic not needed here as we are editing
-      }
-
-      // 4. Bank Details
-      if (extractedData.bank_details && extractedData.bank_details.account_number) {
-        const extractedBank = extractedData.bank_details;
-        
-        if (currentBeneficiary) {
-          try {
-            const { data: existingAccounts } = await supabase.from('bank_accounts')
-              .select('*')
-              .eq('owner_id', currentBeneficiary.id)
-              .eq('account_number', extractedBank.account_number)
-              .maybeSingle();
-
-            if (existingAccounts) {
-              setBankAccounts(prev => {
-                const exists = prev.find(p => p.id === existingAccounts.id);
-                return exists ? prev : [...prev, existingAccounts as unknown as BankAccount];
-              });
-              setValue('bank_account_id', existingAccounts.id);
-              toast.info(`Selected existing bank account: ${extractedBank.bank_name}`);
-            } else {
-              const { data: newAccount, error: createError } = await supabase.from('bank_accounts').insert({
-                owner_id: currentBeneficiary.id,
-                owner_type: currentBeneficiary.type,
-                bank_name: extractedBank.bank_name || 'Unknown Bank',
-                account_number: extractedBank.account_number,
-                account_name: extractedBank.account_name || currentBeneficiary.name,
-                swift_code: extractedBank.swift_code || null,
-                created_by: user?.id
-              }).select().single();
-
-              if (createError) throw createError;
-
-              if (newAccount) {
-                setBankAccounts(prev => [...prev, newAccount as unknown as BankAccount]);
-                setValue('bank_account_id', newAccount.id);
-                toast.success(`Automatically added and selected new bank account: ${extractedBank.bank_name} ${extractedBank.swift_code ? `(${extractedBank.swift_code})` : ''}`);
-              }
-            }
-          } catch (err) {
-            console.error('Error auto-creating bank account:', err);
-          }
-        } else {
-          const tempId = `temp-${Date.now()}`;
-          const tempAccount: BankAccount = {
-            id: tempId,
-            account_name: extractedBank.account_name || extractedData.beneficiary || 'Unknown Name',
-            account_number: extractedBank.account_number,
-            bank_name: extractedBank.bank_name || 'Unknown Bank',
-            swift_code: extractedBank.swift_code || null,
-            is_legacy: true,
-            owner_id: 'temp',
-            owner_type: 'person'
-          };
-          
-          setBankAccounts([tempAccount]);
-          setValue('bank_account_id', tempId);
-          toast.info(`Set temporary bank details: ${extractedBank.bank_name}`);
-        }
-      }
-
-      if (extractedData.remarks) {
-        const currentRemarks = watch('remarks') || '';
-        const newRemarks = currentRemarks ? `${currentRemarks}\n\n--- AI Extracted Notes ---\n${extractedData.remarks}` : extractedData.remarks;
-        setValue('remarks', newRemarks, { shouldValidate: true });
-      }
-      
-      toast.success("Data extracted from document!");
+      await applyExtractedData(extractedData);
     }
     
     setCurrentProcessingFile(null);
+  };
+
+  const handleRunAiCheck = async () => {
+    const attachments = form.getValues('attachments_jsonb');
+    const instructions = form.getValues('ai_review_notes');
+    
+    if (!attachments || attachments.length === 0) {
+       toast.error("No attachments found to analyze.");
+       return;
+    }
+    
+    const file = attachments[attachments.length - 1]; // Use last file
+    setCurrentProcessingFile(file.name);
+    
+    try {
+        const extractedData = await extractData({ 
+            url: file.url, 
+            type: file.type, 
+            instructions: instructions 
+        });
+        
+        if (extractedData) {
+            await applyExtractedData(extractedData);
+        }
+    } finally {
+        setCurrentProcessingFile(null);
+    }
   };
 
   // Handle File List Changes (Sync with Form)
@@ -741,10 +711,22 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                 name="ai_review_notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                        <Wand2 className="h-4 w-4 text-purple-500" />
-                        AI Review Instructions
-                    </FormLabel>
+                    <div className="flex justify-between items-center">
+                        <FormLabel className="flex items-center gap-2">
+                            <Wand2 className="h-4 w-4 text-purple-500" />
+                            AI Review Instructions
+                        </FormLabel>
+                        <Button 
+                          type="button" 
+                          size="sm" 
+                          className="h-7 bg-purple-600 hover:bg-purple-700 text-white"
+                          disabled={isExtracting || !watch('attachments_jsonb')?.length}
+                          onClick={handleRunAiCheck}
+                        >
+                          <Sparkles className="mr-2 h-3 w-3" />
+                          Check Now
+                        </Button>
+                    </div>
                     <FormControl>
                       <Textarea 
                         placeholder="Instruct AI to check specific details (e.g., 'Verify tax amount', 'Check if date is correct')" 
