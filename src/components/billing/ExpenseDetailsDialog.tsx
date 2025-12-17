@@ -48,7 +48,7 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
     queryFn: async () => {
       if (!propExpense?.id) return null;
       
-      // 1. Fetch raw expense data
+      // 1. Fetch raw expense data (including attachments_jsonb)
       const { data: expenseData, error } = await supabase
         .from('expenses')
         .select('*')
@@ -95,7 +95,9 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
         ...expenseData,
         pic: pic, // Use the fetched PIC details
         project_name: projectName,
-        // Keep fallback to prop if PIC fetch failed but prop had it (though unlikely with fresh fetch)
+        // Ensure attachments_jsonb is explicitly included in the final object
+        attachments_jsonb: expenseData.attachments_jsonb,
+        // Keep project_owner fallback if needed
         project_owner: propExpense.project_owner 
       } as unknown as Expense;
     },
