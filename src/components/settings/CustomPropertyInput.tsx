@@ -12,10 +12,11 @@ interface CustomPropertyInputProps {
   property: CustomProperty;
   control: Control<any>;
   name: string;
-  bucket?: string; // Added bucket prop for image upload
+  bucket?: string;
+  disabled?: boolean;
 }
 
-const CustomPropertyInput = ({ property, control, name, bucket = "company-logos" }: CustomPropertyInputProps) => {
+const CustomPropertyInput = ({ property, control, name, bucket = "company-logos", disabled }: CustomPropertyInputProps) => {
   const { field } = useController({ name, control });
 
   const renderInput = () => {
@@ -25,14 +26,14 @@ const CustomPropertyInput = ({ property, control, name, bucket = "company-logos"
       case 'email':
       case 'phone':
       case 'url':
-        return <Input type={property.type} {...field} value={field.value || ''} />;
+        return <Input type={property.type} {...field} value={field.value || ''} disabled={disabled} />;
       case 'textarea':
-        return <Textarea {...field} value={field.value || ''} />;
+        return <Textarea {...field} value={field.value || ''} disabled={disabled} />;
       case 'date':
-        return <Input type="date" {...field} value={field.value || ''} />;
+        return <Input type="date" {...field} value={field.value || ''} disabled={disabled} />;
       case 'select':
         return (
-          <Select onValueChange={field.onChange} value={field.value}>
+          <Select onValueChange={field.onChange} value={field.value} disabled={disabled}>
             <SelectTrigger><SelectValue placeholder={`Select a ${property.label}`} /></SelectTrigger>
             <SelectContent>
               {property.options?.map((option) => (
@@ -48,6 +49,7 @@ const CustomPropertyInput = ({ property, control, name, bucket = "company-logos"
             value={field.value || []}
             onChange={field.onChange}
             placeholder={`Select multiple ${property.label}`}
+            disabled={disabled}
           />
         );
       case 'checkbox':
@@ -57,6 +59,7 @@ const CustomPropertyInput = ({ property, control, name, bucket = "company-logos"
               id={name}
               checked={!!field.value}
               onCheckedChange={field.onChange}
+              disabled={disabled}
             />
             <Label htmlFor={name} className="font-normal">{property.label}</Label>
           </div>
@@ -64,7 +67,7 @@ const CustomPropertyInput = ({ property, control, name, bucket = "company-logos"
       case 'image':
         return <ImageUploader value={field.value} onChange={field.onChange} bucket={bucket} />;
       default:
-        return <Input type="text" {...field} value={field.value || ''} />;
+        return <Input type="text" {...field} value={field.value || ''} disabled={disabled} />;
     }
   };
 

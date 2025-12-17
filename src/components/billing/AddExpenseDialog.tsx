@@ -54,7 +54,7 @@ const expenseSchema = z.object({
   remarks: z.string().optional(),
   ai_review_notes: z.string().optional(),
   custom_properties: z.record(z.any()).optional(),
-  attachments_jsonb: z.array(z.any()).optional(), // Changed to z.any() to accept File objects mixed with metadata
+  attachments_jsonb: z.array(z.any()).optional(),
 });
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
@@ -63,43 +63,6 @@ interface ProjectOption extends Project {
     client_name?: string | null;
     client_company_name?: string | null;
 }
-
-// Helper function to extract date ranges from project names
-const extractDateFromProjectName = (name: string): { start: Date, end: Date } | null => {
-  const rangeMatch = name.match(/\b(\d{2})-(\d{2})(\d{2})(\d{2})\b/);
-  if (rangeMatch) {
-    const startDay = parseInt(rangeMatch[1]);
-    const endDay = parseInt(rangeMatch[2]);
-    const month = parseInt(rangeMatch[3]) - 1; 
-    const year = 2000 + parseInt(rangeMatch[4]);
-    if (month >= 0 && month <= 11) {
-      const start = new Date(year, month, startDay);
-      const end = new Date(year, month, endDay);
-      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) return { start, end };
-    }
-  }
-  const fullDateMatch = name.match(/\b(\d{2})(\d{2})(\d{2})\b/);
-  if (fullDateMatch) {
-    const day = parseInt(fullDateMatch[1]);
-    const month = parseInt(fullDateMatch[2]) - 1;
-    const year = 2000 + parseInt(fullDateMatch[3]);
-    if (month >= 0 && month <= 11) {
-      const date = new Date(year, month, day);
-      if (!isNaN(date.getTime())) return { start: date, end: date };
-    }
-  }
-  const monthYearMatch = name.match(/\b(\d{2})(\d{2})\b/);
-  if (monthYearMatch) {
-    const month = parseInt(monthYearMatch[1]) - 1;
-    const year = 2000 + parseInt(monthYearMatch[2]);
-    if (month >= 0 && month <= 11) {
-      const start = new Date(year, month, 1);
-      const end = new Date(year, month + 1, 0); 
-      if (!isNaN(start.getTime())) return { start, end };
-    }
-  }
-  return null;
-};
 
 const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const { user } = useAuth();
@@ -442,8 +405,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     let finalUrl = URL.createObjectURL(file);
     setCurrentProcessingFile(file.name);
     
-    // In production/real apps, upload this to storage first to get a publicly accessible URL for OpenAI
-    // For this demo, we'll try to upload it temporarily to a bucket
     try {
         const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
         const filePath = `temp-analysis/${Date.now()}-${sanitizedFileName}`;
@@ -451,8 +412,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         
         if (uploadError) {
              console.error("Upload for analysis failed", uploadError);
-             // Fallback to local processing if extracting from local is supported (it's mostly not with standard OpenAI Vision URL requirement)
-             // We return early here as we can't get a public URL easily without upload
              return;
         }
 
@@ -479,7 +438,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
        return;
     }
     
-    // Find the last actual File object
     const lastFile = [...attachments].reverse().find(f => f instanceof File) as File | undefined;
 
     if (!lastFile) {
@@ -495,7 +453,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       
       const newFiles = files.filter((f): f is File => f instanceof File);
       if (newFiles.length > 0) {
-          // Process the most recently added file
           handleFileProcessed(newFiles[newFiles.length - 1]);
       }
   };
@@ -503,11 +460,9 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const onSubmit = async (values: ExpenseFormValues) => {
     setIsSubmitting(true);
     try {
-      // 1. Handle File Uploads
       const currentFiles = values.attachments_jsonb || [];
       const newFilesToUpload = currentFiles.filter((f): f is File => f instanceof File);
       
-      // Calculate initial aggregated status
       let initialStatus = 'Pending';
       const terms = values.payment_terms || [];
       const termStatuses = terms.map(t => t.status || 'Pending');
@@ -517,14 +472,13 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       else if (termStatuses.length > 0 && termStatuses.every(s => s === 'Paid')) initialStatus = 'Paid';
       else if (termStatuses.length > 0 && termStatuses.every(s => s === 'Requested')) initialStatus = 'Requested';
 
-      // Insert expense first to get the ID for storage path
       const { data: newExpense, error: insertError } = await supabase.from('expenses').insert({
         project_id: values.project_id,
         created_by: values.created_by,
         purpose_payment: values.purpose_payment,
         beneficiary: values.beneficiary,
         tf_amount: values.tf_amount,
-        status_expense: initialStatus, // Use calculated status
+        status_expense: initialStatus,
         remarks: values.remarks,
         custom_properties: {
             ...values.custom_properties,
@@ -536,7 +490,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       if (insertError) throw insertError;
       const expenseId = newExpense.id;
 
-      // 2. Upload new files using the new expense ID
       const uploadedFilesMetadata = [];
       for (const file of newFilesToUpload) {
           const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
@@ -556,7 +509,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           });
       }
 
-      // 3. Prepare Payment Terms
       const selectedAccount = bankAccounts.find(acc => acc.id === values.bank_account_id);
       const isTempAccount = selectedAccount && (selectedAccount.id.startsWith('temp-') || selectedAccount.is_legacy);
 
@@ -570,7 +522,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         };
       }
 
-      // 4. Final Update with attachments and payment terms
       const { error: updateError } = await supabase.from('expenses').update({
         payment_terms: values.payment_terms?.map(term => ({
             ...term,
@@ -580,7 +531,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         bank_account_id: (selectedAccount && !isTempAccount) ? selectedAccount.id : null,
         account_bank: bankDetails,
         attachments_jsonb: uploadedFilesMetadata,
-        status_expense: initialStatus, // Ensure status is synced on update too
+        status_expense: initialStatus,
       }).eq('id', expenseId);
 
       if (updateError) throw updateError;
@@ -608,7 +559,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           <Form {...form}>
             <form id="expense-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto p-4">
               
-              {/* 1. Attachments */}
               <FormField
                 control={form.control}
                 name="attachments_jsonb"
@@ -625,7 +575,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                     <FormControl>
                       <FileUploader
                         value={field.value || []}
-                        onChange={(files) => handleFilesChange(files)}
+                        onValueChange={(files) => handleFilesChange(files)}
                         maxFiles={5}
                         maxSize={20971520} // 20MB
                         accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'], 'application/pdf': ['.pdf'] }}
@@ -637,7 +587,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 )}
               />
 
-              {/* 2. AI Review Instructions */}
               <FormField
                 control={form.control}
                 name="ai_review_notes"
@@ -669,7 +618,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 )}
               />
 
-              {/* 3. Project Selector */}
               <FormField
                 control={form.control}
                 name="project_id"
@@ -731,7 +679,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 )}
               />
 
-              {/* 4. PIC Selector */}
               <FormField
                 control={form.control}
                 name="created_by"
@@ -759,7 +706,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 )}
               />
 
-              {/* 5. Purpose Payment */}
               <FormField
                 control={form.control}
                 name="purpose_payment"
@@ -776,7 +722,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 )}
               />
 
-              {/* 6. Beneficiary */}
               <FormField control={form.control} name="beneficiary" render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Beneficiary</FormLabel>
@@ -816,7 +761,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 </FormItem>
               )} />
               
-              {/* 7. Bank Account */}
               <FormField control={form.control} name="bank_account_id" render={({ field }) => (
                 <FormItem>
                   <div className="flex justify-between items-center">
@@ -859,12 +803,10 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 </FormItem>
               )} />
               
-              {/* 8. Total Amount */}
               <FormField control={form.control} name="tf_amount" render={({ field }) => (
                 <FormItem><FormLabel>Total Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
               )} />
               
-              {/* 10. Payment Terms */}
               <div>
                 <FormLabel>Payment Terms</FormLabel>
                 <div className="space-y-3 mt-2">
@@ -913,18 +855,15 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 </div>
               </div>
               
-              {/* 11. Balance */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Balance (Rp)</Label>
                 <Input value={balance.toLocaleString('id-ID')} className={cn("col-span-3 bg-muted", balance !== 0 && "text-red-500 font-semibold")} readOnly />
               </div>
               
-              {/* 12. Remarks */}
               <FormField control={form.control} name="remarks" render={({ field }) => (
                 <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
               )} />
               
-              {/* 13. Custom Properties */}
               {isLoadingProperties ? (
                 <div className="flex justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
               ) : customProperties.length > 0 && (
