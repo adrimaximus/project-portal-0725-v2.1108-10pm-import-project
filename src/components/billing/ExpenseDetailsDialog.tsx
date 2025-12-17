@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
-import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2 } from "lucide-react";
+import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
@@ -166,6 +166,23 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
   // Use PIC if available, otherwise fallback to project owner
   const pic = expense.pic || expense.project_owner;
   const picName = pic?.name || 'PIC';
+
+  const handleCopyBankDetails = () => {
+    if (!bankDetails) return;
+    const textToCopy = `
+Beneficiary: ${expense.beneficiary}
+Bank Name: ${bankDetails.bank || '-'}
+Account Number: ${bankDetails.account || '-'}
+Account Name: ${bankDetails.name || '-'}
+    `.trim();
+
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        toast.success("Bank details copied to clipboard.");
+    }).catch(err => {
+        console.error("Failed to copy text: ", err);
+        toast.error("Failed to copy bank details.");
+    });
+  };
 
   const handleDownload = (url: string) => {
     window.open(url, '_blank');
@@ -364,9 +381,26 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
                 <>
                   <Separator />
                   <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-muted-foreground" />
-                      <h4 className="font-semibold text-sm">Bank Account Details</h4>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-muted-foreground" />
+                        <h4 className="font-semibold text-sm">Bank Account Details</h4>
+                      </div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-muted-foreground hover:text-primary"
+                              onClick={handleCopyBankDetails}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Copy Bank Details</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                     <div className="bg-muted/40 p-4 rounded-lg border text-sm space-y-1">
                       <div className="grid grid-cols-3 gap-2">
