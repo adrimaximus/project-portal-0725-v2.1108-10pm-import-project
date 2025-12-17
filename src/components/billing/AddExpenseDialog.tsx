@@ -559,25 +559,40 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   };
 
   const onSubmit = async (values: ExpenseFormValues) => {
+    if (!expense) return;
     setIsSubmitting(true);
     try {
-      // 1. Handle File Uploads
+      // 1. Handle File Uploads/Deletions
       const currentFiles = values.attachments_jsonb || [];
-      const filesToUpload = currentFiles.filter((f: any) => f.originalFile instanceof File);
-      const finalAttachments = currentFiles.filter((f: any) => !(f.originalFile instanceof File)); // Keep existing files
+      const newFilesToUpload = currentFiles.filter((f: any) => f.originalFile instanceof File);
+      const existingFilesKept = currentFiles.filter((f: any) => !(f.originalFile instanceof File));
+
+      // Calculate files to delete (Initial - Kept)
+      const filesToDelete = initialAttachments.filter(initFile => 
+          !existingFilesKept.some((kept: any) => kept.url === initFile.url)
+      );
+
+      // Delete removed files from storage
+      if (filesToDelete.length > 0) {
+          const paths = filesToDelete.map(f => f.storagePath).filter(Boolean);
+          if (paths.length > 0) {
+              await supabase.storage.from('expense').remove(paths);
+          }
+      }
 
       // Upload new files
-      for (const fileItem of filesToUpload) {
+      const uploadedFilesMetadata = [];
+      for (const fileItem of newFilesToUpload) {
           const file = (fileItem as any).originalFile as File;
           const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-          const filePath = `expense-attachments/${values.project_id}/${Date.now()}-${sanitizedFileName}`;
+          const filePath = `expense-attachments/${expense.id}/${Date.now()}-${sanitizedFileName}`;
           
           const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, file);
           if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
           
           const { data: urlData } = supabase.storage.from('expense').getPublicUrl(filePath);
           
-          finalAttachments.push({
+          uploadedFilesMetadata.push({
               name: file.name,
               url: urlData.publicUrl,
               size: file.size,
@@ -585,6 +600,8 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
               storagePath: filePath
           });
       }
+
+      const finalAttachments = [...existingFilesKept, ...uploadedFilesMetadata];
 
       // 2. Prepare Data
       const selectedAccount = bankAccounts.find(acc => acc.id === values.bank_account_id);
@@ -598,12 +615,14 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           bank: selectedAccount.bank_name,
           swift_code: selectedAccount.swift_code 
         };
+      } else if (values.bank_account_id && expense?.account_bank) {
+        bankDetails = expense.account_bank;
       }
 
-      // 3. Insert DB
-      const { error } = await supabase.from('expenses').insert({
+      // 3. Update DB
+      const { error } = await supabase.from('expenses').update({
         project_id: values.project_id,
-        created_by: values.created_by,
+        created_by: values.created_by, // Update PIC
         purpose_payment: values.purpose_payment,
         beneficiary: values.beneficiary,
         tf_amount: values.tf_amount,
@@ -621,14 +640,14 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
             ai_review_notes: values.ai_review_notes
         },
         attachments_jsonb: finalAttachments, 
-      });
+      }).eq('id', expense.id);
 
       if (error) throw error;
-      toast.success("Expense added successfully.");
+      toast.success("Expense updated successfully.");
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       onOpenChange(false);
     } catch (error: any) {
-      toast.error("Failed to add expense.", { description: error.message });
+      toast.error("Failed to update expense.", { description: error.message });
     } finally {
       setIsSubmitting(false);
     }
@@ -636,13 +655,15 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
   const isFormDisabled = isSubmitting || isExtracting;
 
+  if (!expense) return null;
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add New Expense</DialogTitle>
-            <DialogDescription>Record a new expense for a project.</DialogDescription>
+            <DialogTitle>Edit Expense</DialogTitle>
+            <DialogDescription>Update details for this expense record.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form id="expense-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto p-4">
@@ -742,7 +763,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                   <FormItem>
                     <div className="flex justify-between items-center">
                       <FormLabel>Purpose Payment</FormLabel>
-                      {/* Removed Auto-fill with AI button */}
                     </div>
                     <FormControl>
                       <Input placeholder="Enter purpose of payment" {...field} value={field.value || ''} disabled={isFormDisabled} />
@@ -992,7 +1012,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isFormDisabled}>Cancel</Button>
             <Button type="submit" form="expense-form" disabled={isFormDisabled}>
               {(isSubmitting || isExtracting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isExtracting ? 'Analyzing...' : 'Add Expense'}
+              {isExtracting ? 'Analyzing...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1037,4 +1057,4 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   );
 };
 
-export default AddExpenseDialog;
+export default EditExpenseDialog;
