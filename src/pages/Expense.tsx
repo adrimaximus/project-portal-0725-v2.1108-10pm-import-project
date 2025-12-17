@@ -356,10 +356,17 @@ const ExpensePage = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => setEditingExpense(expense)}>
+                                <DropdownMenuItem 
+                                  onClick={(e) => e.stopPropagation()}
+                                  onSelect={() => setEditingExpense(expense)}
+                                >
                                   <Edit className="mr-2 h-4 w-4" /> Edit
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => setExpenseToDelete(expense)} className="text-destructive">
+                                <DropdownMenuItem 
+                                  onClick={(e) => e.stopPropagation()}
+                                  onSelect={() => setExpenseToDelete(expense)} 
+                                  className="text-destructive"
+                                >
                                   <Trash2 className="mr-2 h-4 w-4" /> Delete
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
