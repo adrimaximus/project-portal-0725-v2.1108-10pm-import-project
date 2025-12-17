@@ -1,283 +1,437 @@
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useState, useMemo } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Expense } from "@/types";
 import { format } from "date-fns";
-import { 
-  CreditCard, 
-  Calendar, 
-  FileText, 
-  User, 
-  Building2, 
-  AlignLeft,
-  Download,
-  ExternalLink,
-  Receipt
-} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Expense } from "@/types/expense";
-
-interface ExpenseDetailsDialogProps {
-  expense: any; // Using any to be flexible with the prop structure
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
+import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 
 interface FileMetadata {
   name: string;
   url: string;
-  type: string;
   size: number;
+  type: string;
+  storagePath: string;
 }
 
-export default function ExpenseDetailsDialog({ 
-  expense: propExpense, 
-  open, 
-  onOpenChange 
-}: ExpenseDetailsDialogProps) {
-  
-  // Fetch full expense details to get latest attachments
+interface ExpenseDetailsDialogProps {
+  expense: Expense | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: ExpenseDetailsDialogProps) => {
+  const queryClient = useQueryClient();
+  const [replyingTermIndex, setReplyingTermIndex] = useState<number | null>(null);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch latest expense data AND PIC details to ensure UI updates
   const { data: expense } = useQuery({
-    queryKey: ['expense-details', propExpense?.id],
+    queryKey: ['expense_details', propExpense?.id],
     queryFn: async () => {
       if (!propExpense?.id) return null;
-      const { data, error } = await supabase
+      
+      // 1. Fetch raw expense data (including attachments_jsonb)
+      const { data: expenseData, error } = await supabase
         .from('expenses')
-        .select(`
-          *,
-          project:projects(name, created_by),
-          creator:created_by(id, first_name, last_name, email, avatar_url)
-        `)
+        .select('*')
         .eq('id', propExpense.id)
         .single();
       
       if (error) throw error;
-      return data;
+
+      // 2. Fetch PIC details if created_by exists
+      let pic = null;
+      if (expenseData.created_by) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email, avatar_url')
+          .eq('id', expenseData.created_by)
+          .maybeSingle();
+          
+        if (profile) {
+          const firstName = profile.first_name || '';
+          const lastName = profile.last_name || '';
+          const fullName = (firstName + ' ' + lastName).trim() || profile.email;
+          const initials = (firstName && lastName) 
+            ? (firstName[0] + lastName[0]).toUpperCase() 
+            : (firstName ? firstName[0].toUpperCase() : (profile.email?.substring(0, 2).toUpperCase() || 'NN'));
+            
+          pic = {
+            id: profile.id,
+            name: fullName,
+            avatar_url: profile.avatar_url,
+            initials: initials,
+            email: profile.email
+          };
+        }
+      }
+
+      // 3. Fetch Project Name if needed (since raw expense table only has project_id)
+      let projectName = propExpense.project_name;
+      if (expenseData.project_id && !projectName) {
+         const { data: proj } = await supabase.from('projects').select('name').eq('id', expenseData.project_id).maybeSingle();
+         if (proj) projectName = proj.name;
+      }
+
+      return {
+        ...expenseData,
+        pic: pic, // Use the fetched PIC details
+        project_name: projectName,
+        // Ensure attachments_jsonb is explicitly included in the final object
+        attachments_jsonb: expenseData.attachments_jsonb,
+        // Keep project_owner fallback if needed
+        project_owner: propExpense.project_owner 
+      } as unknown as Expense;
     },
+    enabled: !!propExpense?.id && open,
     initialData: propExpense,
-    enabled: open && !!propExpense?.id
   });
+
+  // Calculate status based on payment terms
+  const derivedStatus = useMemo(() => {
+    if (!expense?.payment_terms || expense.payment_terms.length === 0) return expense?.status_expense || 'Pending';
+    
+    const terms = (expense.payment_terms as any[]);
+    const statuses = terms.map(t => t.status || 'Pending');
+    
+    // Logic priority: Rejected > On review > Paid (All) > Requested (All) > Pending
+    if (statuses.some(s => s === 'Rejected')) return 'Rejected';
+    if (statuses.some(s => s === 'On review')) return 'On review';
+    if (statuses.every(s => s === 'Paid')) return 'Paid';
+    if (statuses.every(s => s === 'Requested')) return 'Requested';
+    
+    return 'Pending';
+  }, [expense]);
 
   if (!expense) return null;
 
-  const attachments: FileMetadata[] = (expense.attachments_jsonb as any) || [];
-  const paymentTerms = (expense.payment_terms as any) || [];
-  
-  // Use explicit bank account if available, otherwise use JSONB or legacy structure
-  const bankDetails = expense.account_bank;
+  const formatCurrency = (amount: number) => new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(amount);
 
-  const getStatusColor = (status: string) => {
+  const getStatusBadgeStyle = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'paid': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-      case 'approved': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-      case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-      default: return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'paid': return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-200 dark:border-green-700/50';
+      case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700/50';
+      case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200 dark:border-red-700/50';
+      case 'on review': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border-blue-200 dark:border-blue-700/50';
+      case 'requested': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 border-purple-200 dark:border-purple-700/50';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600';
+    }
+  };
+
+  const paymentTerms = (expense as any).payment_terms || [];
+  const bankDetails = expense.account_bank;
+  const attachments: FileMetadata[] = (expense as any).attachments_jsonb || [];
+
+  // Use PIC if available, otherwise fallback to project owner
+  const pic = expense.pic || expense.project_owner;
+  const picName = pic?.name || 'PIC';
+
+  const handleDownload = (url: string) => {
+    window.open(url, '_blank');
+  };
+
+  const handleReplyClick = (index: number) => {
+    setReplyingTermIndex(index);
+    setFeedbackText("");
+  };
+
+  const submitFeedback = async (index: number) => {
+    if (!expense) return;
+    setIsSubmitting(true);
+    try {
+        const updatedTerms = [...(expense.payment_terms as any[])];
+        updatedTerms[index] = {
+            ...updatedTerms[index],
+            pic_feedback: feedbackText
+        };
+
+        const { error } = await supabase
+            .from('expenses')
+            .update({ payment_terms: updatedTerms })
+            .eq('id', expense.id);
+
+        if (error) throw error;
+
+        toast.success("Feedback sent successfully");
+        setReplyingTermIndex(null);
+        setFeedbackText("");
+        
+        // Refresh data explicitly for this dialog and the main list
+        await queryClient.invalidateQueries({ queryKey: ['expense_details', expense.id] });
+        queryClient.invalidateQueries({ queryKey: ['expenses'] });
+        
+    } catch (err: any) {
+        toast.error("Failed to send feedback", { description: err.message });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="p-6 pb-4 border-b">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
           <div className="flex justify-between items-start gap-4 pr-8">
             <div>
-              <DialogTitle className="text-xl font-semibold flex items-center gap-2">
-                {expense.beneficiary}
-                <Badge variant="outline" className={getStatusColor(expense.status_expense)}>
-                  {expense.status_expense || 'Pending'}
-                </Badge>
-              </DialogTitle>
-              <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                <Receipt className="h-3.5 w-3.5" />
-                {expense.project?.name || expense.project_name || 'No Project'}
-              </p>
+              <DialogTitle className="text-xl">{expense.beneficiary}</DialogTitle>
+              <DialogDescription className="mt-1">
+                {expense.project_name}
+              </DialogDescription>
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold">
-                Rp {Number(expense.tf_amount).toLocaleString('id-ID')}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Due: {expense.due_date ? format(new Date(expense.due_date), 'dd MMM yyyy') : '-'}
-              </div>
-            </div>
+            <Badge className={cn("text-sm px-3 py-1", getStatusBadgeStyle(derivedStatus))}>
+              {derivedStatus}
+            </Badge>
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 p-6">
-          <div className="space-y-6">
-            {/* Payment Details */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-                <CreditCard className="h-4 w-4" /> Payment Details
-              </h3>
-              <div className="bg-muted/40 rounded-lg p-4 space-y-2 text-sm">
-                <div className="grid grid-cols-3 gap-2">
-                  <span className="text-muted-foreground">Bank Name:</span>
-                  <span className="col-span-2 font-medium">{bankDetails?.bank || '-'}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <span className="text-muted-foreground">Account Number:</span>
-                  <span className="col-span-2 font-medium">{bankDetails?.account || '-'}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <span className="text-muted-foreground">Account Name:</span>
-                  <span className="col-span-2 font-medium">{bankDetails?.name || '-'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Purpose & Remarks */}
+          <div className="grid gap-6 py-4">
+            {/* Main Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {(expense.purpose_payment || expense.remarks) && (
-                <div className="space-y-3 col-span-2">
-                  <h3 className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-                    <AlignLeft className="h-4 w-4" /> Description
-                  </h3>
-                  <div className="bg-card border rounded-lg p-4 text-sm space-y-4">
-                    {expense.purpose_payment && (
-                      <div>
-                        <span className="text-xs text-muted-foreground block mb-1">Purpose</span>
-                        <p>{expense.purpose_payment}</p>
-                      </div>
-                    )}
-                    {expense.remarks && (
-                      <>
-                        {expense.purpose_payment && <Separator className="my-2" />}
-                        <div>
-                          <span className="text-xs text-muted-foreground block mb-1">Remarks</span>
-                          <p className="whitespace-pre-wrap">{expense.remarks}</p>
-                        </div>
-                      </>
-                    )}
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="bg-primary/10 p-2 rounded-full">
+                    <CreditCard className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Amount</p>
+                    <p className="text-lg font-bold">{formatCurrency(expense.tf_amount)}</p>
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Payment Terms */}
-            {paymentTerms.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-                  <Calendar className="h-4 w-4" /> Payment Terms
-                </h3>
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="text-left p-3 font-medium text-muted-foreground">Description</th>
-                        <th className="text-right p-3 font-medium text-muted-foreground">Percentage</th>
-                        <th className="text-right p-3 font-medium text-muted-foreground">Amount</th>
-                        <th className="text-right p-3 font-medium text-muted-foreground">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {paymentTerms.map((term: any, index: number) => (
-                        <tr key={index}>
-                          <td className="p-3">{term.name}</td>
-                          <td className="p-3 text-right">{term.percentage}%</td>
-                          <td className="p-3 text-right">
-                            Rp {((Number(expense.tf_amount) * term.percentage) / 100).toLocaleString('id-ID')}
-                          </td>
-                          <td className="p-3 text-right">
-                            <Badge variant="secondary" className="text-xs">
-                              {term.status}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="flex items-start gap-3">
+                  <div className="bg-primary/10 p-2 rounded-full">
+                    <FileText className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Purpose</p>
+                    <p className="text-sm font-medium">{(expense as any).purpose_payment || '-'}</p>
+                  </div>
                 </div>
               </div>
-            )}
 
-            {/* Metadata */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/20">
-                <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                  <User className="h-5 w-5 text-muted-foreground" />
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="bg-primary/10 p-2 rounded-full">
+                    <CalendarIcon className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Issued</p>
+                    <p className="text-sm font-medium">
+                      {expense.created_at ? format(new Date(expense.created_at), "PPP") : '-'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Created by</p>
-                  <p className="text-sm font-medium">
-                    {expense.creator?.first_name 
-                      ? `${expense.creator.first_name} ${expense.creator.last_name || ''}`
-                      : (expense.pic?.name || 'Unknown')}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/20">
-                <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                  <Building2 className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Project Owner</p>
-                  <p className="text-sm font-medium">
-                    {expense.project_owner?.name || 'Unknown'}
-                  </p>
+
+                <div className="flex items-start gap-3">
+                  <div className="bg-primary/10 p-2 rounded-full">
+                    <User className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">PIC</p>
+                    {pic ? (
+                        <div className="flex items-center gap-2 mt-1">
+                        <Avatar className="h-6 w-6">
+                            <AvatarImage src={getAvatarUrl(pic.avatar_url, pic.id)} />
+                            <AvatarFallback className="text-[10px]" style={generatePastelColor(pic.id)}>
+                            {pic.initials}
+                            </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium">{pic.name}</span>
+                        </div>
+                    ) : (
+                        <p className="text-sm font-medium">-</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Attachments Section */}
             {attachments.length > 0 && (
-              <div className="space-y-3 pt-4 border-t">
-                <h3 className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-                  <FileText className="h-4 w-4" /> Attachments
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {attachments.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg border bg-card/50 hover:bg-card transition-colors group">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="h-10 w-10 shrink-0 rounded-md bg-muted flex items-center justify-center overflow-hidden">
-                          {file.type?.startsWith('image/') ? (
-                            <img src={file.url} alt={file.name} className="h-full w-full object-cover" />
-                          ) : (
-                            <FileText className="h-5 w-5 text-muted-foreground" />
+              <>
+                <Separator />
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    <h4 className="font-semibold text-sm">Attachments ({attachments.length})</h4>
+                  </div>
+                  <div className="space-y-2">
+                    {attachments.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/40">
+                        <div className="flex items-center space-x-3 truncate">
+                          <FileText className="h-4 w-4 text-primary shrink-0" />
+                          <div className="truncate">
+                            <p className="text-sm font-medium truncate">{file.name}</p>
+                            <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-1 shrink-0">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(file.url)}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>View/Download</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            <Separator />
+
+            {/* Bank Details */}
+            {bankDetails && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-muted-foreground" />
+                  <h4 className="font-semibold text-sm">Bank Account Details</h4>
+                </div>
+                <div className="bg-muted/40 p-4 rounded-lg border text-sm space-y-1">
+                  <div className="grid grid-cols-3 gap-2">
+                    <span className="text-muted-foreground">Bank Name:</span>
+                    <span className="col-span-2 font-medium">{bankDetails.bank || '-'}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <span className="text-muted-foreground">Account Number:</span>
+                    <span className="col-span-2 font-medium font-mono">{bankDetails.account || '-'}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <span className="text-muted-foreground">Account Name:</span>
+                    <span className="col-span-2 font-medium">{bankDetails.name || '-'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Payment Terms */}
+            {paymentTerms.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-muted-foreground" />
+                  <h4 className="font-semibold text-sm">Payment Plan</h4>
+                </div>
+                <div className="border rounded-lg overflow-hidden divide-y">
+                  <div className="grid grid-cols-12 gap-2 bg-muted/50 p-2 text-xs font-medium text-muted-foreground">
+                    <div className="col-span-1 text-center">#</div>
+                    <div className="col-span-4">Amount</div>
+                    <div className="col-span-3">Due Date</div>
+                    <div className="col-span-4 text-right">Status</div>
+                  </div>
+                  {paymentTerms.map((term: any, index: number) => (
+                    <div key={index} className="flex flex-col bg-card">
+                      <div className="grid grid-cols-12 gap-2 p-2 text-sm items-center">
+                        <div className="col-span-1 text-center text-muted-foreground">{index + 1}</div>
+                        <div className="col-span-4 font-medium">{formatCurrency(term.amount || 0)}</div>
+                        <div className="col-span-3 text-xs text-muted-foreground">
+                          {term.release_date ? format(new Date(term.release_date), "dd MMM yyyy") : (term.request_date ? format(new Date(term.request_date), "dd MMM yyyy") : '-')}
+                        </div>
+                        <div className="col-span-4 text-right">
+                          <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5", getStatusBadgeStyle(term.status || 'Pending'))}>
+                            {term.status || 'Pending'}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      {/* Conditional Display for Pending/Rejected Reasons */}
+                      {['Pending', 'Rejected'].includes(term.status) && (term.status_remarks || term.pic_feedback || replyingTermIndex === index) && (
+                        <div className="px-3 pb-3 pt-0 text-xs space-y-2">
+                          {term.status_remarks && (
+                            <div className="bg-yellow-50/50 dark:bg-yellow-900/10 p-2 rounded border border-yellow-100 dark:border-yellow-900/30 flex flex-col gap-2">
+                              <div className="flex gap-2">
+                                <AlertCircle className="h-3.5 w-3.5 text-yellow-600 mt-0.5 shrink-0" />
+                                <div className="space-y-0.5 flex-1">
+                                  <span className="font-semibold text-yellow-700 dark:text-yellow-500 block">Finance Note:</span>
+                                  <p className="text-yellow-800 dark:text-yellow-200/80">{term.status_remarks}</p>
+                                </div>
+                                {!term.pic_feedback && replyingTermIndex !== index && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-100 dark:hover:bg-yellow-900/50"
+                                    onClick={() => handleReplyClick(index)}
+                                    title="Reply to note"
+                                  >
+                                    <Reply className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+                              </div>
+                              
+                              {/* Reply Form */}
+                              {replyingTermIndex === index && (
+                                <div className="pl-6 space-y-2 mt-1">
+                                    <Textarea 
+                                        value={feedbackText} 
+                                        onChange={(e) => setFeedbackText(e.target.value)} 
+                                        placeholder="Write your feedback..."
+                                        className="text-xs min-h-[60px] bg-background/80"
+                                    />
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTermIndex(null)}>Cancel</Button>
+                                        <Button size="sm" className="h-6 text-xs px-2" onClick={() => submitFeedback(index)} disabled={isSubmitting || !feedbackText.trim()}>
+                                            {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send Feedback'}
+                                        </Button>
+                                    </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {term.pic_feedback && (
+                            <div className="bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded border border-blue-100 dark:border-blue-900/30 flex gap-2 ml-4">
+                              <MessageCircle className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
+                              <div className="space-y-0.5">
+                                <span className="font-semibold text-blue-700 dark:text-blue-500 block">{picName} Feedback:</span>
+                                <p className="text-blue-800 dark:text-blue-200/80">{term.pic_feedback}</p>
+                              </div>
+                            </div>
                           )}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate" title={file.name}>
-                            {file.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {(file.size / 1024).toFixed(1)} KB
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <a 
-                          href={file.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="p-2 hover:bg-muted rounded-full"
-                          title="View"
-                        >
-                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                        </a>
-                        <a 
-                          href={file.url} 
-                          download={file.name}
-                          className="p-2 hover:bg-muted rounded-full"
-                          title="Download"
-                        >
-                          <Download className="h-4 w-4 text-muted-foreground" />
-                        </a>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
             )}
+
+            {/* Remarks */}
+            {expense.remarks && (
+              <div className="space-y-2">
+                <h4 className="font-semibold text-sm text-muted-foreground">Remarks</h4>
+                <p className="text-sm bg-muted/30 p-3 rounded-md border whitespace-pre-wrap">{expense.remarks}</p>
+              </div>
+            )}
           </div>
-        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+export default ExpenseDetailsDialog;
