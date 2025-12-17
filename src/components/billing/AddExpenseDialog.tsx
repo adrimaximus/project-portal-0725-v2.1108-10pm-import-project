@@ -404,7 +404,8 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         let fileToProcess = file;
 
         // Convert PDF to Image if necessary for AI analysis
-        if (file.type === 'application/pdf') {
+        // Using relaxed check for 'pdf' string in type
+        if (file.type.includes('pdf')) {
             toast.info("Converting PDF to image for analysis...");
             const imageFile = await convertPdfToImage(file);
             if (imageFile) {
@@ -433,7 +434,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
         // Pass instructions to the extractor
         const instructions = form.getValues('ai_review_notes');
-        
+
         const extractedData = await extractData({ 
             url: finalUrl, 
             type: fileToProcess.type,
@@ -445,7 +446,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         }
     } catch (e) {
         console.error("Processing failed", e);
-        toast.error("An error occurred during file processing.");
     } finally {
         setCurrentProcessingFile(null);
     }
@@ -472,10 +472,8 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
   const handleFilesChange = (files: (File | FileMetadata)[]) => {
       setValue('attachments_jsonb', files, { shouldDirty: true });
-      
       const newFiles = files.filter((f): f is File => f instanceof File);
       if (newFiles.length > 0) {
-          // Process the most recently added file
           handleFileProcessed(newFiles[newFiles.length - 1]);
       }
   };

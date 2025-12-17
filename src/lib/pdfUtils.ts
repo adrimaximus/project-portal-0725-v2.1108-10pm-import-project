@@ -1,16 +1,18 @@
-import { getDocument, GlobalWorkerOptions, version } from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist';
 
 // Configure the worker source using unpkg to match the installed version
 // We use a CDN because creating a local worker bundle in this environment can be complex
-GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.js`;
+// Using a fixed version fallback in case the imported version is undefined in some bundlers
+const pdfjsVersion = pdfjsLib.version || '4.8.69'; 
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.mjs`;
 
 export const convertPdfToImage = async (file: File): Promise<File | null> => {
     try {
-        console.log(`Starting PDF conversion for: ${file.name}`);
+        console.log(`Starting PDF conversion for: ${file.name} (type: ${file.type})`);
         const arrayBuffer = await file.arrayBuffer();
         
         // Load the PDF document
-        const loadingTask = getDocument({ data: arrayBuffer });
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
         const pdf = await loadingTask.promise;
         console.log(`PDF loaded, pages: ${pdf.numPages}`);
         

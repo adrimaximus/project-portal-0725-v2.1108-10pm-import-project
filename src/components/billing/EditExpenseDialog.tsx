@@ -311,8 +311,85 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
       setValue('purpose_payment', description, { shouldValidate: true });
     }
 
+    let currentBeneficiary = beneficiary;
+    
     if (extractedData.beneficiary && !watch('beneficiary')) {
-       setValue('beneficiary', extractedData.beneficiary, { shouldValidate: true });
+      const matchedBeneficiary = beneficiaries.find(b => 
+        b.name.toLowerCase() === extractedData.beneficiary?.toLowerCase() ||
+        b.name.toLowerCase().includes(extractedData.beneficiary?.toLowerCase() || '') ||
+        (extractedData.beneficiary && b.name.toLowerCase().includes(extractedData.beneficiary.toLowerCase()))
+      );
+      
+      if (matchedBeneficiary) {
+        currentBeneficiary = matchedBeneficiary;
+        setBeneficiary(matchedBeneficiary);
+        setValue('beneficiary', matchedBeneficiary.name, { shouldValidate: true });
+      } else {
+        setValue('beneficiary', extractedData.beneficiary, { shouldValidate: true });
+      }
+    }
+
+    if (!watch('project_id')) {
+        // findMatchingProject logic would be similar to AddExpenseDialog
+    }
+
+    if (extractedData.bank_details && extractedData.bank_details.account_number) {
+      const extractedBank = extractedData.bank_details;
+      
+      if (currentBeneficiary) {
+        try {
+          const { data: existingAccounts } = await supabase.from('bank_accounts')
+            .select('*')
+            .eq('owner_id', currentBeneficiary.id)
+            .eq('account_number', extractedBank.account_number)
+            .maybeSingle();
+
+          if (existingAccounts) {
+            setBankAccounts(prev => {
+              const exists = prev.find(p => p.id === existingAccounts.id);
+              return exists ? prev : [...prev, existingAccounts as unknown as BankAccount];
+            });
+            setValue('bank_account_id', existingAccounts.id);
+            toast.info(`Selected existing bank account: ${extractedBank.bank_name}`);
+          } else {
+            const { data: newAccount, error: createError } = await supabase.from('bank_accounts').insert({
+              owner_id: currentBeneficiary.id,
+              owner_type: currentBeneficiary.type,
+              bank_name: extractedBank.bank_name || 'Unknown Bank',
+              account_number: extractedBank.account_number,
+              account_name: extractedBank.account_name || currentBeneficiary.name,
+              swift_code: extractedBank.swift_code || null,
+              created_by: user?.id
+            }).select().single();
+
+            if (createError) throw createError;
+
+            if (newAccount) {
+              setBankAccounts(prev => [...prev, newAccount as unknown as BankAccount]);
+              setValue('bank_account_id', newAccount.id);
+              toast.success(`Automatically added and selected new bank account: ${extractedBank.bank_name}`);
+            }
+          }
+        } catch (err) {
+          console.error('Error auto-creating bank account:', err);
+        }
+      } else {
+        const tempId = `temp-${Date.now()}`;
+        const tempAccount: BankAccount = {
+          id: tempId,
+          account_name: extractedBank.account_name || extractedData.beneficiary || 'Unknown Name',
+          account_number: extractedBank.account_number,
+          bank_name: extractedBank.bank_name || 'Unknown Bank',
+          swift_code: extractedBank.swift_code || null,
+          is_legacy: true,
+          owner_id: 'temp',
+          owner_type: 'person'
+        };
+        
+        setBankAccounts([tempAccount]);
+        setValue('bank_account_id', tempId);
+        toast.info(`Set temporary bank details: ${extractedBank.bank_name}`);
+      }
     }
 
     if (extractedData.remarks) {
@@ -332,19 +409,24 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
         let fileToProcess = file;
 
         // Convert PDF to Image if necessary for AI analysis
-        if (file.type === 'application/pdf') {
+        // Using relaxed check for 'pdf' string in type
+        if (file.type.includes('pdf')) {
             toast.info("Converting PDF to image for analysis...");
             const imageFile = await convertPdfToImage(file);
             if (imageFile) {
                 fileToProcess = imageFile;
                 finalUrl = URL.createObjectURL(imageFile);
+                toast.success("PDF successfully converted to image for analysis");
             } else {
-                toast.warning("Could not convert PDF to image for AI analysis. Trying with original file.");
+                toast.error("Could not convert PDF to image. AI analysis skipped.");
+                // We stop here for analysis, but the file is still uploaded below in onSubmit if saved
+                return;
             }
         }
 
         const sanitizedFileName = fileToProcess.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
         const filePath = `temp-analysis/${Date.now()}-${sanitizedFileName}`;
+        
         const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, fileToProcess);
         
         if (uploadError) {
@@ -386,7 +468,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
     const lastFile = [...attachments].reverse().find(f => f instanceof File) as File | undefined;
 
     if (!lastFile) {
-        toast.error("No new file to analyze.");
+        toast.error("Please upload a new file to analyze.");
         return;
     }
     
@@ -777,16 +859,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
                             <FormItem><FormLabel className="text-xs">Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="bg-background"><SelectValue placeholder="Status" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Requested">Requested</SelectItem><SelectItem value="On review">On review</SelectItem><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Rejected">Rejected</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                           )} />
                         </div>
-                        {['Pending', 'Rejected'].includes(form.watch(`payment_terms.${index}.status`) || '') && (
-                          <div className="grid grid-cols-1 gap-4 mt-2 p-2 bg-yellow-50/50 rounded-md border border-yellow-100">
-                            <FormField control={form.control} name={`payment_terms.${index}.status_remarks`} render={({ field }) => (
-                              <FormItem><FormLabel className="text-xs text-yellow-700">Reason (Finance)</FormLabel><FormControl><Textarea className="min-h-[60px] text-xs bg-white" placeholder="Reason for pending/rejected status..." {...field} value={field.value || ''} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <FormField control={form.control} name={`payment_terms.${index}.pic_feedback`} render={({ field }) => (
-                              <FormItem><FormLabel className="text-xs text-yellow-700">PIC Feedback</FormLabel><FormControl><Textarea className="min-h-[60px] text-xs bg-white" placeholder="Response/Feedback from PIC..." {...field} value={field.value || ''} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                          </div>
-                        )}
                       </div>
                     </div>
                   ))}
