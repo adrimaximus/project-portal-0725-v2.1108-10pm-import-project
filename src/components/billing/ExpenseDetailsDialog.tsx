@@ -410,10 +410,10 @@ Account Name: ${bankDetails.name || '-'}
             <div className="space-y-2 w-full">
               {attachments.map((file, index) => (
                 <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/40 w-full">
-                  <div className="flex items-center space-x-3 truncate min-w-0 flex-1">
+                  <div className="flex items-center space-x-3 min-w-0 flex-1">
                     <FileText className="h-4 w-4 text-primary shrink-0" />
-                    <div className="truncate min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{file.name}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium break-all">{file.name}</p>
                       <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
                     </div>
                   </div>
@@ -845,7 +845,7 @@ Account Name: ${bankDetails.name || '-'}
               <div className="flex justify-between items-start gap-4">
                 <div className="flex-1 min-w-0">
                   <DrawerTitle className="text-xl truncate pr-2">{expense.beneficiary}</DrawerTitle>
-                  <DrawerDescription className="mt-1 truncate">
+                  <DrawerDescription className="mt-1 break-words">
                     {expense.project_name}
                   </DrawerDescription>
                 </div>
