@@ -47,13 +47,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import ExpenseDetailsDialog from "@/components/billing/ExpenseDetailsDialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const ExpensePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -100,20 +93,6 @@ const ExpensePage = () => {
     },
     onError: (error: any) => {
       toast.error("Failed to delete expense.", { description: error.message });
-    }
-  });
-
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase.from('expenses').update({ status_expense: status }).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Status updated successfully");
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
-    },
-    onError: (error: any) => {
-      toast.error("Failed to update status", { description: error.message });
     }
   });
 
@@ -169,6 +148,21 @@ const ExpensePage = () => {
       case 'approved': return 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300 border-teal-200 dark:border-teal-700/50';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600';
     }
+  };
+
+  const getDerivedStatus = (expense: Expense) => {
+    const paymentTerms = (expense as any).payment_terms || [];
+    if (paymentTerms.length === 0) return expense.status_expense || 'Pending';
+    
+    const statuses = paymentTerms.map((t: any) => t.status || 'Pending');
+    
+    // Logic priority: Rejected > On review > Paid (All) > Requested (All) > Pending
+    if (statuses.some((s: string) => s === 'Rejected')) return 'Rejected';
+    if (statuses.some((s: string) => s === 'On review')) return 'On review';
+    if (statuses.every((s: string) => s === 'Paid')) return 'Paid';
+    if (statuses.every((s: string) => s === 'Requested')) return 'Requested';
+    
+    return 'Pending';
   };
 
   if (isLoading) {
@@ -262,6 +256,7 @@ const ExpensePage = () => {
                       const hasAttachments = (expense as any).attachments_jsonb?.length > 0;
                       // Use PIC if available, otherwise project owner
                       const pic = expense.pic || expense.project_owner;
+                      const derivedStatus = getDerivedStatus(expense);
 
                       return (
                         <TableRow 
@@ -348,25 +343,9 @@ const ExpensePage = () => {
                             </p>
                           </TableCell>
                           <TableCell onClick={(e) => e.stopPropagation()}>
-                            {canEditStatus ? (
-                              <Select 
-                                value={expense.status_expense} 
-                                onValueChange={(val) => updateStatusMutation.mutate({ id: expense.id, status: val })}
-                              >
-                                <SelectTrigger className={cn("h-7 px-2 text-xs font-medium border-0 rounded-full w-auto min-w-[90px] gap-1", getStatusBadgeStyle(expense.status_expense))}>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {['Proposed', 'On review', 'Approved', 'Paid', 'Rejected'].map((status) => (
-                                     <SelectItem key={status} value={status}>{status}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <Badge variant="outline" className={cn("capitalize", getStatusBadgeStyle(expense.status_expense))}>
-                                {expense.status_expense}
-                              </Badge>
-                            )}
+                            <Badge variant="outline" className={cn("capitalize", getStatusBadgeStyle(derivedStatus))}>
+                              {derivedStatus}
+                            </Badge>
                           </TableCell>
                           <TableCell>{expense.remarks}</TableCell>
                           <TableCell className="text-right">
