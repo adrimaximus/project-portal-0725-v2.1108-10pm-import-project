@@ -336,37 +336,37 @@ Account Name: ${bankDetails.name || '-'}
 
   // Shared content for both Dialog and Drawer
   const content = (
-    <div className="grid gap-6 py-4">
+    <div className="grid gap-6 py-4 w-full">
       {/* Main Info */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
         <div className="space-y-4">
           <div className="flex items-start gap-3">
-            <div className="bg-primary/10 p-2 rounded-full">
+            <div className="bg-primary/10 p-2 rounded-full shrink-0">
               <CreditCard className="w-4 h-4 text-primary" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-medium text-muted-foreground">Amount</p>
               <p className="text-lg font-bold">{formatCurrency(expense.tf_amount)}</p>
             </div>
           </div>
 
           <div className="flex items-start gap-3">
-            <div className="bg-primary/10 p-2 rounded-full">
+            <div className="bg-primary/10 p-2 rounded-full shrink-0">
               <FileText className="w-4 h-4 text-primary" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-medium text-muted-foreground">Purpose</p>
-              <p className="text-sm font-medium">{(expense as any).purpose_payment || '-'}</p>
+              <p className="text-sm font-medium break-words">{(expense as any).purpose_payment || '-'}</p>
             </div>
           </div>
         </div>
 
         <div className="space-y-4">
           <div className="flex items-start gap-3">
-            <div className="bg-primary/10 p-2 rounded-full">
+            <div className="bg-primary/10 p-2 rounded-full shrink-0">
               <CalendarIcon className="w-4 h-4 text-primary" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-medium text-muted-foreground">Issued</p>
               <p className="text-sm font-medium">
                 {expense.created_at ? format(new Date(expense.created_at), "PPP") : '-'}
@@ -375,20 +375,20 @@ Account Name: ${bankDetails.name || '-'}
           </div>
 
           <div className="flex items-start gap-3">
-            <div className="bg-primary/10 p-2 rounded-full">
+            <div className="bg-primary/10 p-2 rounded-full shrink-0">
               <User className="w-4 h-4 text-primary" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-medium text-muted-foreground">PIC</p>
               {pic ? (
                   <div className="flex items-center gap-2 mt-1">
-                  <Avatar className="h-6 w-6">
+                  <Avatar className="h-6 w-6 shrink-0">
                       <AvatarImage src={getAvatarUrl(pic.avatar_url, pic.id)} />
                       <AvatarFallback className="text-[10px]" style={generatePastelColor(pic.id)}>
                       {pic.initials}
                       </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm font-medium">{pic.name}</span>
+                  <span className="text-sm font-medium truncate">{pic.name}</span>
                   </div>
               ) : (
                   <p className="text-sm font-medium">-</p>
@@ -402,22 +402,22 @@ Account Name: ${bankDetails.name || '-'}
       {attachments.length > 0 && (
         <>
           <Separator />
-          <div className="space-y-3">
+          <div className="space-y-3 w-full">
             <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-muted-foreground" />
+              <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
               <h4 className="font-semibold text-sm">Attachments ({attachments.length})</h4>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 w-full">
               {attachments.map((file, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/40">
-                  <div className="flex items-center space-x-3 truncate">
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/40 w-full">
+                  <div className="flex items-center space-x-3 truncate min-w-0 flex-1">
                     <FileText className="h-4 w-4 text-primary shrink-0" />
-                    <div className="truncate">
+                    <div className="truncate min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{file.name}</p>
                       <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-1 shrink-0">
+                  <div className="flex items-center space-x-1 shrink-0 ml-2">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -450,10 +450,10 @@ Account Name: ${bankDetails.name || '-'}
       {bankDetails && (
         <>
           <Separator />
-          <div className="space-y-3">
+          <div className="space-y-3 w-full">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-muted-foreground" />
+                <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
                 <h4 className="font-semibold text-sm">Bank Account Details</h4>
               </div>
               <TooltipProvider>
@@ -472,18 +472,18 @@ Account Name: ${bankDetails.name || '-'}
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <div className="bg-muted/40 p-4 rounded-lg border text-sm space-y-1">
+            <div className="bg-muted/40 p-4 rounded-lg border text-sm space-y-1 w-full">
               <div className="grid grid-cols-3 gap-2">
                 <span className="text-muted-foreground">Bank Name:</span>
-                <span className="col-span-2 font-medium">{bankDetails.bank || '-'}</span>
+                <span className="col-span-2 font-medium break-words">{bankDetails.bank || '-'}</span>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <span className="text-muted-foreground">Account Number:</span>
-                <span className="col-span-2 font-medium font-mono">{bankDetails.account || '-'}</span>
+                <span className="col-span-2 font-medium font-mono break-all">{bankDetails.account || '-'}</span>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <span className="text-muted-foreground">Account Name:</span>
-                <span className="col-span-2 font-medium">{bankDetails.name || '-'}</span>
+                <span className="col-span-2 font-medium break-words">{bankDetails.name || '-'}</span>
               </div>
             </div>
           </div>
@@ -494,26 +494,26 @@ Account Name: ${bankDetails.name || '-'}
       {paymentTerms.length > 0 && (
         <>
           <Separator />
-          <div className="space-y-3">
+          <div className="space-y-3 w-full">
             <div className="flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-muted-foreground" />
+              <Wallet className="w-4 h-4 text-muted-foreground shrink-0" />
               <h4 className="font-semibold text-sm">Payment Plan</h4>
             </div>
-            <div className="border rounded-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <div className="min-w-[500px] divide-y">
-                  <div className="grid grid-cols-12 gap-2 bg-muted/50 p-2 text-xs font-medium text-muted-foreground">
+            <div className="border rounded-lg overflow-hidden w-full">
+              <div className="overflow-x-auto w-full">
+                <div className="w-full divide-y">
+                  <div className="grid grid-cols-12 gap-2 bg-muted/50 p-2 text-xs font-medium text-muted-foreground min-w-full">
                     <div className="col-span-1 text-center">#</div>
                     <div className="col-span-4">Amount</div>
                     <div className="col-span-3">Due Date</div>
                     <div className="col-span-4 text-right">Status</div>
                   </div>
                   {paymentTerms.map((term: any, index: number) => (
-                    <div key={index} className="flex flex-col bg-card">
-                      <div className="grid grid-cols-12 gap-2 p-2 text-sm items-center">
+                    <div key={index} className="flex flex-col bg-card w-full">
+                      <div className="grid grid-cols-12 gap-2 p-2 text-sm items-center w-full">
                         <div className="col-span-1 text-center text-muted-foreground">{index + 1}</div>
-                        <div className="col-span-4 font-medium">{formatCurrency(term.amount || 0)}</div>
-                        <div className="col-span-3 text-xs text-muted-foreground">
+                        <div className="col-span-4 font-medium truncate">{formatCurrency(term.amount || 0)}</div>
+                        <div className="col-span-3 text-xs text-muted-foreground truncate">
                           {term.release_date ? format(new Date(term.release_date), "dd MMM yyyy") : (term.request_date ? format(new Date(term.request_date), "dd MMM yyyy") : '-')}
                         </div>
                         <div className="col-span-4 text-right">
@@ -543,21 +543,21 @@ Account Name: ${bankDetails.name || '-'}
                       
                       {/* Conditional Display for Pending/Rejected Reasons */}
                       {['Pending', 'Rejected'].includes(term.status) && (term.status_remarks || term.pic_feedback || isReplyingTo(index, 'finance') || isReplyingTo(index, 'pic')) && (
-                        <div className="px-3 pb-3 pt-0 text-xs space-y-2">
+                        <div className="px-3 pb-3 pt-0 text-xs space-y-2 w-full">
                           {term.status_remarks && (
-                            <div className="bg-yellow-50/50 dark:bg-yellow-900/10 p-2 rounded border border-yellow-100 dark:border-yellow-900/30 flex flex-col gap-2">
+                            <div className="bg-yellow-50/50 dark:bg-yellow-900/10 p-2 rounded border border-yellow-100 dark:border-yellow-900/30 flex flex-col gap-2 w-full">
                               <div className="flex gap-2">
                                 <AlertCircle className="h-3.5 w-3.5 text-yellow-600 mt-0.5 shrink-0" />
-                                <div className="space-y-0.5 flex-1">
+                                <div className="space-y-0.5 flex-1 min-w-0">
                                   <span className="font-semibold text-yellow-700 dark:text-yellow-500 block">Finance Note:</span>
-                                  <p className="text-yellow-800 dark:text-yellow-200/80">{term.status_remarks}</p>
+                                  <p className="text-yellow-800 dark:text-yellow-200/80 break-words">{term.status_remarks}</p>
                                 </div>
                                 {/* Reply button for PIC to respond to Finance Note */}
                                 {isCurrentPic && !term.pic_feedback && !isReplyingTo(index, 'finance') && (
                                   <Button 
                                     variant="ghost" 
                                     size="icon" 
-                                    className="h-6 w-6 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-100 dark:hover:bg-yellow-900/50"
+                                    className="h-6 w-6 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 shrink-0"
                                     onClick={() => handleReplyClick(index, 'finance')}
                                     title="Reply to note"
                                   >
@@ -568,32 +568,33 @@ Account Name: ${bankDetails.name || '-'}
                               
                               {/* Reply Form (only for replying to Finance Note) */}
                               {isReplyingTo(index, 'finance') && (
-                                <div className="pl-6 space-y-2 mt-1">
+                                <div className="pl-6 space-y-2 mt-1 w-full">
                                     <Textarea 
                                         value={feedbackText} 
                                         onChange={(e) => setFeedbackText(e.target.value)} 
                                         placeholder="Write your feedback..."
-                                        className="text-xs min-h-[60px] bg-background/80"
+                                        className="text-xs min-h-[60px] bg-background/80 w-full"
                                     />
                                     {/* Attachment Display for Reply */}
                                     {feedbackAttachment && (
-                                        <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
-                                            <span className="truncate flex items-center gap-1">
-                                                <Paperclip className="h-3 w-3" />
-                                                {feedbackAttachment.name} ({formatFileSize(feedbackAttachment.size)})
+                                        <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background w-full">
+                                            <span className="truncate flex items-center gap-1 min-w-0">
+                                                <Paperclip className="h-3 w-3 shrink-0" />
+                                                <span className="truncate">{feedbackAttachment.name}</span> 
+                                                <span className="shrink-0">({formatFileSize(feedbackAttachment.size)})</span>
                                             </span>
                                             <Button 
                                                 type="button" 
                                                 variant="ghost" 
                                                 size="icon" 
-                                                className="h-5 w-5 text-red-500" 
+                                                className="h-5 w-5 text-red-500 shrink-0" 
                                                 onClick={() => setFeedbackAttachment(null)}
                                             >
                                                 <X className="h-3 w-3" />
                                             </Button>
                                         </div>
                                     )}
-                                    <div className="flex justify-between items-center">
+                                    <div className="flex justify-between items-center w-full">
                                         {/* File Input Button */}
                                         <input 
                                             id={`feedback-file-upload-finance-${index}`}
@@ -613,7 +614,7 @@ Account Name: ${bankDetails.name || '-'}
                                                         type="button" 
                                                         variant="ghost" 
                                                         size="icon" 
-                                                        className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                                        className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0"
                                                         onClick={() => document.getElementById(`feedback-file-upload-finance-${index}`)?.click()}
                                                         disabled={isSubmitting}
                                                     >
@@ -638,16 +639,16 @@ Account Name: ${bankDetails.name || '-'}
                             <div className="bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded border border-blue-100 dark:border-blue-900/30 flex flex-col gap-2 ml-4">
                               <div className="flex gap-2">
                                 <MessageCircle className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
-                                <div className="space-y-0.5 flex-1">
+                                <div className="space-y-0.5 flex-1 min-w-0">
                                   <span className="font-semibold text-blue-700 dark:text-blue-500 block">{picName} Feedback:</span>
-                                  <p className="text-blue-800 dark:text-blue-200/80">{term.pic_feedback}</p>
+                                  <p className="text-blue-800 dark:text-blue-200/80 break-words">{term.pic_feedback}</p>
                                 </div>
                                 {/* Edit button for PIC to edit their own feedback */}
                                 {isCurrentPic && !isReplyingTo(index, 'pic') && (
                                   <Button 
                                     variant="ghost" 
                                     size="icon" 
-                                    className="h-6 w-6 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                                    className="h-6 w-6 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50 shrink-0"
                                     onClick={() => handleReplyClick(index, 'pic', term.pic_feedback, term.pic_attachment)}
                                     title="Edit Feedback"
                                   >
@@ -657,10 +658,11 @@ Account Name: ${bankDetails.name || '-'}
                               </div>
                               {/* Display existing attachment */}
                               {term.pic_attachment && !isReplyingTo(index, 'pic') && (
-                                  <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
-                                      <span className="truncate flex items-center gap-1">
-                                          <Paperclip className="h-3 w-3" />
-                                          {term.pic_attachment.name} ({formatFileSize(term.pic_attachment.size)})
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background w-full">
+                                      <span className="truncate flex items-center gap-1 min-w-0">
+                                          <Paperclip className="h-3 w-3 shrink-0" />
+                                          <span className="truncate">{term.pic_attachment.name}</span>
+                                          <span className="shrink-0">({formatFileSize(term.pic_attachment.size)})</span>
                                       </span>
                                       <div className="flex items-center space-x-1 shrink-0">
                                           <TooltipProvider>
@@ -688,32 +690,33 @@ Account Name: ${bankDetails.name || '-'}
                               )}
                               {/* Reply Form (for editing existing PIC feedback) */}
                               {isReplyingTo(index, 'pic') && (
-                                <div className="pl-6 space-y-2 mt-1">
+                                <div className="pl-6 space-y-2 mt-1 w-full">
                                     <Textarea 
                                         value={feedbackText} 
                                         onChange={(e) => setFeedbackText(e.target.value)} 
                                         placeholder="Edit your feedback..."
-                                        className="text-xs min-h-[60px] bg-background/80"
+                                        className="text-xs min-h-[60px] bg-background/80 w-full"
                                     />
                                     {/* Attachment Display for Edit */}
                                     {(feedbackAttachment || term.pic_attachment) && (
-                                        <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
-                                            <span className="truncate flex items-center gap-1">
-                                                <Paperclip className="h-3 w-3" />
-                                                {feedbackAttachment ? feedbackAttachment.name : term.pic_attachment.name} ({formatFileSize(feedbackAttachment ? feedbackAttachment.size : term.pic_attachment.size)})
+                                        <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background w-full">
+                                            <span className="truncate flex items-center gap-1 min-w-0">
+                                                <Paperclip className="h-3 w-3 shrink-0" />
+                                                <span className="truncate">{feedbackAttachment ? feedbackAttachment.name : term.pic_attachment.name}</span>
+                                                <span className="shrink-0">({formatFileSize(feedbackAttachment ? feedbackAttachment.size : term.pic_attachment.size)})</span>
                                             </span>
                                             <Button 
                                                 type="button" 
                                                 variant="ghost" 
                                                 size="icon" 
-                                                className="h-5 w-5 text-red-500" 
+                                                className="h-5 w-5 text-red-500 shrink-0" 
                                                 onClick={() => setFeedbackAttachment(null)}
                                             >
                                                 <X className="h-3 w-3" />
                                             </Button>
                                         </div>
                                     )}
-                                    <div className="flex justify-between items-center">
+                                    <div className="flex justify-between items-center w-full">
                                         {/* File Input Button */}
                                         <input 
                                             id={`feedback-file-upload-pic-${index}`}
@@ -733,7 +736,7 @@ Account Name: ${bankDetails.name || '-'}
                                                         type="button" 
                                                         variant="ghost" 
                                                         size="icon" 
-                                                        className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                                        className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0"
                                                         onClick={() => document.getElementById(`feedback-file-upload-pic-${index}`)?.click()}
                                                         disabled={isSubmitting}
                                                     >
@@ -767,9 +770,9 @@ Account Name: ${bankDetails.name || '-'}
 
       {/* Remarks */}
       {expense.remarks && (
-        <div className="space-y-2">
+        <div className="space-y-2 w-full">
           <h4 className="font-semibold text-sm text-muted-foreground">Remarks</h4>
-          <p className="text-sm bg-muted/30 p-3 rounded-md border whitespace-pre-wrap">{expense.remarks}</p>
+          <p className="text-sm bg-muted/30 p-3 rounded-md border whitespace-pre-wrap break-words">{expense.remarks}</p>
         </div>
       )}
     </div>
