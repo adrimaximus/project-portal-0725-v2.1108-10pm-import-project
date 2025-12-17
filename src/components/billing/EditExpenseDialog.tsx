@@ -617,8 +617,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
     }
   };
 
-  // Removed handleGeneratePurpose function as requested
-
   // Handle File List Changes (Sync with Form)
   const handleFilesChange = (files: any[]) => {
       setValue('attachments_jsonb', files as any, { shouldDirty: true });
@@ -835,7 +833,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                   <FormItem>
                     <div className="flex justify-between items-center">
                       <FormLabel>Purpose Payment</FormLabel>
-                      {/* Removed Auto-fill with AI button */}
                     </div>
                     <FormControl>
                       <Input placeholder="Enter purpose of payment" {...field} value={field.value || ''} disabled={isFormDisabled} />
@@ -850,22 +847,19 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                 name="ai_review_notes"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex justify-between items-center">
-                        <FormLabel className="flex items-center gap-2">
-                            <Wand2 className="h-4 w-4 text-purple-500" />
-                            AI Review Instructions
-                        </FormLabel>
-                        <Button 
-                          type="button" 
-                          size="sm" 
-                          className="h-7 bg-purple-600 hover:bg-purple-700 text-white"
-                          disabled={isExtracting || !watch('attachments_jsonb')?.length}
-                          onClick={handleRunAiCheck}
-                        >
-                          <Sparkles className="mr-2 h-3 w-3" />
-                          Check Now
-                        </Button>
-                    </div>
+                    <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        className="w-full justify-start h-auto p-0 text-base font-semibold text-purple-600 hover:text-purple-700 disabled:opacity-100 disabled:cursor-default"
+                        disabled={isExtracting || !watch('attachments_jsonb')?.length}
+                        onClick={handleRunAiCheck}
+                    >
+                        <Wand2 className="h-4 w-4 text-purple-500 mr-2" />
+                        AI Review Instructions 
+                        {isExtracting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                        {!isExtracting && watch('attachments_jsonb')?.length > 0 && <Sparkles className="ml-2 h-4 w-4" />}
+                    </Button>
                     <FormControl>
                       <Textarea 
                         placeholder="Instruct AI to check for missing details or documents (e.g. 'Check if invoice number is missing', 'Verify tax calculation')" 
