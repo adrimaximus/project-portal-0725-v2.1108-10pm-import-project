@@ -6,6 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
+import { usePaymentStatuses } from '@/hooks/usePaymentStatuses';
 
 interface ExpenseKanbanCardProps {
   expense: Expense;
@@ -20,6 +21,8 @@ const ExpenseKanbanCard = ({ expense, onEdit, onDelete, canDrag }: ExpenseKanban
     disabled: !canDrag 
   });
   
+  const { data: statuses = [] } = usePaymentStatuses();
+  
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat("id-ID", {
@@ -27,6 +30,10 @@ const ExpenseKanbanCard = ({ expense, onEdit, onDelete, canDrag }: ExpenseKanban
     currency: "IDR",
     minimumFractionDigits: 0,
   }).format(amount);
+
+  // Determine border color based on status
+  const statusDef = statuses.find(s => s.name === expense.status_expense);
+  const borderColor = statusDef?.color || '#e5e7eb'; // Default gray if not found
 
   return (
     <div 
@@ -40,7 +47,10 @@ const ExpenseKanbanCard = ({ expense, onEdit, onDelete, canDrag }: ExpenseKanban
         isDragging && "opacity-30"
       )}
     >
-      <Card className="hover:shadow-md transition-shadow">
+      <Card 
+        className="hover:shadow-md transition-shadow border-l-4" 
+        style={{ borderLeftColor: borderColor }}
+      >
         <CardHeader className="p-3 pb-2 flex flex-row items-start justify-between">
           <div className="space-y-1">
             <p className="text-sm font-semibold leading-none tracking-tight">{expense.beneficiary}</p>
