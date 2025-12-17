@@ -10,9 +10,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, FileText, Wand2, Sparkles } from 'lucide-react';
+import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, FileText, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format, isWithinInterval, parseISO } from 'date-fns';
+import { format, isWithinInterval } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -27,7 +27,7 @@ import PersonFormDialog from '../people/PersonFormDialog';
 import CompanyFormDialog from '../people/CompanyFormDialog';
 import CreateProjectDialog from '../projects/CreateProjectDialog';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
-import FileUploader, { UploadedFile } from '../ui/FileUploader';
+import FileUploader, { FileMetadata } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
 
 interface AddExpenseDialogProps {
@@ -54,13 +54,7 @@ const expenseSchema = z.object({
   remarks: z.string().optional(),
   ai_review_notes: z.string().optional(),
   custom_properties: z.record(z.any()).optional(),
-  attachments_jsonb: z.array(z.object({
-    name: z.string(),
-    url: z.string().url(),
-    size: z.number(),
-    type: z.string(),
-    storagePath: z.string(),
-  })).optional(),
+  attachments_jsonb: z.array(z.any()).optional(), // Changed to z.any() to accept File objects mixed with metadata
 });
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
@@ -129,35 +123,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const [projectMembers, setProjectMembers] = useState<Profile[]>([]);
   
   const { extractData, isExtracting } = useExpenseExtractor();
-  const [analysisProgress, setAnalysisProgress] = useState(0);
   const [currentProcessingFile, setCurrentProcessingFile] = useState<string | null>(null);
-
-  useEffect(() => {
-      let interval: NodeJS.Timeout;
-      if (isExtracting) {
-        setAnalysisProgress(0);
-        interval = setInterval(() => {
-          setAnalysisProgress((prev) => {
-            if (prev >= 90) return prev; 
-            const diff = Math.random() * 10;
-            return Math.min(prev + diff, 90);
-          });
-        }, 300);
-      } else {
-        setAnalysisProgress(100);
-      }
-      return () => clearInterval(interval);
-  }, [isExtracting]);
-
-  const processingFiles = useMemo(() => {
-    if (!currentProcessingFile || !isExtracting) return undefined;
-    return {
-      [currentProcessingFile]: {
-        progress: analysisProgress,
-        label: 'Analyzing...'
-      }
-    };
-  }, [currentProcessingFile, isExtracting, analysisProgress]);
 
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery<ProjectOption[]>({
     queryKey: ['projectsForExpenseForm'],
@@ -315,7 +281,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           const exBeneficiary = normalize(extracted.beneficiary); 
           const exAddress = normalize(extracted.address || ''); 
           const exVenue = normalize(extracted.venue || '');
-          const exDate = extracted.date ? parseISO(extracted.date) : null;
+          const exDate = extracted.date ? new Date(extracted.date) : null;
           
           if (exBeneficiary) {
               if (cComp && (cComp.includes(exBeneficiary) || exBeneficiary.includes(cComp))) score += 10;
@@ -334,15 +300,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
               const bufferStart = new Date(start); bufferStart.setDate(start.getDate() - 7);
               const bufferEnd = new Date(end); bufferEnd.setDate(end.getDate() + 60);
               if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) score += 5;
-          }
-
-          const nameDate = extractDateFromProjectName(p.name);
-          if (nameDate && exDate && !isNaN(exDate.getTime())) {
-              const bufferStart = new Date(nameDate.start); 
-              bufferStart.setDate(bufferStart.getDate() - 7);
-              const bufferEnd = new Date(nameDate.end); 
-              bufferEnd.setDate(bufferEnd.getDate() + 60);
-              if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) score += 10;
           }
 
           if (score > maxScore) {
@@ -447,7 +404,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
             if (newAccount) {
               setBankAccounts(prev => [...prev, newAccount as unknown as BankAccount]);
               setValue('bank_account_id', newAccount.id);
-              toast.success(`Automatically added and selected new bank account: ${extractedBank.bank_name} ${extractedBank.swift_code ? `(${extractedBank.swift_code})` : ''}`);
+              toast.success(`Automatically added and selected new bank account: ${extractedBank.bank_name}`);
             }
           }
         } catch (err) {
@@ -481,39 +438,36 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     toast.success("Data extracted from document!");
   };
 
-  const handleFileProcessed = async (file: UploadedFile) => {
-    let finalUrl = file.url;
+  const handleFileProcessed = async (file: File) => {
+    let finalUrl = URL.createObjectURL(file);
+    setCurrentProcessingFile(file.name);
     
-    if (file.url.startsWith('blob:')) {
-      try {
-        toast.info("Uploading image for analysis...");
-        const response = await fetch(file.url);
-        const blob = await response.blob();
-        const fileObj = new File([blob], file.name, { type: file.type });
-
+    // In production/real apps, upload this to storage first to get a publicly accessible URL for OpenAI
+    // For this demo, we'll try to upload it temporarily to a bucket
+    try {
         const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
         const filePath = `temp-analysis/${Date.now()}-${sanitizedFileName}`;
+        const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, file);
         
-        const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, fileObj);
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+             console.error("Upload for analysis failed", uploadError);
+             // Fallback to local processing if extracting from local is supported (it's mostly not with standard OpenAI Vision URL requirement)
+             // We return early here as we can't get a public URL easily without upload
+             return;
+        }
 
         const { data: urlData } = supabase.storage.from('expense').getPublicUrl(filePath);
         finalUrl = urlData.publicUrl;
-      } catch (error) {
-        console.error("Pre-analysis upload failed:", error);
-        toast.error("Failed to upload image for analysis.");
-        return;
-      }
+
+        const extractedData = await extractData({ url: finalUrl, type: file.type });
+        if (extractedData) {
+            await applyExtractedData(extractedData);
+        }
+    } catch (e) {
+        console.error("Processing failed", e);
+    } finally {
+        setCurrentProcessingFile(null);
     }
-    
-    setCurrentProcessingFile(file.name);
-    const extractedData = await extractData({ url: finalUrl, type: file.type });
-    
-    if (extractedData) {
-      await applyExtractedData(extractedData);
-    }
-    
-    setCurrentProcessingFile(null);
   };
 
   const handleRunAiCheck = async () => {
@@ -525,29 +479,23 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
        return;
     }
     
-    const file = attachments[attachments.length - 1]; // Use last file
-    setCurrentProcessingFile(file.name);
-    
-    try {
-        const extractedData = await extractData({ 
-            url: file.url, 
-            type: file.type, 
-            instructions: instructions 
-        });
-        
-        if (extractedData) {
-            await applyExtractedData(extractedData);
-        }
-    } finally {
-        setCurrentProcessingFile(null);
+    // Find the last actual File object
+    const lastFile = [...attachments].reverse().find(f => f instanceof File) as File | undefined;
+
+    if (!lastFile) {
+        toast.error("No new file to analyze.");
+        return;
     }
+    
+    handleFileProcessed(lastFile);
   };
 
-  const handleFilesChange = (files: any[]) => {
-      setValue('attachments_jsonb', files as any, { shouldDirty: true });
+  const handleFilesChange = (files: (File | FileMetadata)[]) => {
+      setValue('attachments_jsonb', files, { shouldDirty: true });
       
-      const newFiles = files.filter(f => f.originalFile instanceof File);
+      const newFiles = files.filter((f): f is File => f instanceof File);
       if (newFiles.length > 0) {
+          // Process the most recently added file
           handleFileProcessed(newFiles[newFiles.length - 1]);
       }
   };
@@ -557,7 +505,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     try {
       // 1. Handle File Uploads
       const currentFiles = values.attachments_jsonb || [];
-      const newFilesToUpload = currentFiles.filter((f: any) => f.originalFile instanceof File);
+      const newFilesToUpload = currentFiles.filter((f): f is File => f instanceof File);
       
       // Calculate initial aggregated status
       let initialStatus = 'Pending';
@@ -590,8 +538,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
       // 2. Upload new files using the new expense ID
       const uploadedFilesMetadata = [];
-      for (const fileItem of newFilesToUpload) {
-          const file = (fileItem as any).originalFile as File;
+      for (const file of newFilesToUpload) {
           const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
           const filePath = `expense-attachments/${expenseId}/${Date.now()}-${sanitizedFileName}`;
           
@@ -677,15 +624,12 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                     </div>
                     <FormControl>
                       <FileUploader
-                        bucket="expense"
                         value={field.value || []}
                         onChange={(files) => handleFilesChange(files)}
                         maxFiles={5}
                         maxSize={20971520} // 20MB
                         accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'], 'application/pdf': ['.pdf'] }}
                         disabled={isFormDisabled}
-                        onFileProcessed={handleFileProcessed}
-                        processingFiles={processingFiles}
                       />
                     </FormControl>
                     <FormMessage />

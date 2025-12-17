@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import * as z from 'zod';
 import {
   Dialog,
   DialogContent,
@@ -122,8 +122,8 @@ const EditExpenseDialog = ({ expense: propExpense, open, onOpenChange }: EditExp
     try {
       // Handle file uploads
       let finalAttachments: FileMetadata[] = [];
-      const existingAttachments = values.attachments.filter(f => !('lastModified' in f)) as FileMetadata[];
-      const newFiles = values.attachments.filter(f => 'lastModified' in f) as File[];
+      const existingAttachments = values.attachments.filter((f: any) => !(f instanceof File)) as FileMetadata[];
+      const newFiles = values.attachments.filter((f: any) => f instanceof File) as File[];
 
       // Keep existing files
       finalAttachments = [...existingAttachments];
