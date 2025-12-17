@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Expense } from "@/types";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface FileMetadata {
   name: string;
@@ -39,6 +41,7 @@ const formatFileSize = (bytes: number) => {
 
 const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: ExpenseDetailsDialogProps) => {
   const queryClient = useQueryClient();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
   // Use an object to track which specific feedback type is being replied to/edited
   const [replyingTerm, setReplyingTerm] = useState<{ index: number, type: 'finance' | 'pic' } | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
@@ -331,467 +334,538 @@ Account Name: ${bankDetails.name || '-'}
   const isReplyingTo = (index: number, type: 'finance' | 'pic') => 
     replyingTerm?.index === index && replyingTerm.type === type;
 
-  return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full max-w-full h-[100dvh] rounded-none border-0 sm:border sm:rounded-lg sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader>
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-2 sm:gap-4 pr-8">
-              <div>
-                <DialogTitle className="text-xl">{expense.beneficiary}</DialogTitle>
-                <DialogDescription className="mt-1">
-                  {expense.project_name}
-                </DialogDescription>
-              </div>
-              <Badge className={cn("text-sm px-3 py-1 self-start sm:self-auto", getStatusBadgeStyle(derivedStatus))}>
-                {derivedStatus}
-              </Badge>
+  // Shared content for both Dialog and Drawer
+  const content = (
+    <div className="grid gap-6 py-4">
+      {/* Main Info */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="bg-primary/10 p-2 rounded-full">
+              <CreditCard className="w-4 h-4 text-primary" />
             </div>
-          </DialogHeader>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Amount</p>
+              <p className="text-lg font-bold">{formatCurrency(expense.tf_amount)}</p>
+            </div>
+          </div>
 
-            <div className="grid gap-6 py-4">
-              {/* Main Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-primary/10 p-2 rounded-full">
-                      <CreditCard className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Amount</p>
-                      <p className="text-lg font-bold">{formatCurrency(expense.tf_amount)}</p>
+          <div className="flex items-start gap-3">
+            <div className="bg-primary/10 p-2 rounded-full">
+              <FileText className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Purpose</p>
+              <p className="text-sm font-medium">{(expense as any).purpose_payment || '-'}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="bg-primary/10 p-2 rounded-full">
+              <CalendarIcon className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Issued</p>
+              <p className="text-sm font-medium">
+                {expense.created_at ? format(new Date(expense.created_at), "PPP") : '-'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="bg-primary/10 p-2 rounded-full">
+              <User className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">PIC</p>
+              {pic ? (
+                  <div className="flex items-center gap-2 mt-1">
+                  <Avatar className="h-6 w-6">
+                      <AvatarImage src={getAvatarUrl(pic.avatar_url, pic.id)} />
+                      <AvatarFallback className="text-[10px]" style={generatePastelColor(pic.id)}>
+                      {pic.initials}
+                      </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium">{pic.name}</span>
+                  </div>
+              ) : (
+                  <p className="text-sm font-medium">-</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Attachments Section */}
+      {attachments.length > 0 && (
+        <>
+          <Separator />
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-muted-foreground" />
+              <h4 className="font-semibold text-sm">Attachments ({attachments.length})</h4>
+            </div>
+            <div className="space-y-2">
+              {attachments.map((file, index) => (
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/40">
+                  <div className="flex items-center space-x-3 truncate">
+                    <FileText className="h-4 w-4 text-primary shrink-0" />
+                    <div className="truncate">
+                      <p className="text-sm font-medium truncate">{file.name}</p>
+                      <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
                     </div>
                   </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="bg-primary/10 p-2 rounded-full">
-                      <FileText className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Purpose</p>
-                      <p className="text-sm font-medium">{(expense as any).purpose_payment || '-'}</p>
-                    </div>
+                  <div className="flex items-center space-x-1 shrink-0">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleView(file)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>View</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(file.url, file.name)}>
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Download</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-primary/10 p-2 rounded-full">
-                      <CalendarIcon className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Issued</p>
-                      <p className="text-sm font-medium">
-                        {expense.created_at ? format(new Date(expense.created_at), "PPP") : '-'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="bg-primary/10 p-2 rounded-full">
-                      <User className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">PIC</p>
-                      {pic ? (
-                          <div className="flex items-center gap-2 mt-1">
-                          <Avatar className="h-6 w-6">
-                              <AvatarImage src={getAvatarUrl(pic.avatar_url, pic.id)} />
-                              <AvatarFallback className="text-[10px]" style={generatePastelColor(pic.id)}>
-                              {pic.initials}
-                              </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm font-medium">{pic.name}</span>
-                          </div>
-                      ) : (
-                          <p className="text-sm font-medium">-</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
+      {/* Bank Details */}
+      {bankDetails && (
+        <>
+          <Separator />
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-muted-foreground" />
+                <h4 className="font-semibold text-sm">Bank Account Details</h4>
               </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-muted-foreground hover:text-primary"
+                      onClick={handleCopyBankDetails}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Copy Bank Details</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="bg-muted/40 p-4 rounded-lg border text-sm space-y-1">
+              <div className="grid grid-cols-3 gap-2">
+                <span className="text-muted-foreground">Bank Name:</span>
+                <span className="col-span-2 font-medium">{bankDetails.bank || '-'}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <span className="text-muted-foreground">Account Number:</span>
+                <span className="col-span-2 font-medium font-mono">{bankDetails.account || '-'}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <span className="text-muted-foreground">Account Name:</span>
+                <span className="col-span-2 font-medium">{bankDetails.name || '-'}</span>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
-              {/* Attachments Section */}
-              {attachments.length > 0 && (
-                <>
-                  <Separator />
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-muted-foreground" />
-                      <h4 className="font-semibold text-sm">Attachments ({attachments.length})</h4>
-                    </div>
-                    <div className="space-y-2">
-                      {attachments.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/40">
-                          <div className="flex items-center space-x-3 truncate">
-                            <FileText className="h-4 w-4 text-primary shrink-0" />
-                            <div className="truncate">
-                              <p className="text-sm font-medium truncate">{file.name}</p>
-                              <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-1 shrink-0">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleView(file)}>
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>View</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(file.url, file.name)}>
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Download</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
+      {/* Payment Terms */}
+      {paymentTerms.length > 0 && (
+        <>
+          <Separator />
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Wallet className="w-4 h-4 text-muted-foreground" />
+              <h4 className="font-semibold text-sm">Payment Plan</h4>
+            </div>
+            <div className="border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <div className="min-w-[500px] divide-y">
+                  <div className="grid grid-cols-12 gap-2 bg-muted/50 p-2 text-xs font-medium text-muted-foreground">
+                    <div className="col-span-1 text-center">#</div>
+                    <div className="col-span-4">Amount</div>
+                    <div className="col-span-3">Due Date</div>
+                    <div className="col-span-4 text-right">Status</div>
+                  </div>
+                  {paymentTerms.map((term: any, index: number) => (
+                    <div key={index} className="flex flex-col bg-card">
+                      <div className="grid grid-cols-12 gap-2 p-2 text-sm items-center">
+                        <div className="col-span-1 text-center text-muted-foreground">{index + 1}</div>
+                        <div className="col-span-4 font-medium">{formatCurrency(term.amount || 0)}</div>
+                        <div className="col-span-3 text-xs text-muted-foreground">
+                          {term.release_date ? format(new Date(term.release_date), "dd MMM yyyy") : (term.request_date ? format(new Date(term.request_date), "dd MMM yyyy") : '-')}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Bank Details */}
-              {bankDetails && (
-                <>
-                  <Separator />
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-muted-foreground" />
-                        <h4 className="font-semibold text-sm">Bank Account Details</h4>
+                        <div className="col-span-4 text-right">
+                          {canEditStatus ? (
+                            <div className="flex justify-end">
+                              <Select 
+                                value={term.status || 'Pending'} 
+                                onValueChange={(val) => updateTermStatus(index, val)}
+                              >
+                                <SelectTrigger className={cn("h-6 px-1.5 text-[10px] font-medium border-0 rounded-full w-auto min-w-[70px] gap-1", getStatusBadgeStyle(term.status || 'Pending'))}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {['Pending', 'Requested', 'On review', 'Paid', 'Rejected'].map((status) => (
+                                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5", getStatusBadgeStyle(term.status || 'Pending'))}>
+                              {term.status || 'Pending'}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-muted-foreground hover:text-primary"
-                              onClick={handleCopyBankDetails}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Copy Bank Details</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    <div className="bg-muted/40 p-4 rounded-lg border text-sm space-y-1">
-                      <div className="grid grid-cols-3 gap-2">
-                        <span className="text-muted-foreground">Bank Name:</span>
-                        <span className="col-span-2 font-medium">{bankDetails.bank || '-'}</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <span className="text-muted-foreground">Account Number:</span>
-                        <span className="col-span-2 font-medium font-mono">{bankDetails.account || '-'}</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <span className="text-muted-foreground">Account Name:</span>
-                        <span className="col-span-2 font-medium">{bankDetails.name || '-'}</span>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Payment Terms */}
-              {paymentTerms.length > 0 && (
-                <>
-                  <Separator />
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Wallet className="w-4 h-4 text-muted-foreground" />
-                      <h4 className="font-semibold text-sm">Payment Plan</h4>
-                    </div>
-                    <div className="border rounded-lg overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <div className="min-w-[500px] divide-y">
-                          <div className="grid grid-cols-12 gap-2 bg-muted/50 p-2 text-xs font-medium text-muted-foreground">
-                            <div className="col-span-1 text-center">#</div>
-                            <div className="col-span-4">Amount</div>
-                            <div className="col-span-3">Due Date</div>
-                            <div className="col-span-4 text-right">Status</div>
-                          </div>
-                          {paymentTerms.map((term: any, index: number) => (
-                            <div key={index} className="flex flex-col bg-card">
-                              <div className="grid grid-cols-12 gap-2 p-2 text-sm items-center">
-                                <div className="col-span-1 text-center text-muted-foreground">{index + 1}</div>
-                                <div className="col-span-4 font-medium">{formatCurrency(term.amount || 0)}</div>
-                                <div className="col-span-3 text-xs text-muted-foreground">
-                                  {term.release_date ? format(new Date(term.release_date), "dd MMM yyyy") : (term.request_date ? format(new Date(term.request_date), "dd MMM yyyy") : '-')}
+                      
+                      {/* Conditional Display for Pending/Rejected Reasons */}
+                      {['Pending', 'Rejected'].includes(term.status) && (term.status_remarks || term.pic_feedback || isReplyingTo(index, 'finance') || isReplyingTo(index, 'pic')) && (
+                        <div className="px-3 pb-3 pt-0 text-xs space-y-2">
+                          {term.status_remarks && (
+                            <div className="bg-yellow-50/50 dark:bg-yellow-900/10 p-2 rounded border border-yellow-100 dark:border-yellow-900/30 flex flex-col gap-2">
+                              <div className="flex gap-2">
+                                <AlertCircle className="h-3.5 w-3.5 text-yellow-600 mt-0.5 shrink-0" />
+                                <div className="space-y-0.5 flex-1">
+                                  <span className="font-semibold text-yellow-700 dark:text-yellow-500 block">Finance Note:</span>
+                                  <p className="text-yellow-800 dark:text-yellow-200/80">{term.status_remarks}</p>
                                 </div>
-                                <div className="col-span-4 text-right">
-                                  {canEditStatus ? (
-                                    <div className="flex justify-end">
-                                      <Select 
-                                        value={term.status || 'Pending'} 
-                                        onValueChange={(val) => updateTermStatus(index, val)}
-                                      >
-                                        <SelectTrigger className={cn("h-6 px-1.5 text-[10px] font-medium border-0 rounded-full w-auto min-w-[70px] gap-1", getStatusBadgeStyle(term.status || 'Pending'))}>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {['Pending', 'Requested', 'On review', 'Paid', 'Rejected'].map((status) => (
-                                            <SelectItem key={status} value={status}>{status}</SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  ) : (
-                                    <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5", getStatusBadgeStyle(term.status || 'Pending'))}>
-                                      {term.status || 'Pending'}
-                                    </Badge>
-                                  )}
-                                </div>
+                                {/* Reply button for PIC to respond to Finance Note */}
+                                {isCurrentPic && !term.pic_feedback && !isReplyingTo(index, 'finance') && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-100 dark:hover:bg-yellow-900/50"
+                                    onClick={() => handleReplyClick(index, 'finance')}
+                                    title="Reply to note"
+                                  >
+                                    <Reply className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
                               </div>
                               
-                              {/* Conditional Display for Pending/Rejected Reasons */}
-                              {['Pending', 'Rejected'].includes(term.status) && (term.status_remarks || term.pic_feedback || isReplyingTo(index, 'finance') || isReplyingTo(index, 'pic')) && (
-                                <div className="px-3 pb-3 pt-0 text-xs space-y-2">
-                                  {term.status_remarks && (
-                                    <div className="bg-yellow-50/50 dark:bg-yellow-900/10 p-2 rounded border border-yellow-100 dark:border-yellow-900/30 flex flex-col gap-2">
-                                      <div className="flex gap-2">
-                                        <AlertCircle className="h-3.5 w-3.5 text-yellow-600 mt-0.5 shrink-0" />
-                                        <div className="space-y-0.5 flex-1">
-                                          <span className="font-semibold text-yellow-700 dark:text-yellow-500 block">Finance Note:</span>
-                                          <p className="text-yellow-800 dark:text-yellow-200/80">{term.status_remarks}</p>
+                              {/* Reply Form (only for replying to Finance Note) */}
+                              {isReplyingTo(index, 'finance') && (
+                                <div className="pl-6 space-y-2 mt-1">
+                                    <Textarea 
+                                        value={feedbackText} 
+                                        onChange={(e) => setFeedbackText(e.target.value)} 
+                                        placeholder="Write your feedback..."
+                                        className="text-xs min-h-[60px] bg-background/80"
+                                    />
+                                    {/* Attachment Display for Reply */}
+                                    {feedbackAttachment && (
+                                        <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
+                                            <span className="truncate flex items-center gap-1">
+                                                <Paperclip className="h-3 w-3" />
+                                                {feedbackAttachment.name} ({formatFileSize(feedbackAttachment.size)})
+                                            </span>
+                                            <Button 
+                                                type="button" 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className="h-5 w-5 text-red-500" 
+                                                onClick={() => setFeedbackAttachment(null)}
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </Button>
                                         </div>
-                                        {/* Reply button for PIC to respond to Finance Note */}
-                                        {isCurrentPic && !term.pic_feedback && !isReplyingTo(index, 'finance') && (
-                                          <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="h-6 w-6 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-100 dark:hover:bg-yellow-900/50"
-                                            onClick={() => handleReplyClick(index, 'finance')}
-                                            title="Reply to note"
-                                          >
-                                            <Reply className="h-3.5 w-3.5" />
-                                          </Button>
-                                        )}
-                                      </div>
-                                      
-                                      {/* Reply Form (only for replying to Finance Note) */}
-                                      {isReplyingTo(index, 'finance') && (
-                                        <div className="pl-6 space-y-2 mt-1">
-                                            <Textarea 
-                                                value={feedbackText} 
-                                                onChange={(e) => setFeedbackText(e.target.value)} 
-                                                placeholder="Write your feedback..."
-                                                className="text-xs min-h-[60px] bg-background/80"
-                                            />
-                                            {/* Attachment Display for Reply */}
-                                            {feedbackAttachment && (
-                                                <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
-                                                    <span className="truncate flex items-center gap-1">
-                                                        <Paperclip className="h-3 w-3" />
-                                                        {feedbackAttachment.name} ({formatFileSize(feedbackAttachment.size)})
-                                                    </span>
+                                    )}
+                                    <div className="flex justify-between items-center">
+                                        {/* File Input Button */}
+                                        <input 
+                                            id={`feedback-file-upload-finance-${index}`}
+                                            type="file" 
+                                            className="hidden" 
+                                            onChange={(e) => {
+                                                if (e.target.files && e.target.files.length > 0) {
+                                                    setFeedbackAttachment(e.target.files[0]);
+                                                }
+                                            }}
+                                            disabled={isSubmitting}
+                                        />
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
                                                     <Button 
                                                         type="button" 
                                                         variant="ghost" 
                                                         size="icon" 
-                                                        className="h-5 w-5 text-red-500" 
-                                                        onClick={() => setFeedbackAttachment(null)}
+                                                        className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                                        onClick={() => document.getElementById(`feedback-file-upload-finance-${index}`)?.click()}
+                                                        disabled={isSubmitting}
                                                     >
-                                                        <X className="h-3 w-3" />
+                                                        <Paperclip className="h-3.5 w-3.5" />
                                                     </Button>
-                                                </div>
-                                            )}
-                                            <div className="flex justify-between items-center">
-                                                {/* File Input Button */}
-                                                <input 
-                                                    id={`feedback-file-upload-finance-${index}`}
-                                                    type="file" 
-                                                    className="hidden" 
-                                                    onChange={(e) => {
-                                                        if (e.target.files && e.target.files.length > 0) {
-                                                            setFeedbackAttachment(e.target.files[0]);
-                                                        }
-                                                    }}
-                                                    disabled={isSubmitting}
-                                                />
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Button 
-                                                                type="button" 
-                                                                variant="ghost" 
-                                                                size="icon" 
-                                                                className="h-6 w-6 text-muted-foreground hover:text-primary"
-                                                                onClick={() => document.getElementById(`feedback-file-upload-finance-${index}`)?.click()}
-                                                                disabled={isSubmitting}
-                                                            >
-                                                                <Paperclip className="h-3.5 w-3.5" />
-                                                            </Button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>Attach File</TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-                                                <div className="flex justify-end gap-2">
-                                                    <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTerm(null)}>Cancel</Button>
-                                                    <Button size="sm" className="h-6 text-xs px-2" onClick={submitFeedback} disabled={isSubmitting || (!feedbackText.trim() && !feedbackAttachment)}>
-                                                        {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send Feedback'}
-                                                    </Button>
-                                                </div>
-                                            </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent>Attach File</TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                        <div className="flex justify-end gap-2">
+                                            <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTerm(null)}>Cancel</Button>
+                                            <Button size="sm" className="h-6 text-xs px-2" onClick={submitFeedback} disabled={isSubmitting || (!feedbackText.trim() && !feedbackAttachment)}>
+                                                {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send Feedback'}
+                                            </Button>
                                         </div>
-                                      )}
                                     </div>
-                                  )}
-                                  {term.pic_feedback && (
-                                    <div className="bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded border border-blue-100 dark:border-blue-900/30 flex flex-col gap-2 ml-4">
-                                      <div className="flex gap-2">
-                                        <MessageCircle className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
-                                        <div className="space-y-0.5 flex-1">
-                                          <span className="font-semibold text-blue-700 dark:text-blue-500 block">{picName} Feedback:</span>
-                                          <p className="text-blue-800 dark:text-blue-200/80">{term.pic_feedback}</p>
-                                        </div>
-                                        {/* Edit button for PIC to edit their own feedback */}
-                                        {isCurrentPic && !isReplyingTo(index, 'pic') && (
-                                          <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="h-6 w-6 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50"
-                                            onClick={() => handleReplyClick(index, 'pic', term.pic_feedback, term.pic_attachment)}
-                                            title="Edit Feedback"
-                                          >
-                                            <Edit className="h-3.5 w-3.5" />
-                                          </Button>
-                                        )}
-                                      </div>
-                                      {/* Display existing attachment */}
-                                      {term.pic_attachment && !isReplyingTo(index, 'pic') && (
-                                          <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
-                                              <span className="truncate flex items-center gap-1">
-                                                  <Paperclip className="h-3 w-3" />
-                                                  {term.pic_attachment.name} ({formatFileSize(term.pic_attachment.size)})
-                                              </span>
-                                              <div className="flex items-center space-x-1 shrink-0">
-                                                  <TooltipProvider>
-                                                      <Tooltip>
-                                                          <TooltipTrigger asChild>
-                                                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleView(term.pic_attachment)}>
-                                                                  <Eye className="h-3 w-3" />
-                                                              </Button>
-                                                          </TooltipTrigger>
-                                                          <TooltipContent>View</TooltipContent>
-                                                      </Tooltip>
-                                                  </TooltipProvider>
-                                                  <TooltipProvider>
-                                                      <Tooltip>
-                                                          <TooltipTrigger asChild>
-                                                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDownload(term.pic_attachment.url, term.pic_attachment.name)}>
-                                                                  <Download className="h-3 w-3" />
-                                                              </Button>
-                                                          </TooltipTrigger>
-                                                          <TooltipContent>Download</TooltipContent>
-                                                      </Tooltip>
-                                                  </TooltipProvider>
-                                              </div>
-                                          </div>
-                                      )}
-                                      {/* Reply Form (for editing existing PIC feedback) */}
-                                      {isReplyingTo(index, 'pic') && (
-                                        <div className="pl-6 space-y-2 mt-1">
-                                            <Textarea 
-                                                value={feedbackText} 
-                                                onChange={(e) => setFeedbackText(e.target.value)} 
-                                                placeholder="Edit your feedback..."
-                                                className="text-xs min-h-[60px] bg-background/80"
-                                            />
-                                            {/* Attachment Display for Edit */}
-                                            {(feedbackAttachment || term.pic_attachment) && (
-                                                <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
-                                                    <span className="truncate flex items-center gap-1">
-                                                        <Paperclip className="h-3 w-3" />
-                                                        {feedbackAttachment ? feedbackAttachment.name : term.pic_attachment.name} ({formatFileSize(feedbackAttachment ? feedbackAttachment.size : term.pic_attachment.size)})
-                                                    </span>
-                                                    <Button 
-                                                        type="button" 
-                                                        variant="ghost" 
-                                                        size="icon" 
-                                                        className="h-5 w-5 text-red-500" 
-                                                        onClick={() => setFeedbackAttachment(null)}
-                                                    >
-                                                        <X className="h-3 w-3" />
-                                                    </Button>
-                                                </div>
-                                            )}
-                                            <div className="flex justify-between items-center">
-                                                {/* File Input Button */}
-                                                <input 
-                                                    id={`feedback-file-upload-pic-${index}`}
-                                                    type="file" 
-                                                    className="hidden" 
-                                                    onChange={(e) => {
-                                                        if (e.target.files && e.target.files.length > 0) {
-                                                            setFeedbackAttachment(e.target.files[0]);
-                                                        }
-                                                    }}
-                                                    disabled={isSubmitting}
-                                                />
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Button 
-                                                                type="button" 
-                                                                variant="ghost" 
-                                                                size="icon" 
-                                                                className="h-6 w-6 text-muted-foreground hover:text-primary"
-                                                                onClick={() => document.getElementById(`feedback-file-upload-pic-${index}`)?.click()}
-                                                                disabled={isSubmitting}
-                                                            >
-                                                                <Paperclip className="h-3.5 w-3.5" />
-                                                            </Button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>Attach File</TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-                                                <div className="flex justify-end gap-2">
-                                                    <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTerm(null)}>Cancel</Button>
-                                                    <Button size="sm" className="h-6 text-xs px-2" onClick={submitFeedback} disabled={isSubmitting || (!feedbackText.trim() && !feedbackAttachment && !term.pic_attachment)}>
-                                                        {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save Changes'}
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
                                 </div>
                               )}
                             </div>
-                          ))}
+                          )}
+                          {term.pic_feedback && (
+                            <div className="bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded border border-blue-100 dark:border-blue-900/30 flex flex-col gap-2 ml-4">
+                              <div className="flex gap-2">
+                                <MessageCircle className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
+                                <div className="space-y-0.5 flex-1">
+                                  <span className="font-semibold text-blue-700 dark:text-blue-500 block">{picName} Feedback:</span>
+                                  <p className="text-blue-800 dark:text-blue-200/80">{term.pic_feedback}</p>
+                                </div>
+                                {/* Edit button for PIC to edit their own feedback */}
+                                {isCurrentPic && !isReplyingTo(index, 'pic') && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                                    onClick={() => handleReplyClick(index, 'pic', term.pic_feedback, term.pic_attachment)}
+                                    title="Edit Feedback"
+                                  >
+                                    <Edit className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+                              </div>
+                              {/* Display existing attachment */}
+                              {term.pic_attachment && !isReplyingTo(index, 'pic') && (
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
+                                      <span className="truncate flex items-center gap-1">
+                                          <Paperclip className="h-3 w-3" />
+                                          {term.pic_attachment.name} ({formatFileSize(term.pic_attachment.size)})
+                                      </span>
+                                      <div className="flex items-center space-x-1 shrink-0">
+                                          <TooltipProvider>
+                                              <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleView(term.pic_attachment)}>
+                                                          <Eye className="h-3 w-3" />
+                                                      </Button>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent>View</TooltipContent>
+                                              </Tooltip>
+                                          </TooltipProvider>
+                                          <TooltipProvider>
+                                              <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDownload(term.pic_attachment.url, term.pic_attachment.name)}>
+                                                          <Download className="h-3 w-3" />
+                                                      </Button>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent>Download</TooltipContent>
+                                              </Tooltip>
+                                          </TooltipProvider>
+                                      </div>
+                                  </div>
+                              )}
+                              {/* Reply Form (for editing existing PIC feedback) */}
+                              {isReplyingTo(index, 'pic') && (
+                                <div className="pl-6 space-y-2 mt-1">
+                                    <Textarea 
+                                        value={feedbackText} 
+                                        onChange={(e) => setFeedbackText(e.target.value)} 
+                                        placeholder="Edit your feedback..."
+                                        className="text-xs min-h-[60px] bg-background/80"
+                                    />
+                                    {/* Attachment Display for Edit */}
+                                    {(feedbackAttachment || term.pic_attachment) && (
+                                        <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
+                                            <span className="truncate flex items-center gap-1">
+                                                <Paperclip className="h-3 w-3" />
+                                                {feedbackAttachment ? feedbackAttachment.name : term.pic_attachment.name} ({formatFileSize(feedbackAttachment ? feedbackAttachment.size : term.pic_attachment.size)})
+                                            </span>
+                                            <Button 
+                                                type="button" 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className="h-5 w-5 text-red-500" 
+                                                onClick={() => setFeedbackAttachment(null)}
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center">
+                                        {/* File Input Button */}
+                                        <input 
+                                            id={`feedback-file-upload-pic-${index}`}
+                                            type="file" 
+                                            className="hidden" 
+                                            onChange={(e) => {
+                                                if (e.target.files && e.target.files.length > 0) {
+                                                    setFeedbackAttachment(e.target.files[0]);
+                                                }
+                                            }}
+                                            disabled={isSubmitting}
+                                        />
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button 
+                                                        type="button" 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                                        onClick={() => document.getElementById(`feedback-file-upload-pic-${index}`)?.click()}
+                                                        disabled={isSubmitting}
+                                                    >
+                                                        <Paperclip className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>Attach File</TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                        <div className="flex justify-end gap-2">
+                                            <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTerm(null)}>Cancel</Button>
+                                            <Button size="sm" className="h-6 text-xs px-2" onClick={submitFeedback} disabled={isSubmitting || (!feedbackText.trim() && !feedbackAttachment && !term.pic_attachment)}>
+                                                {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save Changes'}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      </div>
+                      )}
                     </div>
-                  </div>
-                </>
-              )}
-
-              {/* Remarks */}
-              {expense.remarks && (
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-sm text-muted-foreground">Remarks</h4>
-                  <p className="text-sm bg-muted/30 p-3 rounded-md border whitespace-pre-wrap">{expense.remarks}</p>
+                  ))}
                 </div>
-              )}
+              </div>
             </div>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </>
+      )}
+
+      {/* Remarks */}
+      {expense.remarks && (
+        <div className="space-y-2">
+          <h4 className="font-semibold text-sm text-muted-foreground">Remarks</h4>
+          <p className="text-sm bg-muted/30 p-3 rounded-md border whitespace-pre-wrap">{expense.remarks}</p>
+        </div>
+      )}
+    </div>
+  );
+
+  const Title = isDesktop ? DialogTitle : DrawerTitle;
+  const Description = isDesktop ? DialogDescription : DrawerDescription;
+
+  if (isDesktop) {
+    return (
+      <>
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-2 sm:gap-4 pr-8">
+                <div>
+                  <Title className="text-xl">{expense.beneficiary}</Title>
+                  <Description className="mt-1">
+                    {expense.project_name}
+                  </Description>
+                </div>
+                <Badge className={cn("text-sm px-3 py-1 self-start sm:self-auto", getStatusBadgeStyle(derivedStatus))}>
+                  {derivedStatus}
+                </Badge>
+              </div>
+            </DialogHeader>
+            {content}
+          </DialogContent>
+        </Dialog>
+        {/* Preview Dialog remains as Dialog on Desktop */}
+        <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
+          <DialogContent className="max-w-4xl w-full h-[80vh] flex flex-col p-0">
+            <DialogHeader className="p-4 border-b flex-shrink-0 flex flex-row items-center justify-between space-y-0">
+              <DialogTitle className="truncate pr-8">{previewFile?.name}</DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 bg-muted/20 relative overflow-hidden flex items-center justify-center p-4">
+               {previewFile?.type === 'application/pdf' ? (
+                   <iframe 
+                      src={`${previewFile.url}#view=FitH`} 
+                      title={previewFile.name}
+                      className="w-full h-full border-none rounded-md" 
+                   />
+               ) : (
+                   <img 
+                      src={previewFile?.url} 
+                      alt={previewFile?.name} 
+                      className="max-w-full max-h-full object-contain rounded-md shadow-sm" 
+                   />
+               )}
+            </div>
+            <div className="p-4 border-t flex justify-end gap-2 flex-shrink-0">
+              <Button variant="outline" onClick={() => window.open(previewFile?.url, '_blank')}>
+                  Open Original
+              </Button>
+              <Button onClick={() => setPreviewFile(null)}>Close</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
+
+  // Mobile View using Drawer
+  return (
+    <>
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="max-h-[95vh] flex flex-col">
+          <DrawerHeader className="text-left border-b pb-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  <DrawerTitle className="text-xl truncate pr-2">{expense.beneficiary}</DrawerTitle>
+                  <DrawerDescription className="mt-1 truncate">
+                    {expense.project_name}
+                  </DrawerDescription>
+                </div>
+                <Badge className={cn("text-sm px-2 py-1 shrink-0", getStatusBadgeStyle(derivedStatus))}>
+                  {derivedStatus}
+                </Badge>
+              </div>
+            </div>
+          </DrawerHeader>
+          <div className="flex-1 overflow-y-auto px-4">
+            {content}
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      {/* File Preview for Mobile - can also use Drawer or full screen Dialog */}
       <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
-        <DialogContent className="max-w-4xl w-full h-[80vh] flex flex-col p-0">
-          <DialogHeader className="p-4 border-b flex-shrink-0 flex flex-row items-center justify-between space-y-0">
-            <DialogTitle className="truncate pr-8">{previewFile?.name}</DialogTitle>
+        <DialogContent className="w-full h-[100dvh] max-w-full rounded-none border-0 p-0 flex flex-col">
+          <DialogHeader className="p-4 border-b flex-shrink-0 flex flex-row items-center justify-between space-y-0 bg-background">
+            <DialogTitle className="truncate pr-4 text-base">{previewFile?.name}</DialogTitle>
+            <Button variant="ghost" size="icon" onClick={() => setPreviewFile(null)} className="-mr-2">
+              <X className="h-5 w-5" />
+            </Button>
           </DialogHeader>
           <div className="flex-1 bg-muted/20 relative overflow-hidden flex items-center justify-center p-4">
              {previewFile?.type === 'application/pdf' ? (
@@ -808,11 +882,10 @@ Account Name: ${bankDetails.name || '-'}
                  />
              )}
           </div>
-          <div className="p-4 border-t flex justify-end gap-2 flex-shrink-0">
-            <Button variant="outline" onClick={() => window.open(previewFile?.url, '_blank')}>
+          <div className="p-4 border-t flex justify-end gap-2 flex-shrink-0 bg-background safe-area-bottom">
+            <Button variant="outline" className="w-full" onClick={() => window.open(previewFile?.url, '_blank')}>
                 Open Original
             </Button>
-            <Button onClick={() => setPreviewFile(null)}>Close</Button>
           </div>
         </DialogContent>
       </Dialog>
