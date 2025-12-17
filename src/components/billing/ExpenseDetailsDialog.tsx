@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
-import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2, Copy, Download, Edit } from "lucide-react";
+import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2, Copy, Download, Edit, Paperclip, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,6 +42,7 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
   // Use an object to track which specific feedback type is being replied to/edited
   const [replyingTerm, setReplyingTerm] = useState<{ index: number, type: 'finance' | 'pic' } | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackAttachment, setFeedbackAttachment] = useState<File | null>(null); // New state for attachment
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
 
@@ -206,9 +207,11 @@ Account Name: ${bankDetails.name || '-'}
     }
   };
 
-  const handleReplyClick = (index: number, type: 'finance' | 'pic', existingFeedback?: string) => {
+  const handleReplyClick = (index: number, type: 'finance' | 'pic', existingFeedback?: string, existingAttachment?: FileMetadata) => {
     setReplyingTerm({ index, type });
     setFeedbackText(existingFeedback || "");
+    // When opening the form, clear the attachment state as we only handle new uploads/replacements here.
+    setFeedbackAttachment(null); 
   };
 
   const submitFeedback = async () => {
@@ -218,19 +221,60 @@ Account Name: ${bankDetails.name || '-'}
     setIsSubmitting(true);
     
     try {
+        // --- File Upload Logic ---
+        let attachmentMetadata: FileMetadata | null = null;
+        
+        if (feedbackAttachment) {
+            const file = feedbackAttachment;
+            const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+            const filePath = `expense-feedback/${expense.id}/${index}/${Date.now()}-${sanitizedFileName}`;
+            
+            const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, file);
+            if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
+            
+            const { data: urlData } = supabase.storage.from('expense').getPublicUrl(filePath);
+            
+            attachmentMetadata = {
+                name: file.name,
+                url: urlData.publicUrl,
+                size: file.size,
+                type: file.type,
+                storagePath: filePath
+            };
+        } else {
+            // If editing existing feedback and no new file is selected, retain the old attachment if it exists
+            const existingTerm = (expense.payment_terms as any[])[index];
+            if (type === 'pic' && existingTerm.pic_attachment && !feedbackText.trim() && !existingTerm.pic_feedback) {
+                // If user clears text but keeps attachment, we should probably allow it, but for now, if both are empty, we clear the attachment too.
+                // If the user is editing and clears the attachment, feedbackAttachment is null, and we set attachmentMetadata to null below.
+            }
+        }
+        // --- End File Upload Logic ---
+
         const updatedTerms = [...(expense.payment_terms as any[])];
         
-        if (type === 'pic') {
-            // PIC is editing their own feedback
+        if (type === 'pic' || type === 'finance') {
+            // Determine the final attachment metadata. If a new file was uploaded, use that. 
+            // If no new file, check if the user is editing existing feedback.
+            const existingAttachment = updatedTerms[index].pic_attachment as FileMetadata | undefined;
+            
+            let finalAttachment = attachmentMetadata;
+            
+            // If we are editing (type='pic') and no new file was uploaded, keep the existing one 
+            // UNLESS the user explicitly removed it (which we don't support yet, but clearing feedbackAttachment handles new uploads).
+            // For simplicity, if feedbackAttachment is null, we check if the user cleared the text. If they cleared the text, clear the attachment too.
+            if (type === 'pic' && !feedbackAttachment && !feedbackText.trim()) {
+                finalAttachment = null;
+            } else if (type === 'pic' && !feedbackAttachment && existingAttachment) {
+                // If editing and no new file is selected, keep the existing one.
+                finalAttachment = existingAttachment;
+            }
+
+
             updatedTerms[index] = {
                 ...updatedTerms[index],
-                pic_feedback: feedbackText
-            };
-        } else if (type === 'finance') {
-            // PIC is replying to finance note (setting pic_feedback)
-            updatedTerms[index] = {
-                ...updatedTerms[index],
-                pic_feedback: feedbackText
+                pic_feedback: feedbackText,
+                pic_attachment: finalAttachment,
             };
         }
 
@@ -244,13 +288,14 @@ Account Name: ${bankDetails.name || '-'}
         toast.success("Feedback saved successfully");
         setReplyingTerm(null);
         setFeedbackText("");
+        setFeedbackAttachment(null);
         
         // Refresh data explicitly for this dialog and the main list
         await queryClient.invalidateQueries({ queryKey: ['expense_details', expense.id] });
         queryClient.invalidateQueries({ queryKey: ['expenses'] });
         
     } catch (err: any) {
-        toast.error("Failed to save feedback", { description: err.message });
+        toast.error("Failed to save feedback.", { description: err.message });
     } finally {
         setIsSubmitting(false);
     }
@@ -539,11 +584,60 @@ Account Name: ${bankDetails.name || '-'}
                                             placeholder="Write your feedback..."
                                             className="text-xs min-h-[60px] bg-background/80"
                                         />
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTerm(null)}>Cancel</Button>
-                                            <Button size="sm" className="h-6 text-xs px-2" onClick={submitFeedback} disabled={isSubmitting || !feedbackText.trim()}>
-                                                {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send Feedback'}
-                                            </Button>
+                                        {/* Attachment Display for Reply */}
+                                        {feedbackAttachment && (
+                                            <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
+                                                <span className="truncate flex items-center gap-1">
+                                                    <Paperclip className="h-3 w-3" />
+                                                    {feedbackAttachment.name} ({formatFileSize(feedbackAttachment.size)})
+                                                </span>
+                                                <Button 
+                                                    type="button" 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-5 w-5 text-red-500" 
+                                                    onClick={() => setFeedbackAttachment(null)}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between items-center">
+                                            {/* File Input Button */}
+                                            <input 
+                                                id={`feedback-file-upload-finance-${index}`}
+                                                type="file" 
+                                                className="hidden" 
+                                                onChange={(e) => {
+                                                    if (e.target.files && e.target.files.length > 0) {
+                                                        setFeedbackAttachment(e.target.files[0]);
+                                                    }
+                                                }}
+                                                disabled={isSubmitting}
+                                            />
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button 
+                                                            type="button" 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                                            onClick={() => document.getElementById(`feedback-file-upload-finance-${index}`)?.click()}
+                                                            disabled={isSubmitting}
+                                                        >
+                                                            <Paperclip className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>Attach File</TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                            <div className="flex justify-end gap-2">
+                                                <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTerm(null)}>Cancel</Button>
+                                                <Button size="sm" className="h-6 text-xs px-2" onClick={submitFeedback} disabled={isSubmitting || (!feedbackText.trim() && !feedbackAttachment)}>
+                                                    {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send Feedback'}
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
                                   )}
@@ -563,13 +657,44 @@ Account Name: ${bankDetails.name || '-'}
                                         variant="ghost" 
                                         size="icon" 
                                         className="h-6 w-6 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50"
-                                        onClick={() => handleReplyClick(index, 'pic', term.pic_feedback)}
+                                        onClick={() => handleReplyClick(index, 'pic', term.pic_feedback, term.pic_attachment)}
                                         title="Edit Feedback"
                                       >
                                         <Edit className="h-3.5 w-3.5" />
                                       </Button>
                                     )}
                                   </div>
+                                  {/* Display existing attachment */}
+                                  {term.pic_attachment && !isReplyingTo(index, 'pic') && (
+                                      <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
+                                          <span className="truncate flex items-center gap-1">
+                                              <Paperclip className="h-3 w-3" />
+                                              {term.pic_attachment.name} ({formatFileSize(term.pic_attachment.size)})
+                                          </span>
+                                          <div className="flex items-center space-x-1 shrink-0">
+                                              <TooltipProvider>
+                                                  <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleView(term.pic_attachment)}>
+                                                              <Eye className="h-3 w-3" />
+                                                          </Button>
+                                                      </TooltipTrigger>
+                                                      <TooltipContent>View</TooltipContent>
+                                                  </Tooltip>
+                                              </TooltipProvider>
+                                              <TooltipProvider>
+                                                  <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDownload(term.pic_attachment.url, term.pic_attachment.name)}>
+                                                              <Download className="h-3 w-3" />
+                                                          </Button>
+                                                      </TooltipTrigger>
+                                                      <TooltipContent>Download</TooltipContent>
+                                                  </Tooltip>
+                                              </TooltipProvider>
+                                          </div>
+                                      </div>
+                                  )}
                                   {/* Reply Form (for editing existing PIC feedback) */}
                                   {isReplyingTo(index, 'pic') && (
                                     <div className="pl-6 space-y-2 mt-1">
@@ -579,11 +704,60 @@ Account Name: ${bankDetails.name || '-'}
                                             placeholder="Edit your feedback..."
                                             className="text-xs min-h-[60px] bg-background/80"
                                         />
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTerm(null)}>Cancel</Button>
-                                            <Button size="sm" className="h-6 text-xs px-2" onClick={submitFeedback} disabled={isSubmitting || !feedbackText.trim()}>
-                                                {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save Changes'}
-                                            </Button>
+                                        {/* Attachment Display for Edit */}
+                                        {(feedbackAttachment || term.pic_attachment) && (
+                                            <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
+                                                <span className="truncate flex items-center gap-1">
+                                                    <Paperclip className="h-3 w-3" />
+                                                    {feedbackAttachment ? feedbackAttachment.name : term.pic_attachment.name} ({formatFileSize(feedbackAttachment ? feedbackAttachment.size : term.pic_attachment.size)})
+                                                </span>
+                                                <Button 
+                                                    type="button" 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-5 w-5 text-red-500" 
+                                                    onClick={() => setFeedbackAttachment(null)}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between items-center">
+                                            {/* File Input Button */}
+                                            <input 
+                                                id={`feedback-file-upload-pic-${index}`}
+                                                type="file" 
+                                                className="hidden" 
+                                                onChange={(e) => {
+                                                    if (e.target.files && e.target.files.length > 0) {
+                                                        setFeedbackAttachment(e.target.files[0]);
+                                                    }
+                                                }}
+                                                disabled={isSubmitting}
+                                            />
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button 
+                                                            type="button" 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                                            onClick={() => document.getElementById(`feedback-file-upload-pic-${index}`)?.click()}
+                                                            disabled={isSubmitting}
+                                                        >
+                                                            <Paperclip className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>Attach File</TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                            <div className="flex justify-end gap-2">
+                                                <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTerm(null)}>Cancel</Button>
+                                                <Button size="sm" className="h-6 text-xs px-2" onClick={submitFeedback} disabled={isSubmitting || (!feedbackText.trim() && !feedbackAttachment && !term.pic_attachment)}>
+                                                    {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save Changes'}
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
                                   )}
