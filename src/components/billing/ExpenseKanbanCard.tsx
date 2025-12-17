@@ -33,7 +33,17 @@ const ExpenseKanbanCard = ({ expense, onEdit, onDelete, canDrag }: ExpenseKanban
 
   // Determine border color based on status
   const statusDef = statuses.find(s => s.name === expense.status_expense);
-  const borderColor = statusDef?.color || '#e5e7eb'; // Default gray if not found
+  const statusLower = expense.status_expense?.toLowerCase();
+  
+  // Use DB color if available, otherwise default logic
+  let borderColor = statusDef?.color;
+  if (!borderColor) {
+    if (statusLower === 'pending' || statusLower === 'proposed') {
+      borderColor = '#facc15'; // yellow-400
+    } else {
+      borderColor = '#e5e7eb'; // gray-200
+    }
+  }
 
   return (
     <div 
