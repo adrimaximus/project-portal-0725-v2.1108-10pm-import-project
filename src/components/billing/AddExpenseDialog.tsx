@@ -72,7 +72,6 @@ interface ProjectOption extends Project {
 
 // Helper function to extract date ranges from project names
 const extractDateFromProjectName = (name: string): { start: Date, end: Date } | null => {
-  // 1. Range: dd-ddmmyy (e.g. 05-071225 -> 5 Dec 2025 to 7 Dec 2025)
   const rangeMatch = name.match(/\b(\d{2})-(\d{2})(\d{2})(\d{2})\b/);
   if (rangeMatch) {
     const startDay = parseInt(rangeMatch[1]);
@@ -85,7 +84,6 @@ const extractDateFromProjectName = (name: string): { start: Date, end: Date } | 
       if (!isNaN(start.getTime()) && !isNaN(end.getTime())) return { start, end };
     }
   }
-  // 2. Full Date: ddmmyy
   const fullDateMatch = name.match(/\b(\d{2})(\d{2})(\d{2})\b/);
   if (fullDateMatch) {
     const day = parseInt(fullDateMatch[1]);
@@ -96,7 +94,6 @@ const extractDateFromProjectName = (name: string): { start: Date, end: Date } | 
       if (!isNaN(date.getTime())) return { start: date, end: date };
     }
   }
-  // 3. Month Year: mmyy
   const monthYearMatch = name.match(/\b(\d{2})(\d{2})\b/);
   if (monthYearMatch) {
     const month = parseInt(monthYearMatch[1]) - 1;
@@ -339,7 +336,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
               if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) score += 5;
           }
 
-          // Check against date in project name
           const nameDate = extractDateFromProjectName(p.name);
           if (nameDate && exDate && !isNaN(exDate.getTime())) {
               const bufferStart = new Date(nameDate.start); 
@@ -485,11 +481,9 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     toast.success("Data extracted from document!");
   };
 
-  // Handle Files & AI
   const handleFileProcessed = async (file: UploadedFile) => {
     let finalUrl = file.url;
     
-    // Check if it's a blob URL (new file)
     if (file.url.startsWith('blob:')) {
       try {
         toast.info("Uploading image for analysis...");
@@ -549,11 +543,9 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     }
   };
 
-  // Handle File List Changes (Sync with Form)
   const handleFilesChange = (files: any[]) => {
       setValue('attachments_jsonb', files as any, { shouldDirty: true });
       
-      // Auto-process the last added file if it's new
       const newFiles = files.filter(f => f.originalFile instanceof File);
       if (newFiles.length > 0) {
           handleFileProcessed(newFiles[newFiles.length - 1]);
@@ -567,6 +559,16 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       const currentFiles = values.attachments_jsonb || [];
       const newFilesToUpload = currentFiles.filter((f: any) => f.originalFile instanceof File);
       
+      // Calculate initial aggregated status
+      let initialStatus = 'Pending';
+      const terms = values.payment_terms || [];
+      const termStatuses = terms.map(t => t.status || 'Pending');
+      
+      if (termStatuses.some(s => s === 'Rejected')) initialStatus = 'Rejected';
+      else if (termStatuses.some(s => s === 'On review')) initialStatus = 'On review';
+      else if (termStatuses.length > 0 && termStatuses.every(s => s === 'Paid')) initialStatus = 'Paid';
+      else if (termStatuses.length > 0 && termStatuses.every(s => s === 'Requested')) initialStatus = 'Requested';
+
       // Insert expense first to get the ID for storage path
       const { data: newExpense, error: insertError } = await supabase.from('expenses').insert({
         project_id: values.project_id,
@@ -574,13 +576,12 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         purpose_payment: values.purpose_payment,
         beneficiary: values.beneficiary,
         tf_amount: values.tf_amount,
-        status_expense: 'Pending',
+        status_expense: initialStatus, // Use calculated status
         remarks: values.remarks,
         custom_properties: {
             ...values.custom_properties,
             ai_review_notes: values.ai_review_notes
         },
-        // Temporarily set attachments_jsonb to empty array
         attachments_jsonb: [],
       }).select().single();
 
@@ -632,6 +633,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         bank_account_id: (selectedAccount && !isTempAccount) ? selectedAccount.id : null,
         account_bank: bankDetails,
         attachments_jsonb: uploadedFilesMetadata,
+        status_expense: initialStatus, // Ensure status is synced on update too
       }).eq('id', expenseId);
 
       if (updateError) throw updateError;

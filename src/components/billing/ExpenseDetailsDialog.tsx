@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Expense } from "@/types";
 import { format } from "date-fns";
@@ -32,6 +33,22 @@ const formatFileSize = (bytes: number) => {
 };
 
 const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDialogProps) => {
+  // Calculate status based on payment terms
+  const derivedStatus = useMemo(() => {
+    if (!expense?.payment_terms || expense.payment_terms.length === 0) return expense?.status_expense || 'Pending';
+    
+    const terms = (expense.payment_terms as any[]);
+    const statuses = terms.map(t => t.status || 'Pending');
+    
+    // Logic priority: Rejected > On review > Paid (All) > Requested (All) > Pending
+    if (statuses.some(s => s === 'Rejected')) return 'Rejected';
+    if (statuses.some(s => s === 'On review')) return 'On review';
+    if (statuses.every(s => s === 'Paid')) return 'Paid';
+    if (statuses.every(s => s === 'Requested')) return 'Requested';
+    
+    return 'Pending';
+  }, [expense]);
+
   if (!expense) return null;
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat("id-ID", {
@@ -46,6 +63,7 @@ const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDia
       case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700/50';
       case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200 dark:border-red-700/50';
       case 'on review': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border-blue-200 dark:border-blue-700/50';
+      case 'requested': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 border-purple-200 dark:border-purple-700/50';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600';
     }
   };
@@ -72,8 +90,8 @@ const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDia
                 {expense.project_name}
               </DialogDescription>
             </div>
-            <Badge className={cn("text-sm px-3 py-1", getStatusBadgeStyle(expense.status_expense))}>
-              {expense.status_expense || 'Pending'}
+            <Badge className={cn("text-sm px-3 py-1", getStatusBadgeStyle(derivedStatus))}>
+              {derivedStatus}
             </Badge>
           </div>
         </DialogHeader>

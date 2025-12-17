@@ -77,57 +77,38 @@ interface ProjectOption extends Project {
 
 // Helper function to extract date ranges from project names
 const extractDateFromProjectName = (name: string): { start: Date, end: Date } | null => {
-  // 1. Range: dd-ddmmyy (e.g. 05-071225 -> 5 Dec 2025 to 7 Dec 2025)
-  // Look for pattern: 2 digits, hyphen, 6 digits
   const rangeMatch = name.match(/\b(\d{2})-(\d{2})(\d{2})(\d{2})\b/);
   if (rangeMatch) {
     const startDay = parseInt(rangeMatch[1]);
     const endDay = parseInt(rangeMatch[2]);
-    const month = parseInt(rangeMatch[3]) - 1; // JS months are 0-indexed
+    const month = parseInt(rangeMatch[3]) - 1; 
     const year = 2000 + parseInt(rangeMatch[4]);
-    
-    // Basic validation
     if (month >= 0 && month <= 11) {
       const start = new Date(year, month, startDay);
       const end = new Date(year, month, endDay);
-      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-        return { start, end };
-      }
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) return { start, end };
     }
   }
-
-  // 2. Full Date: ddmmyy (e.g. 081125 -> 8 Nov 2025)
-  // Look for pattern: 6 digits exactly at a boundary
   const fullDateMatch = name.match(/\b(\d{2})(\d{2})(\d{2})\b/);
   if (fullDateMatch) {
     const day = parseInt(fullDateMatch[1]);
     const month = parseInt(fullDateMatch[2]) - 1;
     const year = 2000 + parseInt(fullDateMatch[3]);
-    
     if (month >= 0 && month <= 11) {
       const date = new Date(year, month, day);
-      if (!isNaN(date.getTime())) {
-        return { start: date, end: date };
-      }
+      if (!isNaN(date.getTime())) return { start: date, end: date };
     }
   }
-
-  // 3. Month Year: mmyy (e.g. 1025 -> Oct 2025)
-  // Look for pattern: 4 digits exactly at a boundary
   const monthYearMatch = name.match(/\b(\d{2})(\d{2})\b/);
   if (monthYearMatch) {
     const month = parseInt(monthYearMatch[1]) - 1;
     const year = 2000 + parseInt(monthYearMatch[2]);
-    
     if (month >= 0 && month <= 11) {
       const start = new Date(year, month, 1);
-      const end = new Date(year, month + 1, 0); // Last day of month
-      if (!isNaN(start.getTime())) {
-        return { start, end };
-      }
+      const end = new Date(year, month + 1, 0); 
+      if (!isNaN(start.getTime())) return { start, end };
     }
   }
-
   return null;
 };
 
@@ -163,10 +144,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
   // AI & Files
   const { extractData, isExtracting } = useExpenseExtractor();
   const [analysisProgress, setAnalysisProgress] = useState(0);
-  // We keep track of initial attachments to detect deletions
   const [initialAttachments, setInitialAttachments] = useState<any[]>([]);
-
-  // Track processing for each file
   const [currentProcessingFile, setCurrentProcessingFile] = useState<string | null>(null);
 
   useEffect(() => {
@@ -186,7 +164,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
       return () => clearInterval(interval);
   }, [isExtracting]);
 
-  // Construct processing files map for FileUploader
   const processingFiles = useMemo(() => {
     if (!currentProcessingFile || !isExtracting) return undefined;
     return {
@@ -283,7 +260,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                 purpose_payment: fullExpense.purpose_payment || '',
                 beneficiary: fullExpense.beneficiary,
                 tf_amount: fullExpense.tf_amount,
-                // Removed status_expense from reset as it's not in the form anymore
                 remarks: fullExpense.remarks || "",
                 payment_terms: (fullExpense.payment_terms as any)?.map((t: any) => ({
                     ...t,
@@ -409,7 +385,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
               if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) score += 5;
           }
 
-          // Check against date in project name
           const nameDate = extractDateFromProjectName(p.name);
           if (nameDate && exDate && !isNaN(exDate.getTime())) {
               const bufferStart = new Date(nameDate.start); 
@@ -555,11 +530,9 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
     toast.success("Data extracted from document!");
   };
 
-  // Handle Files & AI
   const handleFileProcessed = async (file: UploadedFile) => {
     let finalUrl = file.url;
     
-    // Check if it's a blob URL (new file)
     if (file.url.startsWith('blob:')) {
       try {
         toast.info("Uploading image for analysis...");
@@ -619,11 +592,9 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
     }
   };
 
-  // Handle File List Changes (Sync with Form)
   const handleFilesChange = (files: any[]) => {
       setValue('attachments_jsonb', files as any, { shouldDirty: true });
       
-      // Auto-process the last added file if it's new
       const newFiles = files.filter(f => f.originalFile instanceof File);
       if (newFiles.length > 0) {
           handleFileProcessed(newFiles[newFiles.length - 1]);
@@ -639,12 +610,10 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
       const newFilesToUpload = currentFiles.filter((f: any) => f.originalFile instanceof File);
       const existingFilesKept = currentFiles.filter((f: any) => !(f.originalFile instanceof File));
 
-      // Calculate files to delete (Initial - Kept)
       const filesToDelete = initialAttachments.filter(initFile => 
           !existingFilesKept.some((kept: any) => kept.url === initFile.url)
       );
 
-      // Delete removed files from storage
       if (filesToDelete.length > 0) {
           const paths = filesToDelete.map(f => f.storagePath).filter(Boolean);
           if (paths.length > 0) {
@@ -652,7 +621,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
           }
       }
 
-      // Upload new files
       const uploadedFilesMetadata = [];
       for (const fileItem of newFilesToUpload) {
           const file = (fileItem as any).originalFile as File;
@@ -691,6 +659,16 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
         bankDetails = expense.account_bank;
       }
 
+      // Calculate new overall status
+      let newStatus = 'Pending';
+      const terms = values.payment_terms || [];
+      const termStatuses = terms.map(t => t.status || 'Pending');
+      
+      if (termStatuses.some(s => s === 'Rejected')) newStatus = 'Rejected';
+      else if (termStatuses.some(s => s === 'On review')) newStatus = 'On review';
+      else if (termStatuses.length > 0 && termStatuses.every(s => s === 'Paid')) newStatus = 'Paid';
+      else if (termStatuses.length > 0 && termStatuses.every(s => s === 'Requested')) newStatus = 'Requested';
+
       // 3. Update DB
       const { error } = await supabase.from('expenses').update({
         project_id: values.project_id,
@@ -706,7 +684,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
         bank_account_id: (selectedAccount && !isTempAccount) ? selectedAccount.id : null,
         account_bank: bankDetails,
         remarks: values.remarks,
-        // Removed status_expense update to preserve existing status
+        status_expense: newStatus, // Update aggregated status
         custom_properties: {
             ...values.custom_properties,
             ai_review_notes: values.ai_review_notes
@@ -998,8 +976,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
               <FormField control={form.control} name="tf_amount" render={({ field }) => (
                 <FormItem><FormLabel>Total Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
               )} />
-              
-              {/* Status field removed as requested */}
               
               {/* 10. Payment Terms */}
               <div>
