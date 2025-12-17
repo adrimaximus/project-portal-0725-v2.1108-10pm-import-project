@@ -29,10 +29,7 @@ import CreateProjectDialog from '../projects/CreateProjectDialog';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
 import FileUploader, { FileMetadata } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
-import * as pdfjsLib from 'pdfjs-dist';
-
-// Initialize PDF worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+import { convertPdfToImage } from '@/lib/pdfUtils';
 
 interface EditExpenseDialogProps {
   open: boolean;
@@ -68,40 +65,6 @@ interface ProjectOption extends Project {
     client_name?: string | null;
     client_company_name?: string | null;
 }
-
-const convertPdfToImage = async (file: File): Promise<File | null> => {
-    try {
-        const arrayBuffer = await file.arrayBuffer();
-        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-        const pdf = await loadingTask.promise;
-        const page = await pdf.getPage(1); // Analyze first page
-        const scale = 2.0; // Higher scale for better quality
-        const viewport = page.getViewport({ scale });
-        
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        if (!context) return null;
-        
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-        
-        await page.render({ canvasContext: context, viewport }).promise;
-        
-        return new Promise((resolve) => {
-            canvas.toBlob((blob) => {
-                if (blob) {
-                    const imageFile = new File([blob], file.name.replace('.pdf', '.png'), { type: 'image/png' });
-                    resolve(imageFile);
-                } else {
-                    resolve(null);
-                }
-            }, 'image/png');
-        });
-    } catch (error) {
-        console.error("PDF to Image conversion error:", error);
-        return null;
-    }
-};
 
 const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExpenseDialogProps) => {
   const { user } = useAuth();
@@ -382,21 +345,30 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
 
         const sanitizedFileName = fileToProcess.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
         const filePath = `temp-analysis/${Date.now()}-${sanitizedFileName}`;
-        
         const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, fileToProcess);
         
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+             console.error("Upload for analysis failed", uploadError);
+             return;
+        }
 
         const { data: urlData } = supabase.storage.from('expense').getPublicUrl(filePath);
         finalUrl = urlData.publicUrl;
 
-        const extractedData = await extractData({ url: finalUrl, type: fileToProcess.type });
+        // Pass instructions to the extractor
+        const instructions = form.getValues('ai_review_notes');
+
+        const extractedData = await extractData({ 
+            url: finalUrl, 
+            type: fileToProcess.type,
+            instructions: instructions
+        });
+        
         if (extractedData) {
             await applyExtractedData(extractedData);
         }
     } catch (e) {
         console.error("Processing failed", e);
-        toast.error("Failed to process file for AI analysis");
     } finally {
         setCurrentProcessingFile(null);
     }
@@ -414,7 +386,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
     const lastFile = [...attachments].reverse().find(f => f instanceof File) as File | undefined;
 
     if (!lastFile) {
-        toast.error("Please upload a new file to analyze.");
+        toast.error("No new file to analyze.");
         return;
     }
     

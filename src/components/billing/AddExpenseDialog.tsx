@@ -29,10 +29,7 @@ import CreateProjectDialog from '../projects/CreateProjectDialog';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
 import FileUploader, { FileMetadata } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
-import * as pdfjsLib from 'pdfjs-dist';
-
-// Initialize PDF worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+import { convertPdfToImage } from '@/lib/pdfUtils';
 
 interface AddExpenseDialogProps {
   open: boolean;
@@ -67,40 +64,6 @@ interface ProjectOption extends Project {
     client_name?: string | null;
     client_company_name?: string | null;
 }
-
-const convertPdfToImage = async (file: File): Promise<File | null> => {
-    try {
-        const arrayBuffer = await file.arrayBuffer();
-        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-        const pdf = await loadingTask.promise;
-        const page = await pdf.getPage(1); // Analyze first page
-        const scale = 2.0; // Higher scale for better quality
-        const viewport = page.getViewport({ scale });
-        
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        if (!context) return null;
-        
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-        
-        await page.render({ canvasContext: context, viewport }).promise;
-        
-        return new Promise((resolve) => {
-            canvas.toBlob((blob) => {
-                if (blob) {
-                    const imageFile = new File([blob], file.name.replace('.pdf', '.png'), { type: 'image/png' });
-                    resolve(imageFile);
-                } else {
-                    resolve(null);
-                }
-            }, 'image/png');
-        });
-    } catch (error) {
-        console.error("PDF to Image conversion error:", error);
-        return null;
-    }
-};
 
 const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const { user } = useAuth();
@@ -298,8 +261,11 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           if (exDate && !isNaN(exDate.getTime()) && p.start_date) {
               const start = new Date(p.start_date);
               const end = p.due_date ? new Date(p.due_date) : new Date(start);
+              // Allow date to be within project range with some buffer
               const bufferStart = new Date(start); bufferStart.setDate(start.getDate() - 7);
               const bufferEnd = new Date(end); bufferEnd.setDate(end.getDate() + 60);
+              // @ts-ignore
+              const isWithinInterval = (date, interval) => date >= interval.start && date <= interval.end;
               if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) score += 5;
           }
 
@@ -314,16 +280,13 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const applyExtractedData = async (extractedData: any) => {
     if (extractedData.amount && extractedData.amount > 0) {
       setValue('tf_amount', extractedData.amount, { shouldValidate: true });
-      
       const terms = form.getValues('payment_terms');
       const invoiceDate = extractedData.date ? new Date(extractedData.date) : new Date();
       const dueDate = extractedData.due_date ? new Date(extractedData.due_date) : invoiceDate;
 
       if (terms && terms.length === 1) {
            setValue('payment_terms.0.amount', extractedData.amount);
-           setValue('payment_terms.0.request_date', new Date());
            setValue('payment_terms.0.release_date', dueDate);
-           setValue('payment_terms.0.status', 'Requested');
       } else {
            setValue('payment_terms', [{
                amount: extractedData.amount,
@@ -335,14 +298,9 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       }
     }
     
-    const explicitDescription = extractedData.description || extractedData.purpose;
-    const itemsDescription = Array.isArray(extractedData.items) && extractedData.items.length > 0 
-        ? extractedData.items.map((i: any) => i.description || i.name).filter(Boolean).join(', ') 
-        : null;
-    const purpose = itemsDescription || explicitDescription || extractedData.summary;
-
-    if (purpose) {
-      setValue('purpose_payment', purpose, { shouldValidate: true });
+    const description = extractedData.description || extractedData.purpose || extractedData.summary;
+    if (description) {
+      setValue('purpose_payment', description, { shouldValidate: true });
     }
 
     let currentBeneficiary = beneficiary;
@@ -460,6 +418,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
         const sanitizedFileName = fileToProcess.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
         const filePath = `temp-analysis/${Date.now()}-${sanitizedFileName}`;
+        
         const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, fileToProcess);
         
         if (uploadError) {
@@ -470,7 +429,15 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         const { data: urlData } = supabase.storage.from('expense').getPublicUrl(filePath);
         finalUrl = urlData.publicUrl;
 
-        const extractedData = await extractData({ url: finalUrl, type: fileToProcess.type });
+        // Pass instructions to the extractor
+        const instructions = form.getValues('ai_review_notes');
+        
+        const extractedData = await extractData({ 
+            url: finalUrl, 
+            type: fileToProcess.type,
+            instructions: instructions
+        });
+        
         if (extractedData) {
             await applyExtractedData(extractedData);
         }
@@ -483,17 +450,17 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
   const handleRunAiCheck = async () => {
     const attachments = form.getValues('attachments_jsonb');
-    const instructions = form.getValues('ai_review_notes');
     
     if (!attachments || attachments.length === 0) {
        toast.error("No attachments found to analyze.");
        return;
     }
     
+    // Find first NEW file if possible, else take last file
     const lastFile = [...attachments].reverse().find(f => f instanceof File) as File | undefined;
 
     if (!lastFile) {
-        toast.error("No new file to analyze.");
+        toast.error("Please upload a new file to analyze.");
         return;
     }
     
@@ -629,7 +596,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                         value={field.value || []}
                         onValueChange={(files) => handleFilesChange(files)}
                         maxFiles={5}
-                        maxSize={20971520} // 20MB
+                        maxSize={20971520}
                         accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'], 'application/pdf': ['.pdf'] }}
                         disabled={isFormDisabled}
                       />
@@ -888,16 +855,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                             <FormItem><FormLabel className="text-xs">Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="bg-background"><SelectValue placeholder="Status" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Requested">Requested</SelectItem><SelectItem value="On review">On review</SelectItem><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Rejected">Rejected</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                           )} />
                         </div>
-                        {['Pending', 'Rejected'].includes(form.watch(`payment_terms.${index}.status`) || '') && (
-                          <div className="grid grid-cols-1 gap-4 mt-2 p-2 bg-yellow-50/50 rounded-md border border-yellow-100">
-                            <FormField control={form.control} name={`payment_terms.${index}.status_remarks`} render={({ field }) => (
-                              <FormItem><FormLabel className="text-xs text-yellow-700">Reason (Finance)</FormLabel><FormControl><Textarea className="min-h-[60px] text-xs bg-white" placeholder="Reason for pending/rejected status..." {...field} value={field.value || ''} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <FormField control={form.control} name={`payment_terms.${index}.pic_feedback`} render={({ field }) => (
-                              <FormItem><FormLabel className="text-xs text-yellow-700">PIC Feedback</FormLabel><FormControl><Textarea className="min-h-[60px] text-xs bg-white" placeholder="Response/Feedback from PIC..." {...field} value={field.value || ''} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                          </div>
-                        )}
                       </div>
                     </div>
                   ))}
