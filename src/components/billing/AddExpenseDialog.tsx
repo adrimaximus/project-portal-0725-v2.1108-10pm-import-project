@@ -565,7 +565,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="w-full sm:max-w-lg md:max-w-xl max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Expense</DialogTitle>
             <DialogDescription>Record a new expense for a project.</DialogDescription>

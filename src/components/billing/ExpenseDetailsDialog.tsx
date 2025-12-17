@@ -262,12 +262,14 @@ Account Name: ${bankDetails.name || '-'}
             
             // If we are editing (type='pic') and no new file was uploaded, keep the existing one 
             // UNLESS the user explicitly removed it (which we don't support yet, but clearing feedbackAttachment handles new uploads).
-            // For simplicity, if feedbackAttachment is null, we check if the user cleared the text. If they cleared the text, clear the attachment too.
-            if (type === 'pic' && !feedbackAttachment && !feedbackText.trim()) {
-                finalAttachment = null;
-            } else if (type === 'pic' && !feedbackAttachment && existingAttachment) {
-                // If editing and no new file is selected, keep the existing one.
+            // If editing and no new file is selected, keep the existing one.
+            if (type === 'pic' && !feedbackAttachment && existingAttachment) {
                 finalAttachment = existingAttachment;
+            }
+            
+            // If the user clears the text and there is no new attachment, clear the old attachment too.
+            if (!feedbackText.trim() && !feedbackAttachment) {
+                finalAttachment = null;
             }
 
 
@@ -332,7 +334,7 @@ Account Name: ${bankDetails.name || '-'}
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-2xl max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex justify-between items-start gap-4 pr-8">
               <div>

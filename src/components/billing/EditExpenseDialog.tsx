@@ -576,7 +576,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="w-full sm:max-w-lg md:max-w-xl max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Expense</DialogTitle>
             <DialogDescription>Update expense details.</DialogDescription>
@@ -687,7 +687,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
                                         <span>{project.name}</span>
                                         {(project.client_company_name || project.client_name) && (
                                           <span className="text-xs text-muted-foreground">
-                                            {project.client_company_name || project.client_name}
+                                            {project.client_company_name || project.client_company_name}
                                           </span>
                                         )}
                                     </div>
