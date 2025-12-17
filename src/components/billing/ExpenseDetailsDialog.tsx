@@ -44,8 +44,9 @@ export default function ExpenseDetailsDialog({
   
   // Fetch full expense details to get latest attachments
   const { data: expense } = useQuery({
-    queryKey: ['expense-details', propExpense.id],
+    queryKey: ['expense-details', propExpense?.id],
     queryFn: async () => {
+      if (!propExpense?.id) return null;
       const { data, error } = await supabase
         .from('expenses')
         .select(`
@@ -60,7 +61,7 @@ export default function ExpenseDetailsDialog({
       return data;
     },
     initialData: propExpense,
-    enabled: open
+    enabled: open && !!propExpense?.id
   });
 
   if (!expense) return null;
