@@ -280,14 +280,14 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="w-full h-[100dvh] sm:h-auto sm:max-w-lg flex flex-col p-0 sm:p-6 sm:rounded-lg max-h-[100dvh] sm:max-h-[85vh]">
+        <DialogHeader className="p-4 sm:p-0 flex-shrink-0">
           <DialogTitle>Edit Invoice</DialogTitle>
           <DialogDescription>
             Update details for invoice related to project "{invoice.projectName}".
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
+        <div className="grid gap-4 py-4 px-4 sm:px-0 flex-1 overflow-y-auto">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="invoiceNumber" className="text-right">
               Invoice #
@@ -467,19 +467,20 @@ export const EditInvoiceDialog = ({ isOpen, onClose, invoice, project }: EditInv
             </div>
           </div>
         </div>
-        <DialogFooter className="flex justify-between w-full">
+        <DialogFooter className="flex flex-col sm:flex-row justify-between w-full gap-2 p-4 sm:p-0 sm:pt-4 border-t sm:border-t-0 flex-shrink-0 mt-auto bg-background">
           <Button 
             type="button" 
             variant="secondary" 
             onClick={handleSendReminder} 
             disabled={isProcessing || isSendingReminder || status === 'Paid'}
+            className="w-full sm:w-auto"
           >
             {isSendingReminder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BellRing className="mr-2 h-4 w-4" />}
             Send Reminder
           </Button>
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isProcessing}>Cancel</Button>
-            <Button onClick={handleSave} disabled={isProcessing}>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isProcessing} className="flex-1 sm:flex-none">Cancel</Button>
+            <Button onClick={handleSave} disabled={isProcessing} className="flex-1 sm:flex-none">
               {isProcessing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : 'Save Changes'}
             </Button>
           </div>

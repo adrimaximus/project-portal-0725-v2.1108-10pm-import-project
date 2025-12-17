@@ -127,7 +127,7 @@ const CompanyFormDialog: React.FC<CompanyFormDialogProps> = ({ open, onOpenChang
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-lg grid grid-rows-[auto_1fr_auto] max-h-[80vh] p-0">
+            <DialogContent className="w-full h-[100dvh] sm:h-auto sm:max-w-lg grid grid-rows-[auto_1fr_auto] sm:max-h-[85vh] p-0">
                 <DialogHeader className="p-4 border-b">
                     <DialogTitle>{company ? 'Edit Company' : 'Add New Company'}</DialogTitle>
                     <DialogDescription>
