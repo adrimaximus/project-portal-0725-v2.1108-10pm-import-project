@@ -770,7 +770,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                         type="button" 
                         variant="outline" 
                         size="sm" 
-                        className="w-fit justify-start h-auto p-0 text-sm font-medium text-foreground hover:text-primary disabled:opacity-100 disabled:cursor-default"
+                        className="w-fit justify-start h-auto px-3 py-1 text-sm font-medium text-foreground hover:text-primary disabled:opacity-100 disabled:cursor-default"
                         disabled={isExtracting || !watch('attachments_jsonb')?.length}
                         onClick={handleRunAiCheck}
                     >
