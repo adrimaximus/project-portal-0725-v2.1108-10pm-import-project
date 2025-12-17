@@ -656,6 +656,72 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           </DialogHeader>
           <Form {...form}>
             <form id="expense-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto p-4">
+              
+              {/* 1. Attachments */}
+              <FormField
+                control={form.control}
+                name="attachments_jsonb"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex justify-between items-center mb-1">
+                      <FormLabel className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" /> Attachments
+                      </FormLabel>
+                    </div>
+                    <div className="text-xs text-muted-foreground mb-1">
+                        Upload invoice or receipt to auto-fill details (Image & PDF supported)
+                    </div>
+                    <FormControl>
+                      <FileUploader
+                        bucket="expense"
+                        value={field.value || []}
+                        onChange={(files) => handleFilesChange(files)}
+                        maxFiles={5}
+                        maxSize={20971520} // 20MB
+                        accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'], 'application/pdf': ['.pdf'] }}
+                        disabled={isFormDisabled}
+                        onFileProcessed={handleFileProcessed}
+                        processingFiles={processingFiles}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* 2. AI Review Instructions */}
+              <FormField
+                control={form.control}
+                name="ai_review_notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-fit justify-start h-auto px-3 py-1 text-sm font-medium text-foreground hover:text-primary disabled:opacity-100 disabled:cursor-default"
+                        disabled={isExtracting || !watch('attachments_jsonb')?.length}
+                        onClick={handleRunAiCheck}
+                    >
+                        <Wand2 className="h-4 w-4 text-purple-500 mr-2" />
+                        AI Review Instructions 
+                        {isExtracting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                    </Button>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Instruct AI to check for missing details or documents (e.g. 'Check if invoice number is missing', 'Verify tax calculation')" 
+                        {...field} 
+                        value={field.value || ''}
+                        disabled={isFormDisabled} 
+                        className="bg-purple-50/50 border-purple-100 focus-visible:ring-purple-200"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* 3. Project Selector */}
               <FormField
                 control={form.control}
                 name="project_id"
@@ -717,7 +783,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 )}
               />
 
-              {/* PIC Selector */}
+              {/* 4. PIC Selector */}
               <FormField
                 control={form.control}
                 name="created_by"
@@ -745,6 +811,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 )}
               />
 
+              {/* 5. Purpose Payment */}
               <FormField
                 control={form.control}
                 name="purpose_payment"
@@ -761,67 +828,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="ai_review_notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-fit justify-start h-auto px-3 py-1 text-sm font-medium text-foreground hover:text-primary disabled:opacity-100 disabled:cursor-default"
-                        disabled={isExtracting || !watch('attachments_jsonb')?.length}
-                        onClick={handleRunAiCheck}
-                    >
-                        <Wand2 className="h-4 w-4 text-purple-500 mr-2" />
-                        AI Review Instructions 
-                        {isExtracting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                    </Button>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Instruct AI to check for missing details or documents (e.g. 'Check if invoice number is missing', 'Verify tax calculation')" 
-                        {...field} 
-                        value={field.value || ''}
-                        disabled={isFormDisabled} 
-                        className="bg-purple-50/50 border-purple-100 focus-visible:ring-purple-200"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="attachments_jsonb"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex justify-between items-center mb-1">
-                      <FormLabel className="flex items-center gap-2">
-                        <FileText className="h-4 w-4" /> Attachments
-                      </FormLabel>
-                    </div>
-                    <div className="text-xs text-muted-foreground mb-1">
-                        Upload invoice or receipt to auto-fill details (Image & PDF supported)
-                    </div>
-                    <FormControl>
-                      <FileUploader
-                        bucket="expense"
-                        value={field.value || []}
-                        onChange={(files) => handleFilesChange(files)}
-                        maxFiles={5}
-                        maxSize={20971520} // 20MB
-                        accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'], 'application/pdf': ['.pdf'] }}
-                        disabled={isFormDisabled}
-                        onFileProcessed={handleFileProcessed}
-                        processingFiles={processingFiles}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* 6. Beneficiary */}
               <FormField control={form.control} name="beneficiary" render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Beneficiary</FormLabel>
@@ -860,6 +867,8 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                   <FormMessage />
                 </FormItem>
               )} />
+              
+              {/* 7. Bank Account */}
               <FormField control={form.control} name="bank_account_id" render={({ field }) => (
                 <FormItem>
                   <div className="flex justify-between items-center">
@@ -901,9 +910,13 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                   <FormMessage />
                 </FormItem>
               )} />
+              
+              {/* 8. Total Amount */}
               <FormField control={form.control} name="tf_amount" render={({ field }) => (
                 <FormItem><FormLabel>Total Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
               )} />
+              
+              {/* 9. Status */}
               <FormField
                 control={form.control}
                 name="status_expense"
@@ -926,6 +939,8 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                   </FormItem>
                 )}
               />
+              
+              {/* 10. Payment Terms */}
               <div>
                 <FormLabel>Payment Terms</FormLabel>
                 <div className="space-y-3 mt-2">
@@ -963,13 +978,19 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                   </Button>
                 </div>
               </div>
+              
+              {/* 11. Balance */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Balance (Rp)</Label>
                 <Input value={balance.toLocaleString('id-ID')} className={cn("col-span-3 bg-muted", balance !== 0 && "text-red-500 font-semibold")} readOnly />
               </div>
+              
+              {/* 12. Remarks */}
               <FormField control={form.control} name="remarks" render={({ field }) => (
                 <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
               )} />
+              
+              {/* 13. Custom Properties */}
               {isLoadingProperties ? (
                 <div className="flex justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
               ) : customProperties.length > 0 && (
