@@ -74,6 +74,62 @@ interface ProjectOption extends Project {
     client_company_name?: string | null;
 }
 
+// Helper function to extract date ranges from project names
+const extractDateFromProjectName = (name: string): { start: Date, end: Date } | null => {
+  // 1. Range: dd-ddmmyy (e.g. 05-071225 -> 5 Dec 2025 to 7 Dec 2025)
+  // Look for pattern: 2 digits, hyphen, 6 digits
+  const rangeMatch = name.match(/\b(\d{2})-(\d{2})(\d{2})(\d{2})\b/);
+  if (rangeMatch) {
+    const startDay = parseInt(rangeMatch[1]);
+    const endDay = parseInt(rangeMatch[2]);
+    const month = parseInt(rangeMatch[3]) - 1; // JS months are 0-indexed
+    const year = 2000 + parseInt(rangeMatch[4]);
+    
+    // Basic validation
+    if (month >= 0 && month <= 11) {
+      const start = new Date(year, month, startDay);
+      const end = new Date(year, month, endDay);
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+        return { start, end };
+      }
+    }
+  }
+
+  // 2. Full Date: ddmmyy (e.g. 081125 -> 8 Nov 2025)
+  // Look for pattern: 6 digits exactly at a boundary
+  const fullDateMatch = name.match(/\b(\d{2})(\d{2})(\d{2})\b/);
+  if (fullDateMatch) {
+    const day = parseInt(fullDateMatch[1]);
+    const month = parseInt(fullDateMatch[2]) - 1;
+    const year = 2000 + parseInt(fullDateMatch[3]);
+    
+    if (month >= 0 && month <= 11) {
+      const date = new Date(year, month, day);
+      if (!isNaN(date.getTime())) {
+        return { start: date, end: date };
+      }
+    }
+  }
+
+  // 3. Month Year: mmyy (e.g. 1025 -> Oct 2025)
+  // Look for pattern: 4 digits exactly at a boundary
+  const monthYearMatch = name.match(/\b(\d{2})(\d{2})\b/);
+  if (monthYearMatch) {
+    const month = parseInt(monthYearMatch[1]) - 1;
+    const year = 2000 + parseInt(monthYearMatch[2]);
+    
+    if (month >= 0 && month <= 11) {
+      const start = new Date(year, month, 1);
+      const end = new Date(year, month + 1, 0); // Last day of month
+      if (!isNaN(start.getTime())) {
+        return { start, end };
+      }
+    }
+  }
+
+  return null;
+};
+
 const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -489,6 +545,43 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
     }
   };
 
+  const handleGeneratePurpose = async () => {
+    const attachments = form.getValues('attachments_jsonb');
+    if (!attachments || attachments.length === 0) {
+       toast.error("No attachments found to analyze.");
+       return;
+    }
+    
+    const file = attachments[attachments.length - 1]; 
+    setCurrentProcessingFile(file.name);
+    
+    try {
+        const extractedData = await extractData({ 
+            url: file.url, 
+            type: file.type, 
+            instructions: "Extract a concise description of the goods or services being paid for. Return it as the 'description' or 'purpose' field." 
+        });
+        
+        if (extractedData) {
+            const explicitDescription = extractedData.description || extractedData.purpose;
+            const itemsDescription = Array.isArray(extractedData.items) && extractedData.items.length > 0 
+                ? extractedData.items.map((i: any) => i.description || i.name).filter(Boolean).join(', ') 
+                : null;
+            
+            const purpose = itemsDescription || explicitDescription || extractedData.summary;
+
+            if (purpose) {
+              setValue('purpose_payment', purpose, { shouldValidate: true, shouldDirty: true });
+              toast.success("Purpose payment updated.");
+            } else {
+              toast.info("Could not extract purpose.");
+            }
+        }
+    } finally {
+        setCurrentProcessingFile(null);
+    }
+  };
+
   // Handle File List Changes (Sync with Form)
   const handleFilesChange = (files: any[]) => {
       setValue('attachments_jsonb', files as any, { shouldDirty: true });
@@ -697,7 +790,20 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                 name="purpose_payment"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Purpose Payment</FormLabel>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Purpose Payment</FormLabel>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50 p-0 px-2"
+                        onClick={handleGeneratePurpose}
+                        disabled={isExtracting || !watch('attachments_jsonb')?.length}
+                      >
+                        <Wand2 className="mr-1 h-3 w-3" />
+                        Auto-fill with AI
+                      </Button>
+                    </div>
                     <FormControl>
                       <Input placeholder="Enter purpose of payment" {...field} value={field.value || ''} disabled={isFormDisabled} />
                     </FormControl>
