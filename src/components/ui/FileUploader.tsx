@@ -1,9 +1,8 @@
-import React, { useCallback } from 'react';
-import { useDropzone, DropzoneOptions } from 'react-dropzone';
-import { UploadCloud, X, FileText, Image as ImageIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn, formatBytes } from '@/lib/utils';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import React, { useCallback } from 'react'
+import { useDropzone, DropzoneOptions } from 'react-dropzone'
+import { UploadCloud, X, FileText } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 export interface FileMetadata {
   name: string;
@@ -21,87 +20,36 @@ interface FileUploaderProps {
   accept?: DropzoneOptions['accept'];
   disabled?: boolean;
   className?: string;
-  label?: string;
-  bucket?: string;
 }
 
-const isFileObject = (file: File | FileMetadata): file is File => {
-  return file instanceof File;
-};
-
-const FilePreview = ({ file, onRemove, disabled }: { file: File | FileMetadata, onRemove: () => void, disabled?: boolean }) => {
-  const isImage = isFileObject(file) 
-    ? file.type.startsWith('image/') 
-    : file.type?.startsWith('image/');
-
-  const previewUrl = isFileObject(file) 
-    ? URL.createObjectURL(file) 
-    : file.url;
-
-  const fileName = isFileObject(file) ? file.name : file.name;
-  const fileSize = isFileObject(file) ? file.size : file.size;
-
-  React.useEffect(() => {
-    return () => {
-      if (isFileObject(file)) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [file, previewUrl]);
-
-  return (
-    <div className="relative group flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-      <div className="h-10 w-10 shrink-0 rounded-md overflow-hidden bg-muted flex items-center justify-center border">
-        {isImage ? (
-          <img src={previewUrl} alt={fileName} className="h-full w-full object-cover" />
-        ) : (
-          <FileText className="h-5 w-5 text-muted-foreground" />
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate" title={fileName}>
-          {fileName}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {formatBytes(fileSize)}
-        </p>
-      </div>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-        onClick={onRemove}
-        disabled={disabled}
-      >
-        <X className="h-4 w-4" />
-        <span className="sr-only">Remove file</span>
-      </Button>
-    </div>
-  );
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
 const FileUploader = ({
   value = [],
   onValueChange,
   maxFiles = 5,
-  maxSize = 5 * 1024 * 1024,
-  accept = {
-    'image/*': [],
-    'application/pdf': []
-  },
+  maxSize = 10 * 1024 * 1024, // 10MB default
+  accept,
   disabled = false,
-  className,
+  className
 }: FileUploaderProps) => {
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (disabled) return;
-    const newFiles = [...value, ...acceptedFiles].slice(0, maxFiles);
-    onValueChange(newFiles);
-  }, [value, maxFiles, onValueChange, disabled]);
+    const currentFilesCount = value.length;
+    const filesToAdd = acceptedFiles.slice(0, maxFiles - currentFilesCount);
+    if (filesToAdd.length > 0) {
+      onValueChange([...value, ...filesToAdd]);
+    }
+  }, [value, maxFiles, onValueChange]);
 
   const removeFile = (index: number) => {
-    if (disabled) return;
-    const newFiles = value.filter((_, i) => i !== index);
+    const newFiles = [...value];
+    newFiles.splice(index, 1);
     onValueChange(newFiles);
   };
 
@@ -110,7 +58,7 @@ const FileUploader = ({
     maxFiles: maxFiles - value.length,
     maxSize,
     accept,
-    disabled: disabled || value.length >= maxFiles,
+    disabled: disabled || value.length >= maxFiles
   });
 
   return (
@@ -118,57 +66,69 @@ const FileUploader = ({
       <div
         {...getRootProps()}
         className={cn(
-          "border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          isDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50",
-          (disabled || value.length >= maxFiles) && "opacity-50 cursor-not-allowed hover:border-muted-foreground/25 hover:bg-transparent"
+          "border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-muted/50 hover:bg-muted",
+          isDragActive && "border-primary bg-primary/10",
+          (disabled || value.length >= maxFiles) && "opacity-50 cursor-not-allowed hover:bg-muted/50",
+          className
         )}
       >
         <input {...getInputProps()} />
-        <div className="rounded-full bg-muted p-2 mb-2">
-          <UploadCloud className="h-6 w-6 text-muted-foreground" />
-        </div>
-        <div className="text-sm font-medium">
-          {isDragActive ? (
-            <p className="text-primary">Drop the files here</p>
-          ) : (
-            <p>
-              Drag & drop files or <span className="text-primary hover:underline">browse</span>
-            </p>
-          )}
-        </div>
-        <p className="text-xs text-muted-foreground mt-1">
-          PDF, PNG, JPG up to {formatBytes(maxSize)}
+        <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
+        <p className="text-sm font-medium text-muted-foreground">
+          {isDragActive ? "Drop files here" : "Drag & drop files here or click to select"}
         </p>
-        {value.length >= maxFiles && (
-          <p className="text-xs text-amber-500 mt-2 font-medium">
-            Max {maxFiles} files reached
-          </p>
-        )}
+        <p className="text-xs text-muted-foreground mt-1">
+          Max {maxFiles} files, up to {formatFileSize(maxSize)} each
+        </p>
       </div>
 
-      {fileRejections.length > 0 && (
-        <div className="text-xs text-destructive space-y-1">
-          {fileRejections.map(({ file, errors }) => (
-            <div key={file.name}>
-              <span className="font-medium">{file.name}:</span> {errors.map(e => e.message).join(', ')}
-            </div>
-          ))}
+      {/* File List */}
+      {value.length > 0 && (
+        <div className="space-y-2">
+          {value.map((file, index) => {
+            const fileName = file.name;
+            const fileSize = file.size;
+
+            return (
+              <div key={index} className="flex items-center p-3 bg-background border rounded-md group">
+                <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center text-primary mr-3 shrink-0">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium break-all whitespace-normal" title={fileName}>
+                    {fileName}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatFileSize(fileSize)}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeFile(index);
+                  }}
+                  disabled={disabled}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            );
+          })}
         </div>
       )}
-
-      {value.length > 0 && (
-        <ScrollArea className="max-h-[200px]">
-          <div className="space-y-2 pr-4">
-            {value.map((file, index) => (
-              <FilePreview
-                key={index}
-                file={file}
-                onRemove={() => removeFile(index)}
-                disabled={disabled}
-              />
+      
+      {fileRejections.length > 0 && (
+        <div className="text-sm text-destructive mt-2">
+            {fileRejections.map(({ file, errors }) => (
+                <div key={file.name}>
+                    {file.name}: {errors.map(e => e.message).join(', ')}
+                </div>
             ))}
-          </div>
-        </ScrollArea>
+        </div>
       )}
     </div>
   );
