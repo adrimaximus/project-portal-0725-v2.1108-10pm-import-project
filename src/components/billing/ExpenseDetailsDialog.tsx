@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
-import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2, Copy, Download } from "lucide-react";
+import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2, Copy, Download, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
@@ -59,6 +59,10 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
     const role = userProfile.role?.toLowerCase() || '';
     return ['master admin', 'finance', 'admin', 'admin project'].includes(role);
   }, [userProfile]);
+  
+  const isCurrentPic = useMemo(() => {
+    return userProfile?.id === propExpense?.created_by;
+  }, [userProfile, propExpense]);
 
   // Fetch latest expense data AND PIC details to ensure UI updates
   const { data: expense } = useQuery({
@@ -201,9 +205,9 @@ Account Name: ${bankDetails.name || '-'}
     }
   };
 
-  const handleReplyClick = (index: number) => {
+  const handleReplyClick = (index: number, existingFeedback?: string) => {
     setReplyingTermIndex(index);
-    setFeedbackText("");
+    setFeedbackText(existingFeedback || "");
   };
 
   const submitFeedback = async (index: number) => {
@@ -495,15 +499,15 @@ Account Name: ${bankDetails.name || '-'}
                                       <span className="font-semibold text-yellow-700 dark:text-yellow-500 block">Finance Note:</span>
                                       <p className="text-yellow-800 dark:text-yellow-200/80">{term.status_remarks}</p>
                                     </div>
-                                    {!term.pic_feedback && replyingTermIndex !== index && (
+                                    {isCurrentPic && replyingTermIndex !== index && (
                                       <Button 
                                         variant="ghost" 
                                         size="icon" 
                                         className="h-6 w-6 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-100 dark:hover:bg-yellow-900/50"
-                                        onClick={() => handleReplyClick(index)}
-                                        title="Reply to note"
+                                        onClick={() => handleReplyClick(index, term.pic_feedback)}
+                                        title={term.pic_feedback ? "Edit Reply" : "Reply to note"}
                                       >
-                                        <Reply className="h-3.5 w-3.5" />
+                                        {term.pic_feedback ? <Edit className="h-3.5 w-3.5" /> : <Reply className="h-3.5 w-3.5" />}
                                       </Button>
                                     )}
                                   </div>
@@ -528,12 +532,42 @@ Account Name: ${bankDetails.name || '-'}
                                 </div>
                               )}
                               {term.pic_feedback && (
-                                <div className="bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded border border-blue-100 dark:border-blue-900/30 flex gap-2 ml-4">
-                                  <MessageCircle className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
-                                  <div className="space-y-0.5">
-                                    <span className="font-semibold text-blue-700 dark:text-blue-500 block">{picName} Feedback:</span>
-                                    <p className="text-blue-800 dark:text-blue-200/80">{term.pic_feedback}</p>
+                                <div className="bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded border border-blue-100 dark:border-blue-900/30 flex flex-col gap-2 ml-4">
+                                  <div className="flex gap-2">
+                                    <MessageCircle className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
+                                    <div className="space-y-0.5 flex-1">
+                                      <span className="font-semibold text-blue-700 dark:text-blue-500 block">{picName} Feedback:</span>
+                                      <p className="text-blue-800 dark:text-blue-200/80">{term.pic_feedback}</p>
+                                    </div>
+                                    {isCurrentPic && replyingTermIndex !== index && (
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-6 w-6 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                                        onClick={() => handleReplyClick(index, term.pic_feedback)}
+                                        title="Edit Feedback"
+                                      >
+                                        <Edit className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
                                   </div>
+                                  {/* Reply Form (for editing existing feedback) */}
+                                  {replyingTermIndex === index && (
+                                    <div className="pl-6 space-y-2 mt-1">
+                                        <Textarea 
+                                            value={feedbackText} 
+                                            onChange={(e) => setFeedbackText(e.target.value)} 
+                                            placeholder="Edit your feedback..."
+                                            className="text-xs min-h-[60px] bg-background/80"
+                                        />
+                                        <div className="flex justify-end gap-2">
+                                            <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTermIndex(null)}>Cancel</Button>
+                                            <Button size="sm" className="h-6 text-xs px-2" onClick={() => submitFeedback(index)} disabled={isSubmitting || !feedbackText.trim()}>
+                                                {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save Changes'}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>
