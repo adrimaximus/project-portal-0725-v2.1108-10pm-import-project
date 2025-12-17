@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface FileMetadata {
   name: string;
@@ -42,6 +43,22 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
   const [feedbackText, setFeedbackText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
+
+  const { data: userProfile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      return data;
+    }
+  });
+
+  const canEditStatus = useMemo(() => {
+    if (!userProfile) return false;
+    const role = userProfile.role?.toLowerCase() || '';
+    return ['master admin', 'finance', 'admin', 'admin project'].includes(role);
+  }, [userProfile]);
 
   // Fetch latest expense data AND PIC details to ensure UI updates
   const { data: expense } = useQuery({
@@ -137,6 +154,7 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
       case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200 dark:border-red-700/50';
       case 'on review': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border-blue-200 dark:border-blue-700/50';
       case 'requested': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 border-purple-200 dark:border-purple-700/50';
+      case 'approved': return 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300 border-teal-200 dark:border-teal-700/50';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600';
     }
   };
@@ -195,6 +213,31 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
         toast.error("Failed to send feedback", { description: err.message });
     } finally {
         setIsSubmitting(false);
+    }
+  };
+
+  const updateTermStatus = async (index: number, newStatus: string) => {
+    if (!expense) return;
+    try {
+      const updatedTerms = [...(expense.payment_terms as any[])];
+      updatedTerms[index] = {
+        ...updatedTerms[index],
+        status: newStatus
+      };
+
+      const { error } = await supabase
+        .from('expenses')
+        .update({ payment_terms: updatedTerms })
+        .eq('id', expense.id);
+
+      if (error) throw error;
+      
+      toast.success("Term status updated");
+      // Refresh data explicitly for this dialog and the main list
+      await queryClient.invalidateQueries({ queryKey: ['expense_details', expense.id] });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+    } catch (err: any) {
+      toast.error("Failed to update status", { description: err.message });
     }
   };
 
@@ -365,9 +408,27 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
                             {term.release_date ? format(new Date(term.release_date), "dd MMM yyyy") : (term.request_date ? format(new Date(term.request_date), "dd MMM yyyy") : '-')}
                           </div>
                           <div className="col-span-4 text-right">
-                            <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5", getStatusBadgeStyle(term.status || 'Pending'))}>
-                              {term.status || 'Pending'}
-                            </Badge>
+                            {canEditStatus ? (
+                              <div className="flex justify-end">
+                                <Select 
+                                  defaultValue={term.status || 'Pending'} 
+                                  onValueChange={(val) => updateTermStatus(index, val)}
+                                >
+                                  <SelectTrigger className={cn("h-6 px-1.5 text-[10px] font-medium border-0 rounded-full w-auto min-w-[70px] gap-1", getStatusBadgeStyle(term.status || 'Pending'))}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {['Pending', 'Requested', 'On review', 'Paid', 'Rejected'].map((status) => (
+                                       <SelectItem key={status} value={status}>{status}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            ) : (
+                              <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5", getStatusBadgeStyle(term.status || 'Pending'))}>
+                                {term.status || 'Pending'}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                         

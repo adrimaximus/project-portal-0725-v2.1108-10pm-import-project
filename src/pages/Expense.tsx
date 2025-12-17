@@ -47,6 +47,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import ExpenseDetailsDialog from "@/components/billing/ExpenseDetailsDialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const ExpensePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -56,6 +63,22 @@ const ExpensePage = () => {
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const queryClient = useQueryClient();
+
+  const { data: userProfile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      return data;
+    }
+  });
+
+  const canEditStatus = useMemo(() => {
+    if (!userProfile) return false;
+    const role = userProfile.role?.toLowerCase() || '';
+    return ['master admin', 'finance', 'admin', 'admin project'].includes(role);
+  }, [userProfile]);
 
   const { data: expenses = [], isLoading } = useQuery<Expense[]>({
     queryKey: ['expenses'],
@@ -77,6 +100,20 @@ const ExpensePage = () => {
     },
     onError: (error: any) => {
       toast.error("Failed to delete expense.", { description: error.message });
+    }
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase.from('expenses').update({ status_expense: status }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Status updated successfully");
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+    },
+    onError: (error: any) => {
+      toast.error("Failed to update status", { description: error.message });
     }
   });
 
@@ -129,6 +166,7 @@ const ExpensePage = () => {
       case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200 dark:border-red-700/50';
       case 'on review': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border-blue-200 dark:border-blue-700/50';
       case 'requested': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 border-purple-200 dark:border-purple-700/50';
+      case 'approved': return 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300 border-teal-200 dark:border-teal-700/50';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600';
     }
   };
@@ -309,10 +347,26 @@ const ExpensePage = () => {
                               {formatCurrency(remainingAmount)}
                             </p>
                           </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={cn("capitalize", getStatusBadgeStyle(expense.status_expense))}>
-                              {expense.status_expense}
-                            </Badge>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            {canEditStatus ? (
+                              <Select 
+                                defaultValue={expense.status_expense} 
+                                onValueChange={(val) => updateStatusMutation.mutate({ id: expense.id, status: val })}
+                              >
+                                <SelectTrigger className={cn("h-7 px-2 text-xs font-medium border-0 rounded-full w-auto min-w-[90px] gap-1", getStatusBadgeStyle(expense.status_expense))}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {['Proposed', 'On review', 'Approved', 'Paid', 'Rejected'].map((status) => (
+                                     <SelectItem key={status} value={status}>{status}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Badge variant="outline" className={cn("capitalize", getStatusBadgeStyle(expense.status_expense))}>
+                                {expense.status_expense}
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell>{expense.remarks}</TableCell>
                           <TableCell className="text-right">
