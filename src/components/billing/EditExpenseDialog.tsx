@@ -29,6 +29,10 @@ import CreateProjectDialog from '../projects/CreateProjectDialog';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
 import FileUploader, { FileMetadata } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Initialize PDF worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
 
 interface EditExpenseDialogProps {
   open: boolean;
@@ -64,6 +68,40 @@ interface ProjectOption extends Project {
     client_name?: string | null;
     client_company_name?: string | null;
 }
+
+const convertPdfToImage = async (file: File): Promise<File | null> => {
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1); // Analyze first page
+        const scale = 2.0; // Higher scale for better quality
+        const viewport = page.getViewport({ scale });
+        
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) return null;
+        
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        
+        await page.render({ canvasContext: context, viewport }).promise;
+        
+        return new Promise((resolve) => {
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    const imageFile = new File([blob], file.name.replace('.pdf', '.png'), { type: 'image/png' });
+                    resolve(imageFile);
+                } else {
+                    resolve(null);
+                }
+            }, 'image/png');
+        });
+    } catch (error) {
+        console.error("PDF to Image conversion error:", error);
+        return null;
+    }
+};
 
 const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExpenseDialogProps) => {
   const { user } = useAuth();
@@ -259,30 +297,19 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
         setIsLoadingBankAccounts(false);
       } else if (beneficiary) {
           // Keep existing bank account info if beneficiary is just text/unknown ID
-          // Or handle as empty
       } else {
         const currentBankId = form.getValues('bank_account_id');
         if (!currentBankId || !currentBankId.startsWith('temp-')) {
-            // Only clear if not temp
-            // But we might want to keep the selected ID if it was loaded from expense data
             if (!expense || !expense.bank_account_id) {
                  setBankAccounts([]);
-            } else if (expense && expense.bank_account_id) {
-                // If we have an expense with a bank account, we should try to keep it visible
-                // But get_beneficiary_bank_accounts logic depends on owner_id.
-                // If we loaded the form, maybe we should fetch the specific bank account details?
-                // For simplicity, we rely on the beneficiary match.
             }
         }
       }
     };
     
-    // Initial fetch for bank accounts when editing if we have bank_account_id but no beneficiary match yet?
-    // The previous useEffect sets beneficiary state, which triggers this one.
     fetchBankAccounts();
   }, [beneficiary]); 
 
-  // --- Helper functions from AddExpenseDialog ---
   const handleCreateNewBeneficiary = (name: string) => {
     setNewBeneficiaryName(name);
     setBeneficiaryPopoverOpen(false);
@@ -304,11 +331,8 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
   };
 
   const applyExtractedData = async (extractedData: any) => {
-    // ... Logic mostly same as AddDialog, but we are editing ...
-    // For simplicity, we can update fields.
     if (extractedData.amount && extractedData.amount > 0) {
       setValue('tf_amount', extractedData.amount, { shouldValidate: true });
-      // Update terms similarly
       const terms = form.getValues('payment_terms');
       const invoiceDate = extractedData.date ? new Date(extractedData.date) : new Date();
       const dueDate = extractedData.due_date ? new Date(extractedData.due_date) : invoiceDate;
@@ -325,7 +349,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
     }
 
     if (extractedData.beneficiary && !watch('beneficiary')) {
-       // ... logic to match beneficiary ...
        setValue('beneficiary', extractedData.beneficiary, { shouldValidate: true });
     }
 
@@ -343,21 +366,37 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
     setCurrentProcessingFile(file.name);
     
     try {
-        const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+        let fileToProcess = file;
+
+        // Convert PDF to Image if necessary for AI analysis
+        if (file.type === 'application/pdf') {
+            toast.info("Converting PDF to image for analysis...");
+            const imageFile = await convertPdfToImage(file);
+            if (imageFile) {
+                fileToProcess = imageFile;
+                finalUrl = URL.createObjectURL(imageFile);
+            } else {
+                toast.warning("Could not convert PDF to image for AI analysis. Trying with original file.");
+            }
+        }
+
+        const sanitizedFileName = fileToProcess.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
         const filePath = `temp-analysis/${Date.now()}-${sanitizedFileName}`;
-        const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, file);
         
-        if (uploadError) return;
+        const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, fileToProcess);
+        
+        if (uploadError) throw uploadError;
 
         const { data: urlData } = supabase.storage.from('expense').getPublicUrl(filePath);
         finalUrl = urlData.publicUrl;
 
-        const extractedData = await extractData({ url: finalUrl, type: file.type });
+        const extractedData = await extractData({ url: finalUrl, type: fileToProcess.type });
         if (extractedData) {
             await applyExtractedData(extractedData);
         }
     } catch (e) {
         console.error("Processing failed", e);
+        toast.error("Failed to process file for AI analysis");
     } finally {
         setCurrentProcessingFile(null);
     }
@@ -375,8 +414,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
     const lastFile = [...attachments].reverse().find(f => f instanceof File) as File | undefined;
 
     if (!lastFile) {
-        // If all are existing files (FileMetadata), we might need to process URL. 
-        // For simplicity in Edit mode, we only process new files or warn user.
         toast.error("Please upload a new file to analyze.");
         return;
     }
@@ -420,7 +457,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
           });
       }
 
-      // Determine overall status based on terms
       const terms = values.payment_terms || [];
       const termStatuses = terms.map(t => t.status || 'Pending');
       let statusToSave = 'Pending';
