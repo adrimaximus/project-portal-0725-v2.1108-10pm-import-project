@@ -1,11 +1,12 @@
 import { Expense } from '@/types';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Calendar } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 interface ExpenseKanbanCardProps {
   expense: Expense;
@@ -77,8 +78,14 @@ const ExpenseKanbanCard = ({ expense, onEdit, onDelete, onClick, canDrag }: Expe
             </DropdownMenuContent>
           </DropdownMenu>
         </CardHeader>
-        <CardContent className="p-3 pt-0">
+        <CardContent className="p-3 pt-0 space-y-2">
           <div className="text-lg font-bold">{formatCurrency(expense.tf_amount)}</div>
+          {expense.due_date && (
+            <div className="flex items-center text-xs text-muted-foreground">
+              <Calendar className="mr-1 h-3 w-3" />
+              <span>Due: {format(new Date(expense.due_date), 'dd MMM yyyy')}</span>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
