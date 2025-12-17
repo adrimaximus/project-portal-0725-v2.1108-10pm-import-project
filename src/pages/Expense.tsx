@@ -199,7 +199,6 @@ const ExpensePage = () => {
                     <TableHead>Purpose</TableHead>
                     <TableHead>PIC</TableHead>
                     <TableHead>Amount</TableHead>
-                    <TableHead>Paid</TableHead>
                     <TableHead>Remaining</TableHead>
                     <TableHead>Remarks</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -208,7 +207,7 @@ const ExpensePage = () => {
                 <TableBody>
                   {filteredExpenses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center">
+                      <TableCell colSpan={8} className="h-24 text-center">
                         No expenses found.
                       </TableCell>
                     </TableRow>
@@ -295,12 +294,12 @@ const ExpensePage = () => {
                             </TooltipProvider>
                           </TableCell>
                           <TableCell>
-                            <div>
-                              <p>{formatCurrency(expense.tf_amount)}</p>
+                            <div className="flex flex-col">
+                              <p className="font-medium">{formatCurrency(expense.tf_amount)}</p>
+                              {paidAmount > 0 && (
+                                <p className="text-xs text-muted-foreground">Paid: {formatCurrency(paidAmount)}</p>
+                              )}
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <p className="font-medium">{formatCurrency(paidAmount)}</p>
                           </TableCell>
                           <TableCell>
                             <p className={cn("font-medium", remainingAmount > 0 ? "text-red-500" : "text-green-600")}>
