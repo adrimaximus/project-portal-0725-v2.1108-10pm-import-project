@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 
 interface FileMetadata {
   name: string;
@@ -36,11 +36,29 @@ const formatFileSize = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDialogProps) => {
+const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: ExpenseDetailsDialogProps) => {
   const queryClient = useQueryClient();
   const [replyingTermIndex, setReplyingTermIndex] = useState<number | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch latest expense data to ensure UI updates after actions
+  const { data: expense } = useQuery({
+    queryKey: ['expense_details', propExpense?.id],
+    queryFn: async () => {
+      if (!propExpense?.id) return null;
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('id', propExpense.id)
+        .single();
+      
+      if (error) throw error;
+      return data as Expense;
+    },
+    enabled: !!propExpense?.id && open,
+    initialData: propExpense, // Show initial data immediately
+  });
 
   // Calculate status based on payment terms
   const derivedStatus = useMemo(() => {
@@ -72,6 +90,7 @@ const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDia
       case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700/50';
       case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200 dark:border-red-700/50';
       case 'on review': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border-blue-200 dark:border-blue-700/50';
+      case 'requested': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 border-purple-200 dark:border-purple-700/50';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600';
     }
   };
@@ -113,9 +132,9 @@ const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDia
         setReplyingTermIndex(null);
         setFeedbackText("");
         
-        // Refresh data
+        // Refresh data explicitly for this dialog and the main list
+        await queryClient.invalidateQueries({ queryKey: ['expense_details', expense.id] });
         queryClient.invalidateQueries({ queryKey: ['expenses'] });
-        queryClient.invalidateQueries({ queryKey: ['expense_details', expense.id] });
         
     } catch (err: any) {
         toast.error("Failed to send feedback", { description: err.message });
