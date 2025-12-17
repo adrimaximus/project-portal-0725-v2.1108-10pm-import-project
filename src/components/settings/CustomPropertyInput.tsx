@@ -44,13 +44,14 @@ const CustomPropertyInput = ({ property, control, name, bucket = "company-logos"
         );
       case 'multi-select':
         return (
-          <MultiSelect
-            options={property.options?.map(opt => ({ value: opt, label: opt })) || []}
-            value={field.value || []}
-            onChange={field.onChange}
-            placeholder={`Select multiple ${property.label}`}
-            disabled={disabled}
-          />
+          <div className={disabled ? "pointer-events-none opacity-50" : ""}>
+            <MultiSelect
+              options={property.options?.map(opt => ({ value: opt, label: opt })) || []}
+              value={field.value || []}
+              onChange={field.onChange}
+              placeholder={`Select multiple ${property.label}`}
+            />
+          </div>
         );
       case 'checkbox':
         return (
