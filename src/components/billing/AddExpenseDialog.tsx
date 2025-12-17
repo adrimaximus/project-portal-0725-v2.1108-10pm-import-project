@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, FileText, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format, isWithinInterval } from 'date-fns';
+import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -29,6 +29,10 @@ import CreateProjectDialog from '../projects/CreateProjectDialog';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
 import FileUploader, { FileMetadata } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Initialize PDF worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
 
 interface AddExpenseDialogProps {
   open: boolean;
@@ -63,6 +67,40 @@ interface ProjectOption extends Project {
     client_name?: string | null;
     client_company_name?: string | null;
 }
+
+const convertPdfToImage = async (file: File): Promise<File | null> => {
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1); // Analyze first page
+        const scale = 2.0; // Higher scale for better quality
+        const viewport = page.getViewport({ scale });
+        
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) return null;
+        
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        
+        await page.render({ canvasContext: context, viewport }).promise;
+        
+        return new Promise((resolve) => {
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    const imageFile = new File([blob], file.name.replace('.pdf', '.png'), { type: 'image/png' });
+                    resolve(imageFile);
+                } else {
+                    resolve(null);
+                }
+            }, 'image/png');
+        });
+    } catch (error) {
+        console.error("PDF to Image conversion error:", error);
+        return null;
+    }
+};
 
 const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const { user } = useAuth();
@@ -406,9 +444,23 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     setCurrentProcessingFile(file.name);
     
     try {
-        const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+        let fileToProcess = file;
+
+        // Convert PDF to Image if necessary for AI analysis
+        if (file.type === 'application/pdf') {
+            toast.info("Converting PDF to image for analysis...");
+            const imageFile = await convertPdfToImage(file);
+            if (imageFile) {
+                fileToProcess = imageFile;
+                finalUrl = URL.createObjectURL(imageFile);
+            } else {
+                toast.warning("Could not convert PDF to image for AI analysis. Trying with original file.");
+            }
+        }
+
+        const sanitizedFileName = fileToProcess.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
         const filePath = `temp-analysis/${Date.now()}-${sanitizedFileName}`;
-        const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, file);
+        const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, fileToProcess);
         
         if (uploadError) {
              console.error("Upload for analysis failed", uploadError);
@@ -418,7 +470,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         const { data: urlData } = supabase.storage.from('expense').getPublicUrl(filePath);
         finalUrl = urlData.publicUrl;
 
-        const extractedData = await extractData({ url: finalUrl, type: file.type });
+        const extractedData = await extractData({ url: finalUrl, type: fileToProcess.type });
         if (extractedData) {
             await applyExtractedData(extractedData);
         }
@@ -685,7 +737,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>PIC (Person In Charge)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value || user?.id} disabled={isFormDisabled || projectMembers.length === 0}>
+                    <Select onValueChange={field.onChange} value={field.value || user?.id} disabled={isFormDisabled || projectMembers.length === 0}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select PIC" />
@@ -908,7 +960,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           ownerType={beneficiary.type}
           onSuccess={() => {
             const fetchNewAccounts = async () => {
-              const { data, error } = await supabase.rpc('get_beneficiary_bank_accounts', {
+              const { data } = await supabase.rpc('get_beneficiary_bank_accounts', {
                 p_owner_id: beneficiary!.id,
                 p_owner_type: beneficiary!.type,
               });
