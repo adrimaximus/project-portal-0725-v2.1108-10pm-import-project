@@ -68,7 +68,7 @@ serve(async (req) => {
     console.log(`Processing image analysis...`)
 
     // 3. Call OpenAI GPT-4o
-    const response = await openai.chat.completions.create({
+    const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
@@ -111,16 +111,10 @@ serve(async (req) => {
       response_format: { type: "json_object" }
     });
 
-    const data = await response.json()
+    // OpenAI SDK returns the object directly, no need for .json()
+    console.log('OpenAI Response usage:', completion.usage)
     
-    if (data.error) {
-      console.error('OpenAI API Error:', data.error)
-      throw new Error(`OpenAI Error: ${data.error.message}`)
-    }
-
-    console.log('OpenAI Response usage:', data.usage)
-    
-    const content = data.choices[0].message.content
+    const content = completion.choices[0].message.content
     let result
     try {
       result = JSON.parse(content)
