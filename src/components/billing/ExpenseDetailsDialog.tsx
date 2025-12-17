@@ -41,6 +41,7 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
   const [replyingTermIndex, setReplyingTermIndex] = useState<number | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
 
   // Fetch latest expense data AND PIC details to ensure UI updates
   const { data: expense } = useQuery({
@@ -151,6 +152,14 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
   const handleDownload = (url: string) => {
     window.open(url, '_blank');
   };
+  
+  const handleView = (file: FileMetadata) => {
+    if (file.type === 'application/pdf' || file.type.startsWith('image/')) {
+        setPreviewFile(file);
+    } else {
+        window.open(file.url, '_blank');
+    }
+  };
 
   const handleReplyClick = (index: number) => {
     setReplyingTermIndex(index);
@@ -190,247 +199,277 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex justify-between items-start gap-4 pr-8">
-            <div>
-              <DialogTitle className="text-xl">{expense.beneficiary}</DialogTitle>
-              <DialogDescription className="mt-1">
-                {expense.project_name}
-              </DialogDescription>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex justify-between items-start gap-4 pr-8">
+              <div>
+                <DialogTitle className="text-xl">{expense.beneficiary}</DialogTitle>
+                <DialogDescription className="mt-1">
+                  {expense.project_name}
+                </DialogDescription>
+              </div>
+              <Badge className={cn("text-sm px-3 py-1", getStatusBadgeStyle(derivedStatus))}>
+                {derivedStatus}
+              </Badge>
             </div>
-            <Badge className={cn("text-sm px-3 py-1", getStatusBadgeStyle(derivedStatus))}>
-              {derivedStatus}
-            </Badge>
-          </div>
-        </DialogHeader>
+          </DialogHeader>
 
-          <div className="grid gap-6 py-4">
-            {/* Main Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <CreditCard className="w-4 h-4 text-primary" />
+            <div className="grid gap-6 py-4">
+              {/* Main Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-primary/10 p-2 rounded-full">
+                      <CreditCard className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Amount</p>
+                      <p className="text-lg font-bold">{formatCurrency(expense.tf_amount)}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Amount</p>
-                    <p className="text-lg font-bold">{formatCurrency(expense.tf_amount)}</p>
+
+                  <div className="flex items-start gap-3">
+                    <div className="bg-primary/10 p-2 rounded-full">
+                      <FileText className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Purpose</p>
+                      <p className="text-sm font-medium">{(expense as any).purpose_payment || '-'}</p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <FileText className="w-4 h-4 text-primary" />
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-primary/10 p-2 rounded-full">
+                      <CalendarIcon className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Issued</p>
+                      <p className="text-sm font-medium">
+                        {expense.created_at ? format(new Date(expense.created_at), "PPP") : '-'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Purpose</p>
-                    <p className="text-sm font-medium">{(expense as any).purpose_payment || '-'}</p>
+
+                  <div className="flex items-start gap-3">
+                    <div className="bg-primary/10 p-2 rounded-full">
+                      <User className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">PIC</p>
+                      {pic ? (
+                          <div className="flex items-center gap-2 mt-1">
+                          <Avatar className="h-6 w-6">
+                              <AvatarImage src={getAvatarUrl(pic.avatar_url, pic.id)} />
+                              <AvatarFallback className="text-[10px]" style={generatePastelColor(pic.id)}>
+                              {pic.initials}
+                              </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">{pic.name}</span>
+                          </div>
+                      ) : (
+                          <p className="text-sm font-medium">-</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <CalendarIcon className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Issued</p>
-                    <p className="text-sm font-medium">
-                      {expense.created_at ? format(new Date(expense.created_at), "PPP") : '-'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <User className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">PIC</p>
-                    {pic ? (
-                        <div className="flex items-center gap-2 mt-1">
-                        <Avatar className="h-6 w-6">
-                            <AvatarImage src={getAvatarUrl(pic.avatar_url, pic.id)} />
-                            <AvatarFallback className="text-[10px]" style={generatePastelColor(pic.id)}>
-                            {pic.initials}
-                            </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm font-medium">{pic.name}</span>
-                        </div>
-                    ) : (
-                        <p className="text-sm font-medium">-</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Attachments Section */}
-            {attachments.length > 0 && (
-              <>
-                <Separator />
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-muted-foreground" />
-                    <h4 className="font-semibold text-sm">Attachments ({attachments.length})</h4>
-                  </div>
-                  <div className="space-y-2">
-                    {attachments.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/40">
-                        <div className="flex items-center space-x-3 truncate">
-                          <FileText className="h-4 w-4 text-primary shrink-0" />
-                          <div className="truncate">
-                            <p className="text-sm font-medium truncate">{file.name}</p>
-                            <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
+              {/* Attachments Section */}
+              {attachments.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-muted-foreground" />
+                      <h4 className="font-semibold text-sm">Attachments ({attachments.length})</h4>
+                    </div>
+                    <div className="space-y-2">
+                      {attachments.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/40">
+                          <div className="flex items-center space-x-3 truncate">
+                            <FileText className="h-4 w-4 text-primary shrink-0" />
+                            <div className="truncate">
+                              <p className="text-sm font-medium truncate">{file.name}</p>
+                              <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-1 shrink-0">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleView(file)}>
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>View</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-1 shrink-0">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(file.url)}>
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>View/Download</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <Separator />
+
+              {/* Bank Details */}
+              {bankDetails && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-muted-foreground" />
+                    <h4 className="font-semibold text-sm">Bank Account Details</h4>
+                  </div>
+                  <div className="bg-muted/40 p-4 rounded-lg border text-sm space-y-1">
+                    <div className="grid grid-cols-3 gap-2">
+                      <span className="text-muted-foreground">Bank Name:</span>
+                      <span className="col-span-2 font-medium">{bankDetails.bank || '-'}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <span className="text-muted-foreground">Account Number:</span>
+                      <span className="col-span-2 font-medium font-mono">{bankDetails.account || '-'}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <span className="text-muted-foreground">Account Name:</span>
+                      <span className="col-span-2 font-medium">{bankDetails.name || '-'}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Payment Terms */}
+              {paymentTerms.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="w-4 h-4 text-muted-foreground" />
+                    <h4 className="font-semibold text-sm">Payment Plan</h4>
+                  </div>
+                  <div className="border rounded-lg overflow-hidden divide-y">
+                    <div className="grid grid-cols-12 gap-2 bg-muted/50 p-2 text-xs font-medium text-muted-foreground">
+                      <div className="col-span-1 text-center">#</div>
+                      <div className="col-span-4">Amount</div>
+                      <div className="col-span-3">Due Date</div>
+                      <div className="col-span-4 text-right">Status</div>
+                    </div>
+                    {paymentTerms.map((term: any, index: number) => (
+                      <div key={index} className="flex flex-col bg-card">
+                        <div className="grid grid-cols-12 gap-2 p-2 text-sm items-center">
+                          <div className="col-span-1 text-center text-muted-foreground">{index + 1}</div>
+                          <div className="col-span-4 font-medium">{formatCurrency(term.amount || 0)}</div>
+                          <div className="col-span-3 text-xs text-muted-foreground">
+                            {term.release_date ? format(new Date(term.release_date), "dd MMM yyyy") : (term.request_date ? format(new Date(term.request_date), "dd MMM yyyy") : '-')}
+                          </div>
+                          <div className="col-span-4 text-right">
+                            <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5", getStatusBadgeStyle(term.status || 'Pending'))}>
+                              {term.status || 'Pending'}
+                            </Badge>
+                          </div>
                         </div>
+                        
+                        {/* Conditional Display for Pending/Rejected Reasons */}
+                        {['Pending', 'Rejected'].includes(term.status) && (term.status_remarks || term.pic_feedback || replyingTermIndex === index) && (
+                          <div className="px-3 pb-3 pt-0 text-xs space-y-2">
+                            {term.status_remarks && (
+                              <div className="bg-yellow-50/50 dark:bg-yellow-900/10 p-2 rounded border border-yellow-100 dark:border-yellow-900/30 flex flex-col gap-2">
+                                <div className="flex gap-2">
+                                  <AlertCircle className="h-3.5 w-3.5 text-yellow-600 mt-0.5 shrink-0" />
+                                  <div className="space-y-0.5 flex-1">
+                                    <span className="font-semibold text-yellow-700 dark:text-yellow-500 block">Finance Note:</span>
+                                    <p className="text-yellow-800 dark:text-yellow-200/80">{term.status_remarks}</p>
+                                  </div>
+                                  {!term.pic_feedback && replyingTermIndex !== index && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-6 w-6 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-100 dark:hover:bg-yellow-900/50"
+                                      onClick={() => handleReplyClick(index)}
+                                      title="Reply to note"
+                                    >
+                                      <Reply className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
+                                
+                                {/* Reply Form */}
+                                {replyingTermIndex === index && (
+                                  <div className="pl-6 space-y-2 mt-1">
+                                      <Textarea 
+                                          value={feedbackText} 
+                                          onChange={(e) => setFeedbackText(e.target.value)} 
+                                          placeholder="Write your feedback..."
+                                          className="text-xs min-h-[60px] bg-background/80"
+                                      />
+                                      <div className="flex justify-end gap-2">
+                                          <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTermIndex(null)}>Cancel</Button>
+                                          <Button size="sm" className="h-6 text-xs px-2" onClick={() => submitFeedback(index)} disabled={isSubmitting || !feedbackText.trim()}>
+                                              {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send Feedback'}
+                                          </Button>
+                                      </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {term.pic_feedback && (
+                              <div className="bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded border border-blue-100 dark:border-blue-900/30 flex gap-2 ml-4">
+                                <MessageCircle className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
+                                <div className="space-y-0.5">
+                                  <span className="font-semibold text-blue-700 dark:text-blue-500 block">{picName} Feedback:</span>
+                                  <p className="text-blue-800 dark:text-blue-200/80">{term.pic_feedback}</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
                 </div>
-              </>
-            )}
+              )}
 
-            <Separator />
-
-            {/* Bank Details */}
-            {bankDetails && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-muted-foreground" />
-                  <h4 className="font-semibold text-sm">Bank Account Details</h4>
+              {/* Remarks */}
+              {expense.remarks && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-sm text-muted-foreground">Remarks</h4>
+                  <p className="text-sm bg-muted/30 p-3 rounded-md border whitespace-pre-wrap">{expense.remarks}</p>
                 </div>
-                <div className="bg-muted/40 p-4 rounded-lg border text-sm space-y-1">
-                  <div className="grid grid-cols-3 gap-2">
-                    <span className="text-muted-foreground">Bank Name:</span>
-                    <span className="col-span-2 font-medium">{bankDetails.bank || '-'}</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <span className="text-muted-foreground">Account Number:</span>
-                    <span className="col-span-2 font-medium font-mono">{bankDetails.account || '-'}</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <span className="text-muted-foreground">Account Name:</span>
-                    <span className="col-span-2 font-medium">{bankDetails.name || '-'}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Payment Terms */}
-            {paymentTerms.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Wallet className="w-4 h-4 text-muted-foreground" />
-                  <h4 className="font-semibold text-sm">Payment Plan</h4>
-                </div>
-                <div className="border rounded-lg overflow-hidden divide-y">
-                  <div className="grid grid-cols-12 gap-2 bg-muted/50 p-2 text-xs font-medium text-muted-foreground">
-                    <div className="col-span-1 text-center">#</div>
-                    <div className="col-span-4">Amount</div>
-                    <div className="col-span-3">Due Date</div>
-                    <div className="col-span-4 text-right">Status</div>
-                  </div>
-                  {paymentTerms.map((term: any, index: number) => (
-                    <div key={index} className="flex flex-col bg-card">
-                      <div className="grid grid-cols-12 gap-2 p-2 text-sm items-center">
-                        <div className="col-span-1 text-center text-muted-foreground">{index + 1}</div>
-                        <div className="col-span-4 font-medium">{formatCurrency(term.amount || 0)}</div>
-                        <div className="col-span-3 text-xs text-muted-foreground">
-                          {term.release_date ? format(new Date(term.release_date), "dd MMM yyyy") : (term.request_date ? format(new Date(term.request_date), "dd MMM yyyy") : '-')}
-                        </div>
-                        <div className="col-span-4 text-right">
-                          <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5", getStatusBadgeStyle(term.status || 'Pending'))}>
-                            {term.status || 'Pending'}
-                          </Badge>
-                        </div>
-                      </div>
-                      
-                      {/* Conditional Display for Pending/Rejected Reasons */}
-                      {['Pending', 'Rejected'].includes(term.status) && (term.status_remarks || term.pic_feedback || replyingTermIndex === index) && (
-                        <div className="px-3 pb-3 pt-0 text-xs space-y-2">
-                          {term.status_remarks && (
-                            <div className="bg-yellow-50/50 dark:bg-yellow-900/10 p-2 rounded border border-yellow-100 dark:border-yellow-900/30 flex flex-col gap-2">
-                              <div className="flex gap-2">
-                                <AlertCircle className="h-3.5 w-3.5 text-yellow-600 mt-0.5 shrink-0" />
-                                <div className="space-y-0.5 flex-1">
-                                  <span className="font-semibold text-yellow-700 dark:text-yellow-500 block">Finance Note:</span>
-                                  <p className="text-yellow-800 dark:text-yellow-200/80">{term.status_remarks}</p>
-                                </div>
-                                {!term.pic_feedback && replyingTermIndex !== index && (
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-6 w-6 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-100 dark:hover:bg-yellow-900/50"
-                                    onClick={() => handleReplyClick(index)}
-                                    title="Reply to note"
-                                  >
-                                    <Reply className="h-3.5 w-3.5" />
-                                  </Button>
-                                )}
-                              </div>
-                              
-                              {/* Reply Form */}
-                              {replyingTermIndex === index && (
-                                <div className="pl-6 space-y-2 mt-1">
-                                    <Textarea 
-                                        value={feedbackText} 
-                                        onChange={(e) => setFeedbackText(e.target.value)} 
-                                        placeholder="Write your feedback..."
-                                        className="text-xs min-h-[60px] bg-background/80"
-                                    />
-                                    <div className="flex justify-end gap-2">
-                                        <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTermIndex(null)}>Cancel</Button>
-                                        <Button size="sm" className="h-6 text-xs px-2" onClick={() => submitFeedback(index)} disabled={isSubmitting || !feedbackText.trim()}>
-                                            {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send Feedback'}
-                                        </Button>
-                                    </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          {term.pic_feedback && (
-                            <div className="bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded border border-blue-100 dark:border-blue-900/30 flex gap-2 ml-4">
-                              <MessageCircle className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
-                              <div className="space-y-0.5">
-                                <span className="font-semibold text-blue-700 dark:text-blue-500 block">{picName} Feedback:</span>
-                                <p className="text-blue-800 dark:text-blue-200/80">{term.pic_feedback}</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Remarks */}
-            {expense.remarks && (
-              <div className="space-y-2">
-                <h4 className="font-semibold text-sm text-muted-foreground">Remarks</h4>
-                <p className="text-sm bg-muted/30 p-3 rounded-md border whitespace-pre-wrap">{expense.remarks}</p>
-              </div>
-            )}
+              )}
+            </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
+        <DialogContent className="max-w-4xl w-full h-[80vh] flex flex-col p-0">
+          <DialogHeader className="p-4 border-b flex-shrink-0 flex flex-row items-center justify-between space-y-0">
+            <DialogTitle className="truncate pr-8">{previewFile?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 bg-muted/20 relative overflow-hidden flex items-center justify-center p-4">
+             {previewFile?.type === 'application/pdf' ? (
+                 <iframe 
+                    src={`${previewFile.url}#view=FitH`} 
+                    title={previewFile.name}
+                    className="w-full h-full border-none rounded-md" 
+                 />
+             ) : (
+                 <img 
+                    src={previewFile?.url} 
+                    alt={previewFile?.name} 
+                    className="max-w-full max-h-full object-contain rounded-md shadow-sm" 
+                 />
+             )}
           </div>
-      </DialogContent>
-    </Dialog>
+          <div className="p-4 border-t flex justify-end gap-2 flex-shrink-0">
+            <Button variant="outline" onClick={() => window.open(previewFile?.url, '_blank')}>
+                Open Original
+            </Button>
+            <Button onClick={() => setPreviewFile(null)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
