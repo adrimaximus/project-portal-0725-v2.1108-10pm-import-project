@@ -184,7 +184,9 @@ Account Name: ${bankDetails.name || '-'}
     });
   };
 
-  // Removed handleDownload function as we will use direct anchor tag download attribute
+  const handleDownload = (url: string) => {
+    window.open(url, '_blank');
+  };
   
   const handleView = (file: FileMetadata) => {
     if (file.type === 'application/pdf' || file.type.startsWith('image/')) {
@@ -369,11 +371,9 @@ Account Name: ${bankDetails.name || '-'}
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <a href={file.url} download={file.name} target="_blank" rel="noopener noreferrer">
-                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                                      <Download className="h-4 w-4" />
-                                    </Button>
-                                  </a>
+                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(file.url)}>
+                                    <Download className="h-4 w-4" />
+                                  </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>Download</TooltipContent>
                               </Tooltip>
