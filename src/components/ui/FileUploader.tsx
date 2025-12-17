@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useDropzone, DropzoneOptions } from 'react-dropzone';
-import { UploadCloud, X, FileText, Image as ImageIcon, File } from 'lucide-react';
+import { UploadCloud, X, FileText, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn, formatBytes } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
