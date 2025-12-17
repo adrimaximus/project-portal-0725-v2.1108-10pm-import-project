@@ -432,7 +432,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
                         onValueChange={(value) => updatePaymentStatusMutation.mutate(value)}
                         disabled={updatePaymentStatusMutation.isPending}
                       >
-                        <SelectTrigger className="w-auto h-auto p-0 border-none bg-transparent focus:ring-0 shadow-none data-[placeholder]:text-foreground">
+                        <SelectTrigger className="w-full h-auto p-0 border-none bg-transparent focus:ring-0 shadow-none hover:bg-accent/50 rounded-md transition-colors text-left flex items-center justify-between group">
                           <Badge 
                             variant="outline" 
                             className={cn("font-normal border-transparent cursor-pointer hover:opacity-80 transition-opacity")}
