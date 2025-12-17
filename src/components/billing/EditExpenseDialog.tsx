@@ -46,6 +46,8 @@ const expenseSchema = z.object({
     request_date: z.date().optional().nullable(),
     release_date: z.date().optional().nullable(),
     status: z.string().optional(),
+    status_remarks: z.string().optional(),
+    pic_feedback: z.string().optional(),
   })).optional(),
   bank_account_id: z.string().optional().nullable(),
   remarks: z.string().optional(),
@@ -287,7 +289,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                     ...t,
                     request_date: t.request_date ? new Date(t.request_date) : undefined,
                     release_date: t.release_date ? new Date(t.release_date) : undefined,
-                })) || [{ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Pending' }],
+                })) || [{ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Requested' }],
                 bank_account_id: fullExpense.bank_account_id || null,
                 ai_review_notes: (fullExpense.custom_properties as any)?.ai_review_notes || '',
                 custom_properties: fullExpense.custom_properties || {},
@@ -437,14 +439,14 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
            setValue('payment_terms.0.amount', extractedData.amount);
            setValue('payment_terms.0.request_date', new Date());
            setValue('payment_terms.0.release_date', dueDate);
-           setValue('payment_terms.0.status', 'Pending');
+           setValue('payment_terms.0.status', 'Requested');
       } else {
            setValue('payment_terms', [{
                amount: extractedData.amount,
                request_type: 'Requested',
                request_date: new Date(),
                release_date: dueDate,
-               status: 'Pending'
+               status: 'Requested'
            }]);
       }
     }
@@ -690,8 +692,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
       }
 
       // 3. Update DB
-      // We removed status_expense from form values, so it's not updated here.
-      // Supabase will keep the existing value.
       const { error } = await supabase.from('expenses').update({
         project_id: values.project_id,
         created_by: values.created_by, // Update PIC
@@ -1028,9 +1028,19 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                             <FormItem><FormLabel className="text-xs">Payment Schedule</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
                           )} />
                           <FormField control={form.control} name={`payment_terms.${index}.status`} render={({ field }) => (
-                            <FormItem><FormLabel className="text-xs">Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="bg-background"><SelectValue placeholder="Status" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Rejected">Rejected</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                            <FormItem><FormLabel className="text-xs">Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="bg-background"><SelectValue placeholder="Status" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Requested">Requested</SelectItem><SelectItem value="On review">On review</SelectItem><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Rejected">Rejected</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                           )} />
                         </div>
+                        {['Pending', 'Rejected'].includes(form.watch(`payment_terms.${index}.status`) || '') && (
+                          <div className="grid grid-cols-1 gap-4 mt-2 p-2 bg-yellow-50/50 rounded-md border border-yellow-100">
+                            <FormField control={form.control} name={`payment_terms.${index}.status_remarks`} render={({ field }) => (
+                              <FormItem><FormLabel className="text-xs text-yellow-700">Reason (Finance)</FormLabel><FormControl><Textarea className="min-h-[60px] text-xs bg-white" placeholder="Reason for pending/rejected status..." {...field} value={field.value || ''} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={form.control} name={`payment_terms.${index}.pic_feedback`} render={({ field }) => (
+                              <FormItem><FormLabel className="text-xs text-yellow-700">PIC Feedback</FormLabel><FormControl><Textarea className="min-h-[60px] text-xs bg-white" placeholder="Response/Feedback from PIC..." {...field} value={field.value || ''} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
