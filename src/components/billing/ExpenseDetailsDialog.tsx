@@ -144,6 +144,7 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
 
   // Use PIC if available, otherwise fallback to project owner
   const pic = expense.pic || expense.project_owner;
+  const picName = pic?.name || 'PIC';
 
   const handleDownload = (url: string) => {
     window.open(url, '_blank');
@@ -405,7 +406,7 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
                             <div className="bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded border border-blue-100 dark:border-blue-900/30 flex gap-2 ml-4">
                               <MessageCircle className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
                               <div className="space-y-0.5">
-                                <span className="font-semibold text-blue-700 dark:text-blue-500 block">PIC Feedback:</span>
+                                <span className="font-semibold text-blue-700 dark:text-blue-500 block">{picName} Feedback:</span>
                                 <p className="text-blue-800 dark:text-blue-200/80">{term.pic_feedback}</p>
                               </div>
                             </div>
