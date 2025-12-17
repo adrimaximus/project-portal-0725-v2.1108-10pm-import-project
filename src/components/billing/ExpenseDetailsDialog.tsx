@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
-import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2, Activity } from "lucide-react";
+import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
@@ -200,7 +200,6 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
                 {expense.project_name}
               </DialogDescription>
             </div>
-            {/* Status Badge in Header */}
             <Badge className={cn("text-sm px-3 py-1", getStatusBadgeStyle(derivedStatus))}>
               {derivedStatus}
             </Badge>
@@ -228,19 +227,6 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Purpose</p>
                     <p className="text-sm font-medium">{(expense as any).purpose_payment || '-'}</p>
-                  </div>
-                </div>
-
-                {/* Added Status Field */}
-                <div className="flex items-start gap-3">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <Activity className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Status</p>
-                    <Badge className={cn("text-xs px-2 py-0.5 mt-1", getStatusBadgeStyle(derivedStatus))}>
-                      {derivedStatus}
-                    </Badge>
                   </div>
                 </div>
               </div>
