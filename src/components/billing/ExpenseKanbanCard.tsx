@@ -6,7 +6,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
-import { usePaymentStatuses } from '@/hooks/usePaymentStatuses';
 
 interface ExpenseKanbanCardProps {
   expense: Expense;
@@ -21,8 +20,6 @@ const ExpenseKanbanCard = ({ expense, onEdit, onDelete, canDrag }: ExpenseKanban
     disabled: !canDrag 
   });
   
-  const { data: statuses = [] } = usePaymentStatuses();
-  
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat("id-ID", {
@@ -31,19 +28,16 @@ const ExpenseKanbanCard = ({ expense, onEdit, onDelete, canDrag }: ExpenseKanban
     minimumFractionDigits: 0,
   }).format(amount);
 
-  // Determine border color based on status
-  const statusDef = statuses.find(s => s.name === expense.status_expense);
-  const statusLower = expense.status_expense?.toLowerCase();
-  
-  // Use DB color if available, otherwise default logic
-  let borderColor = statusDef?.color;
-  if (!borderColor) {
-    if (statusLower === 'pending' || statusLower === 'proposed') {
-      borderColor = '#facc15'; // yellow-400
-    } else {
-      borderColor = '#e5e7eb'; // gray-200
-    }
-  }
+  // Determine border color based on status to match badge styles
+  const getStatusColor = (status?: string) => {
+    const s = status?.toLowerCase() || '';
+    if (s === 'paid') return '#22c55e'; // green-500
+    if (s === 'pending' || s === 'proposed') return '#eab308'; // yellow-500
+    if (s === 'cancelled' || s === 'rejected') return '#ef4444'; // red-500
+    return '#cbd5e1'; // slate-300
+  };
+
+  const borderColor = getStatusColor(expense.status_expense);
 
   return (
     <div 
