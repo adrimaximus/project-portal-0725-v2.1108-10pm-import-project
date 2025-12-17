@@ -2,7 +2,6 @@ import * as pdfjsLib from 'pdfjs-dist';
 
 // Configure the worker source using unpkg to match the installed version
 // We use a CDN because creating a local worker bundle in this environment can be complex
-// Using a fixed version fallback in case the imported version is undefined in some bundlers
 const pdfjsVersion = pdfjsLib.version || '4.8.69'; 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.mjs`;
 

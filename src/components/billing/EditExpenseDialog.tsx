@@ -409,7 +409,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
         let fileToProcess = file;
 
         // Convert PDF to Image if necessary for AI analysis
-        // Using relaxed check for 'pdf' string in type
         if (file.type.includes('pdf')) {
             toast.info("Converting PDF to image for analysis...");
             const imageFile = await convertPdfToImage(file);
@@ -906,9 +905,9 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
           </Form>
           <DialogFooter className="pt-4">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isFormDisabled}>Cancel</Button>
-            <Button type="submit" form="edit-expense-form" disabled={isFormDisabled}>
+            <Button type="submit" form="expense-form" disabled={isFormDisabled}>
               {(isSubmitting || isExtracting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isExtracting ? 'Analyzing...' : 'Save Changes'}
+              {isExtracting ? 'Analyzing...' : 'Add Expense'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -953,4 +952,4 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
   );
 };
 
-export default EditExpenseDialog;
+export default AddExpenseDialog;

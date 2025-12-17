@@ -21,6 +21,8 @@ interface FileUploaderProps {
   accept?: DropzoneOptions['accept'];
   disabled?: boolean;
   className?: string;
+  label?: string;
+  bucket?: string;
 }
 
 const isFileObject = (file: File | FileMetadata): file is File => {
@@ -30,7 +32,7 @@ const isFileObject = (file: File | FileMetadata): file is File => {
 const FilePreview = ({ file, onRemove, disabled }: { file: File | FileMetadata, onRemove: () => void, disabled?: boolean }) => {
   const isImage = isFileObject(file) 
     ? file.type.startsWith('image/') 
-    : file.type.startsWith('image/');
+    : file.type?.startsWith('image/');
 
   const previewUrl = isFileObject(file) 
     ? URL.createObjectURL(file) 
@@ -39,7 +41,6 @@ const FilePreview = ({ file, onRemove, disabled }: { file: File | FileMetadata, 
   const fileName = isFileObject(file) ? file.name : file.name;
   const fileSize = isFileObject(file) ? file.size : file.size;
 
-  // Revoke object URL on unmount if it's a File object to avoid memory leaks
   React.useEffect(() => {
     return () => {
       if (isFileObject(file)) {
@@ -84,7 +85,7 @@ const FileUploader = ({
   value = [],
   onValueChange,
   maxFiles = 5,
-  maxSize = 5 * 1024 * 1024, // 5MB default
+  maxSize = 5 * 1024 * 1024,
   accept = {
     'image/*': [],
     'application/pdf': []

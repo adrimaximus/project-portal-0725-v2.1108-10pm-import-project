@@ -483,38 +483,13 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     try {
       const currentFiles = values.attachments_jsonb || [];
       const newFilesToUpload = currentFiles.filter((f): f is File => f instanceof File);
+      const existingFiles = currentFiles.filter((f): f is FileMetadata => !(f instanceof File));
       
-      let initialStatus = 'Pending';
-      const terms = values.payment_terms || [];
-      const termStatuses = terms.map(t => t.status || 'Pending');
-      
-      if (termStatuses.some(s => s === 'Rejected')) initialStatus = 'Rejected';
-      else if (termStatuses.some(s => s === 'On review')) initialStatus = 'On review';
-      else if (termStatuses.length > 0 && termStatuses.every(s => s === 'Paid')) initialStatus = 'Paid';
-      else if (termStatuses.length > 0 && termStatuses.every(s => s === 'Requested')) initialStatus = 'Requested';
+      const uploadedFilesMetadata = [...existingFiles];
 
-      const { data: newExpense, error: insertError } = await supabase.from('expenses').insert({
-        project_id: values.project_id,
-        created_by: values.created_by,
-        purpose_payment: values.purpose_payment,
-        beneficiary: values.beneficiary,
-        tf_amount: values.tf_amount,
-        status_expense: initialStatus,
-        remarks: values.remarks,
-        custom_properties: {
-            ...values.custom_properties,
-            ai_review_notes: values.ai_review_notes
-        },
-        attachments_jsonb: [],
-      }).select().single();
-
-      if (insertError) throw insertError;
-      const expenseId = newExpense.id;
-
-      const uploadedFilesMetadata = [];
       for (const file of newFilesToUpload) {
           const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-          const filePath = `expense-attachments/${expenseId}/${Date.now()}-${sanitizedFileName}`;
+          const filePath = `expense-attachments/${values.project_id}/${Date.now()}-${sanitizedFileName}`;
           
           const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, file);
           if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
@@ -530,6 +505,15 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           });
       }
 
+      const terms = values.payment_terms || [];
+      const termStatuses = terms.map(t => t.status || 'Pending');
+      let statusToSave = 'Pending';
+      
+      if (termStatuses.some(s => s === 'Rejected')) statusToSave = 'Rejected';
+      else if (termStatuses.some(s => s === 'On review')) statusToSave = 'On review';
+      else if (termStatuses.length > 0 && termStatuses.every(s => s === 'Paid')) statusToSave = 'Paid';
+      else if (termStatuses.length > 0 && termStatuses.every(s => s === 'Requested')) statusToSave = 'Requested';
+
       const selectedAccount = bankAccounts.find(acc => acc.id === values.bank_account_id);
       const isTempAccount = selectedAccount && (selectedAccount.id.startsWith('temp-') || selectedAccount.is_legacy);
 
@@ -543,7 +527,18 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         };
       }
 
-      const { error: updateError } = await supabase.from('expenses').update({
+      const { data: newExpense, error: insertError } = await supabase.from('expenses').insert({
+        project_id: values.project_id,
+        created_by: values.created_by,
+        purpose_payment: values.purpose_payment,
+        beneficiary: values.beneficiary,
+        tf_amount: values.tf_amount,
+        status_expense: statusToSave,
+        remarks: values.remarks,
+        custom_properties: {
+            ...values.custom_properties,
+            ai_review_notes: values.ai_review_notes
+        },
         payment_terms: values.payment_terms?.map(term => ({
             ...term,
             request_date: term.request_date ? term.request_date.toISOString() : null,
@@ -552,10 +547,9 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         bank_account_id: (selectedAccount && !isTempAccount) ? selectedAccount.id : null,
         account_bank: bankDetails,
         attachments_jsonb: uploadedFilesMetadata,
-        status_expense: initialStatus,
-      }).eq('id', expenseId);
+      }).select().single();
 
-      if (updateError) throw updateError;
+      if (insertError) throw insertError;
 
       toast.success("Expense added successfully.");
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
