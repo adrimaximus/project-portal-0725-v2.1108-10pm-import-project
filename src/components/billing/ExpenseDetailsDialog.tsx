@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
-import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye } from "lucide-react";
+import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -45,6 +45,7 @@ const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDia
       case 'paid': return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-200 dark:border-green-700/50';
       case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700/50';
       case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200 dark:border-red-700/50';
+      case 'on review': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border-blue-200 dark:border-blue-700/50';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600';
     }
   };
@@ -210,25 +211,51 @@ const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDia
                   <Wallet className="w-4 h-4 text-muted-foreground" />
                   <h4 className="font-semibold text-sm">Payment Plan</h4>
                 </div>
-                <div className="border rounded-lg overflow-hidden">
-                  <div className="grid grid-cols-12 gap-2 bg-muted/50 p-2 text-xs font-medium text-muted-foreground border-b">
+                <div className="border rounded-lg overflow-hidden divide-y">
+                  <div className="grid grid-cols-12 gap-2 bg-muted/50 p-2 text-xs font-medium text-muted-foreground">
                     <div className="col-span-1 text-center">#</div>
                     <div className="col-span-4">Amount</div>
                     <div className="col-span-3">Due Date</div>
                     <div className="col-span-4 text-right">Status</div>
                   </div>
                   {paymentTerms.map((term: any, index: number) => (
-                    <div key={index} className="grid grid-cols-12 gap-2 p-2 text-sm items-center border-b last:border-0">
-                      <div className="col-span-1 text-center text-muted-foreground">{index + 1}</div>
-                      <div className="col-span-4 font-medium">{formatCurrency(term.amount || 0)}</div>
-                      <div className="col-span-3 text-xs text-muted-foreground">
-                        {term.release_date ? format(new Date(term.release_date), "dd MMM yyyy") : (term.request_date ? format(new Date(term.request_date), "dd MMM yyyy") : '-')}
+                    <div key={index} className="flex flex-col bg-card">
+                      <div className="grid grid-cols-12 gap-2 p-2 text-sm items-center">
+                        <div className="col-span-1 text-center text-muted-foreground">{index + 1}</div>
+                        <div className="col-span-4 font-medium">{formatCurrency(term.amount || 0)}</div>
+                        <div className="col-span-3 text-xs text-muted-foreground">
+                          {term.release_date ? format(new Date(term.release_date), "dd MMM yyyy") : (term.request_date ? format(new Date(term.request_date), "dd MMM yyyy") : '-')}
+                        </div>
+                        <div className="col-span-4 text-right">
+                          <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5", getStatusBadgeStyle(term.status || 'Pending'))}>
+                            {term.status || 'Pending'}
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="col-span-4 text-right">
-                        <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5", getStatusBadgeStyle(term.status || 'Pending'))}>
-                          {term.status || 'Pending'}
-                        </Badge>
-                      </div>
+                      
+                      {/* Conditional Display for Pending/Rejected Reasons */}
+                      {['Pending', 'Rejected'].includes(term.status) && (term.status_remarks || term.pic_feedback) && (
+                        <div className="px-3 pb-3 pt-0 text-xs space-y-2">
+                          {term.status_remarks && (
+                            <div className="bg-yellow-50/50 dark:bg-yellow-900/10 p-2 rounded border border-yellow-100 dark:border-yellow-900/30 flex gap-2">
+                              <AlertCircle className="h-3.5 w-3.5 text-yellow-600 mt-0.5 shrink-0" />
+                              <div className="space-y-0.5">
+                                <span className="font-semibold text-yellow-700 dark:text-yellow-500 block">Finance Note:</span>
+                                <p className="text-yellow-800 dark:text-yellow-200/80">{term.status_remarks}</p>
+                              </div>
+                            </div>
+                          )}
+                          {term.pic_feedback && (
+                            <div className="bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded border border-blue-100 dark:border-blue-900/30 flex gap-2 ml-4">
+                              <MessageCircle className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
+                              <div className="space-y-0.5">
+                                <span className="font-semibold text-blue-700 dark:text-blue-500 block">PIC Feedback:</span>
+                                <p className="text-blue-800 dark:text-blue-200/80">{term.pic_feedback}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -239,7 +266,7 @@ const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDia
             {expense.remarks && (
               <div className="space-y-2">
                 <h4 className="font-semibold text-sm text-muted-foreground">Remarks</h4>
-                <p className="text-sm bg-muted/30 p-3 rounded-md border">{expense.remarks}</p>
+                <p className="text-sm bg-muted/30 p-3 rounded-md border whitespace-pre-wrap">{expense.remarks}</p>
               </div>
             )}
           </div>
