@@ -69,8 +69,9 @@ export default function EditExpenseDialog({
 
   // Fetch full expense details to get the latest attachments
   const { data: fullExpense, isLoading } = useQuery({
-    queryKey: ['expense', expense.id],
+    queryKey: ['expense', expense?.id],
     queryFn: async () => {
+      if (!expense?.id) return null;
       const { data, error } = await supabase
         .from('expenses')
         .select('*')
@@ -80,18 +81,18 @@ export default function EditExpenseDialog({
       if (error) throw error;
       return data;
     },
-    enabled: open,
+    enabled: open && !!expense?.id,
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      beneficiary: expense.beneficiary,
-      tf_amount: expense.tf_amount?.toString(),
-      status_expense: expense.status_expense,
-      due_date: expense.due_date ? new Date(expense.due_date) : null,
-      remarks: expense.remarks || "",
-      purpose_payment: expense.purpose_payment || "",
+      beneficiary: expense?.beneficiary || '',
+      tf_amount: expense?.tf_amount?.toString() || '',
+      status_expense: expense?.status_expense || 'Pending',
+      due_date: expense?.due_date ? new Date(expense.due_date) : null,
+      remarks: expense?.remarks || "",
+      purpose_payment: expense?.purpose_payment || "",
       attachments_jsonb: [],
     },
   });
@@ -110,10 +111,22 @@ export default function EditExpenseDialog({
         purpose_payment: fullExpense.purpose_payment || "",
         attachments_jsonb: attachments,
       });
+    } else if (expense) {
+       // Reset form when expense prop changes if fullExpense isn't loaded yet
+       form.reset({
+        beneficiary: expense.beneficiary,
+        tf_amount: expense.tf_amount?.toString(),
+        status_expense: expense.status_expense,
+        due_date: expense.due_date ? new Date(expense.due_date) : null,
+        remarks: expense.remarks || "",
+        purpose_payment: expense.purpose_payment || "",
+        attachments_jsonb: expense.attachments_jsonb || [],
+      });
     }
-  }, [fullExpense, form]);
+  }, [fullExpense, form, expense]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!expense?.id) return;
     setIsSubmitting(true);
     try {
       const { error } = await supabase
@@ -149,6 +162,8 @@ export default function EditExpenseDialog({
       setIsSubmitting(false);
     }
   };
+
+  if (!expense) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
