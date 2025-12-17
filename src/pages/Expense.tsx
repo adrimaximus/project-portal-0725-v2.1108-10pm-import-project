@@ -350,7 +350,7 @@ const ExpensePage = () => {
                           <TableCell onClick={(e) => e.stopPropagation()}>
                             {canEditStatus ? (
                               <Select 
-                                defaultValue={expense.status_expense} 
+                                value={expense.status_expense} 
                                 onValueChange={(val) => updateStatusMutation.mutate({ id: expense.id, status: val })}
                               >
                                 <SelectTrigger className={cn("h-7 px-2 text-xs font-medium border-0 rounded-full w-auto min-w-[90px] gap-1", getStatusBadgeStyle(expense.status_expense))}>
