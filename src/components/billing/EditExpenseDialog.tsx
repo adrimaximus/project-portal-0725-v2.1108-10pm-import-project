@@ -20,7 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, isWithinInterval, parseISO } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import BankAccountFormDialog from './BankAccountFormDialog';
@@ -49,7 +49,6 @@ const expenseSchema = z.object({
   })).optional(),
   bank_account_id: z.string().optional().nullable(),
   remarks: z.string().optional(),
-  status_expense: z.string().min(1, "Status is required"),
   ai_review_notes: z.string().optional(),
   custom_properties: z.record(z.any()).optional(),
   attachments_jsonb: z.array(z.object({
@@ -377,8 +376,22 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
       setValue('tf_amount', extractedData.amount, { shouldValidate: true });
       
       const terms = form.getValues('payment_terms');
-      if (terms && terms.length === 1 && !terms[0].amount) {
-          setValue('payment_terms.0.amount', extractedData.amount);
+      const invoiceDate = extractedData.date ? new Date(extractedData.date) : new Date();
+      const dueDate = extractedData.due_date ? new Date(extractedData.due_date) : invoiceDate;
+
+      if (terms && terms.length === 1) {
+           setValue('payment_terms.0.amount', extractedData.amount);
+           setValue('payment_terms.0.request_date', new Date());
+           setValue('payment_terms.0.release_date', dueDate);
+           setValue('payment_terms.0.status', 'Pending');
+      } else {
+           setValue('payment_terms', [{
+               amount: extractedData.amount,
+               request_type: 'Requested',
+               request_date: new Date(),
+               release_date: dueDate,
+               status: 'Pending'
+           }]);
       }
     }
     
@@ -386,14 +399,12 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
     const itemsDescription = Array.isArray(extractedData.items) && extractedData.items.length > 0 
         ? extractedData.items.map((i: any) => i.description || i.name).filter(Boolean).join(', ') 
         : null;
-    
     const purpose = itemsDescription || explicitDescription || extractedData.summary;
 
     if (purpose) {
       setValue('purpose_payment', purpose, { shouldValidate: true });
     }
 
-    // Beneficiary Matching
     let currentBeneficiary = beneficiary;
     
     if (extractedData.beneficiary && !watch('beneficiary')) {
@@ -412,7 +423,14 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
       }
     }
 
-    // Bank Details
+    if (!watch('project_id')) {
+        const matchedProject = findMatchingProject(extractedData);
+        if (matchedProject) {
+            setValue('project_id', matchedProject.id);
+            toast.success(`Matched to project: ${matchedProject.name}`);
+        }
+    }
+
     if (extractedData.bank_details && extractedData.bank_details.account_number) {
       const extractedBank = extractedData.bank_details;
       
@@ -580,6 +598,12 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
   // Handle File List Changes (Sync with Form)
   const handleFilesChange = (files: any[]) => {
       setValue('attachments_jsonb', files as any, { shouldDirty: true });
+      
+      // Auto-process the last added file if it's new
+      const newFiles = files.filter(f => f.originalFile instanceof File);
+      if (newFiles.length > 0) {
+          handleFileProcessed(newFiles[newFiles.length - 1]);
+      }
   };
 
   const onSubmit = async (values: ExpenseFormValues) => {
@@ -954,6 +978,28 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
               <FormField control={form.control} name="tf_amount" render={({ field }) => (
                 <FormItem><FormLabel>Total Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
               )} />
+              <FormField
+                control={form.control}
+                name="status_expense"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {['Pending', 'Reviewed', 'Approved', 'Paid', 'Rejected'].map(status => (
+                          <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <div>
                 <FormLabel>Payment Terms</FormLabel>
                 <div className="space-y-3 mt-2">
