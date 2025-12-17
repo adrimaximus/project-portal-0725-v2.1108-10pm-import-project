@@ -400,6 +400,7 @@ const ExpensePage = () => {
             statuses={orderedStatuses}
             onEditExpense={setEditingExpense}
             onDeleteExpense={setExpenseToDelete}
+            canEditStatus={canEditStatus}
           />
         )}
       </div>

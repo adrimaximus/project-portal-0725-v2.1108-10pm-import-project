@@ -17,7 +17,7 @@ interface BillingTableProps {
   onEdit: (invoice: Invoice) => void;
   sortConfig: { key: keyof Invoice | null; direction: 'asc' | 'desc' };
   handleSort: (column: keyof Invoice) => void;
-  onStatusChange: (invoiceId: string, newStatus: PaymentStatus) => void;
+  onStatusChange?: (invoiceId: string, newStatus: PaymentStatus) => void;
 }
 
 const getInitials = (name?: string | null) => {
@@ -146,7 +146,7 @@ const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange
               <TableCell>
                 <PaymentStatusBadge 
                   status={invoice.status} 
-                  onStatusChange={(newStatus) => onStatusChange(invoice.rawProjectId, newStatus)} 
+                  onStatusChange={onStatusChange ? (newStatus) => onStatusChange(invoice.rawProjectId, newStatus) : undefined} 
                 />
               </TableCell>
               <TableCell>{invoice.poNumber || 'N/A'}</TableCell>

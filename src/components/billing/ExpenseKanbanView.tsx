@@ -13,9 +13,10 @@ interface ExpenseKanbanViewProps {
   statuses: string[];
   onEditExpense: (expense: Expense) => void;
   onDeleteExpense: (expense: Expense) => void;
+  canEditStatus: boolean;
 }
 
-const ExpenseKanbanView = ({ expenses, statuses, onEditExpense, onDeleteExpense }: ExpenseKanbanViewProps) => {
+const ExpenseKanbanView = ({ expenses, statuses, onEditExpense, onDeleteExpense, canEditStatus }: ExpenseKanbanViewProps) => {
   const [activeExpense, setActiveExpense] = useState<Expense | null>(null);
   const [groupedExpenses, setGroupedExpenses] = useState<Record<string, Expense[]>>({});
   const queryClient = useQueryClient();
@@ -44,10 +45,12 @@ const ExpenseKanbanView = ({ expenses, statuses, onEditExpense, onDeleteExpense 
   );
 
   const handleDragStart = (event: DragStartEvent) => {
+    if (!canEditStatus) return;
     setActiveExpense(expenses.find(e => e.id === event.active.id) || null);
   };
 
   const handleDragOver = (event: DragOverEvent) => {
+    if (!canEditStatus) return;
     const { active, over } = event;
     if (!over) return;
     const activeId = String(active.id);
@@ -82,6 +85,7 @@ const ExpenseKanbanView = ({ expenses, statuses, onEditExpense, onDeleteExpense 
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
+    if (!canEditStatus) return;
     const { active, over } = event;
     setActiveExpense(null);
     if (!over) return;
@@ -119,12 +123,13 @@ const ExpenseKanbanView = ({ expenses, statuses, onEditExpense, onDeleteExpense 
             expenses={groupedExpenses[status] || []}
             onEditExpense={onEditExpense}
             onDeleteExpense={onDeleteExpense}
+            canEditStatus={canEditStatus}
           />
         ))}
       </div>
       <DragOverlay>
         {activeExpense ? (
-          <ExpenseKanbanCard expense={activeExpense} onEdit={() => {}} onDelete={() => {}} />
+          <ExpenseKanbanCard expense={activeExpense} onEdit={() => {}} onDelete={() => {}} canDrag={true} />
         ) : null}
       </DragOverlay>
     </DndContext>

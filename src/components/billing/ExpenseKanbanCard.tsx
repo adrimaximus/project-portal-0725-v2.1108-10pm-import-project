@@ -11,10 +11,15 @@ interface ExpenseKanbanCardProps {
   expense: Expense;
   onEdit: (expense: Expense) => void;
   onDelete: (expense: Expense) => void;
+  canDrag: boolean;
 }
 
-const ExpenseKanbanCard = ({ expense, onEdit, onDelete }: ExpenseKanbanCardProps) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: expense.id });
+const ExpenseKanbanCard = ({ expense, onEdit, onDelete, canDrag }: ExpenseKanbanCardProps) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
+    id: expense.id,
+    disabled: !canDrag 
+  });
+  
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat("id-ID", {
@@ -24,7 +29,17 @@ const ExpenseKanbanCard = ({ expense, onEdit, onDelete }: ExpenseKanbanCardProps
   }).format(amount);
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={cn("mb-3 cursor-grab active:cursor-grabbing", isDragging && "opacity-30")}>
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      {...attributes} 
+      {...listeners} 
+      className={cn(
+        "mb-3", 
+        canDrag ? "cursor-grab active:cursor-grabbing" : "cursor-default",
+        isDragging && "opacity-30"
+      )}
+    >
       <Card className="hover:shadow-md transition-shadow">
         <CardHeader className="p-3 pb-2 flex flex-row items-start justify-between">
           <div className="space-y-1">

@@ -17,7 +17,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSortConfig } from "@/hooks/useSortConfig";
@@ -32,6 +32,22 @@ const Billing = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const queryClient = useQueryClient();
+
+  const { data: userProfile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      return data;
+    }
+  });
+
+  const canEditStatus = useMemo(() => {
+    if (!userProfile) return false;
+    const role = userProfile.role?.toLowerCase() || '';
+    return ['master admin', 'finance', 'admin', 'admin project'].includes(role);
+  }, [userProfile]);
 
   const updatePaymentStatusMutation = useMutation({
     mutationFn: async ({ projectId, newStatus }: { projectId: string, newStatus: PaymentStatus }) => {
@@ -202,7 +218,7 @@ const Billing = () => {
                 onEdit={handleEdit}
                 sortConfig={sortConfig}
                 handleSort={handleSort}
-                onStatusChange={handleStatusChange}
+                onStatusChange={canEditStatus ? handleStatusChange : undefined}
               />
             ) : (
               <BillingKanbanView invoices={activeInvoices} onEditInvoice={handleEdit} />
@@ -224,7 +240,7 @@ const Billing = () => {
                       onEdit={handleEdit}
                       sortConfig={sortConfig}
                       handleSort={handleSort}
-                      onStatusChange={handleStatusChange}
+                      onStatusChange={canEditStatus ? handleStatusChange : undefined}
                     />
                   ) : (
                     <BillingKanbanView invoices={archivedInvoices} onEditInvoice={handleEdit} />

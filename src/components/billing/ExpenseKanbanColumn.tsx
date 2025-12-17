@@ -10,9 +10,10 @@ interface ExpenseKanbanColumnProps {
   expenses: Expense[];
   onEditExpense: (expense: Expense) => void;
   onDeleteExpense: (expense: Expense) => void;
+  canEditStatus: boolean;
 }
 
-const ExpenseKanbanColumn = ({ status, expenses, onEditExpense, onDeleteExpense }: ExpenseKanbanColumnProps) => {
+const ExpenseKanbanColumn = ({ status, expenses, onEditExpense, onDeleteExpense, canEditStatus }: ExpenseKanbanColumnProps) => {
   const { setNodeRef } = useDroppable({ id: status });
   const expenseIds = useMemo(() => expenses.map(e => e.id), [expenses]);
 
@@ -28,7 +29,13 @@ const ExpenseKanbanColumn = ({ status, expenses, onEditExpense, onDeleteExpense 
         <div className="min-h-[6rem] p-2 pt-0 overflow-y-auto">
           <SortableContext id={status} items={expenseIds} strategy={verticalListSortingStrategy}>
             {expenses.map(expense => (
-              <ExpenseKanbanCard key={expense.id} expense={expense} onEdit={onEditExpense} onDelete={onDeleteExpense} />
+              <ExpenseKanbanCard 
+                key={expense.id} 
+                expense={expense} 
+                onEdit={onEditExpense} 
+                onDelete={onDeleteExpense}
+                canDrag={canEditStatus}
+              />
             ))}
           </SortableContext>
           {expenses.length === 0 && (
