@@ -64,7 +64,7 @@ type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
 interface EditExpenseDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChange: (open: (boolean | ((prevState: boolean) => boolean))) => void;
   expense: Expense | null;
 }
 
@@ -371,6 +371,60 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
     setIsBankAccountFormOpen(true);
   };
 
+  const findMatchingProject = (extracted: any) => {
+      let bestMatch: ProjectOption | null = null;
+      let maxScore = 0;
+      const normalize = (s: string) => s?.toLowerCase().trim() || '';
+
+      projects.forEach(p => {
+          let score = 0;
+          const pName = normalize(p.name);
+          const cName = normalize(p.client_name || '');
+          const cComp = normalize(p.client_company_name || '');
+          const pVenue = normalize(p.venue || '');
+          
+          const exBeneficiary = normalize(extracted.beneficiary); 
+          const exAddress = normalize(extracted.address || ''); 
+          const exVenue = normalize(extracted.venue || '');
+          const exDate = extracted.date ? parseISO(extracted.date) : null;
+          
+          if (exBeneficiary) {
+              if (cComp && (cComp.includes(exBeneficiary) || exBeneficiary.includes(cComp))) score += 10;
+              else if (cName && (cName.includes(exBeneficiary) || exBeneficiary.includes(cName))) score += 5;
+              if (pName.includes(exBeneficiary)) score += 3;
+          }
+
+          const checkVenue = exVenue || exAddress;
+          if (pVenue && checkVenue) {
+             if (pVenue.includes(checkVenue) || checkVenue.includes(pVenue)) score += 8;
+          }
+
+          if (exDate && !isNaN(exDate.getTime()) && p.start_date) {
+              const start = new Date(p.start_date);
+              const end = p.due_date ? new Date(p.due_date) : new Date(start);
+              const bufferStart = new Date(start); bufferStart.setDate(start.getDate() - 7);
+              const bufferEnd = new Date(end); bufferEnd.setDate(end.getDate() + 60);
+              if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) score += 5;
+          }
+
+          // Check against date in project name
+          const nameDate = extractDateFromProjectName(p.name);
+          if (nameDate && exDate && !isNaN(exDate.getTime())) {
+              const bufferStart = new Date(nameDate.start); 
+              bufferStart.setDate(bufferStart.getDate() - 7);
+              const bufferEnd = new Date(nameDate.end); 
+              bufferEnd.setDate(bufferEnd.getDate() + 60);
+              if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) score += 10;
+          }
+
+          if (score > maxScore) {
+              maxScore = score;
+              bestMatch = p;
+          }
+      });
+      return maxScore > 0 ? bestMatch : null;
+  };
+
   const applyExtractedData = async (extractedData: any) => {
     if (extractedData.amount && extractedData.amount > 0) {
       setValue('tf_amount', extractedData.amount, { shouldValidate: true });
@@ -563,37 +617,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
     }
   };
 
-  const handleGeneratePurpose = async () => {
-    const attachments = form.getValues('attachments_jsonb');
-    if (!attachments || attachments.length === 0) {
-       toast.error("No attachments found to analyze.");
-       return;
-    }
-    
-    const file = attachments[attachments.length - 1]; 
-    setCurrentProcessingFile(file.name);
-    
-    try {
-        const extractedData = await extractData({ 
-            url: file.url, 
-            type: file.type, 
-            instructions: "Identify the main purpose of this payment/invoice. Return a short string in a JSON field named 'purpose' (e.g. 'Web Hosting', 'Office Supplies')." 
-        });
-        
-        if (extractedData) {
-            const purpose = extractedData.purpose || extractedData.description || extractedData.summary;
-
-            if (purpose) {
-              setValue('purpose_payment', purpose, { shouldValidate: true, shouldDirty: true });
-              toast.success("Purpose payment updated.");
-            } else {
-              toast.info("Could not extract purpose. Try adding instructions in AI Review Notes.");
-            }
-        }
-    } finally {
-        setCurrentProcessingFile(null);
-    }
-  };
+  // Removed handleGeneratePurpose function as requested
 
   // Handle File List Changes (Sync with Form)
   const handleFilesChange = (files: any[]) => {
@@ -811,17 +835,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                   <FormItem>
                     <div className="flex justify-between items-center">
                       <FormLabel>Purpose Payment</FormLabel>
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-6 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50 p-0 px-2"
-                        onClick={handleGeneratePurpose}
-                        disabled={isExtracting || !watch('attachments_jsonb')?.length}
-                      >
-                        <Wand2 className="mr-1 h-3 w-3" />
-                        Auto-fill with AI
-                      </Button>
+                      {/* Removed Auto-fill with AI button */}
                     </div>
                     <FormControl>
                       <Input placeholder="Enter purpose of payment" {...field} value={field.value || ''} disabled={isFormDisabled} />
