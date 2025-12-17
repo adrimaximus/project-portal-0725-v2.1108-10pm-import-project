@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Expense } from "@/types";
 import { format } from "date-fns";
@@ -6,9 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
-import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle } from "lucide-react";
+import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface FileMetadata {
   name: string;
@@ -33,6 +37,11 @@ const formatFileSize = (bytes: number) => {
 };
 
 const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDialogProps) => {
+  const queryClient = useQueryClient();
+  const [replyingTermIndex, setReplyingTermIndex] = useState<number | null>(null);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Calculate status based on payment terms
   const derivedStatus = useMemo(() => {
     if (!expense?.payment_terms || expense.payment_terms.length === 0) return expense?.status_expense || 'Pending';
@@ -63,7 +72,6 @@ const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDia
       case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700/50';
       case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200 dark:border-red-700/50';
       case 'on review': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border-blue-200 dark:border-blue-700/50';
-      case 'requested': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 border-purple-200 dark:border-purple-700/50';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600';
     }
   };
@@ -77,6 +85,43 @@ const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDia
 
   const handleDownload = (url: string) => {
     window.open(url, '_blank');
+  };
+
+  const handleReplyClick = (index: number) => {
+    setReplyingTermIndex(index);
+    setFeedbackText("");
+  };
+
+  const submitFeedback = async (index: number) => {
+    if (!expense) return;
+    setIsSubmitting(true);
+    try {
+        const updatedTerms = [...(expense.payment_terms as any[])];
+        updatedTerms[index] = {
+            ...updatedTerms[index],
+            pic_feedback: feedbackText
+        };
+
+        const { error } = await supabase
+            .from('expenses')
+            .update({ payment_terms: updatedTerms })
+            .eq('id', expense.id);
+
+        if (error) throw error;
+
+        toast.success("Feedback sent successfully");
+        setReplyingTermIndex(null);
+        setFeedbackText("");
+        
+        // Refresh data
+        queryClient.invalidateQueries({ queryKey: ['expenses'] });
+        queryClient.invalidateQueries({ queryKey: ['expense_details', expense.id] });
+        
+    } catch (err: any) {
+        toast.error("Failed to send feedback", { description: err.message });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   return (
@@ -252,15 +297,46 @@ const ExpenseDetailsDialog = ({ expense, open, onOpenChange }: ExpenseDetailsDia
                       </div>
                       
                       {/* Conditional Display for Pending/Rejected Reasons */}
-                      {['Pending', 'Rejected'].includes(term.status) && (term.status_remarks || term.pic_feedback) && (
+                      {['Pending', 'Rejected'].includes(term.status) && (term.status_remarks || term.pic_feedback || replyingTermIndex === index) && (
                         <div className="px-3 pb-3 pt-0 text-xs space-y-2">
                           {term.status_remarks && (
-                            <div className="bg-yellow-50/50 dark:bg-yellow-900/10 p-2 rounded border border-yellow-100 dark:border-yellow-900/30 flex gap-2">
-                              <AlertCircle className="h-3.5 w-3.5 text-yellow-600 mt-0.5 shrink-0" />
-                              <div className="space-y-0.5">
-                                <span className="font-semibold text-yellow-700 dark:text-yellow-500 block">Finance Note:</span>
-                                <p className="text-yellow-800 dark:text-yellow-200/80">{term.status_remarks}</p>
+                            <div className="bg-yellow-50/50 dark:bg-yellow-900/10 p-2 rounded border border-yellow-100 dark:border-yellow-900/30 flex flex-col gap-2">
+                              <div className="flex gap-2">
+                                <AlertCircle className="h-3.5 w-3.5 text-yellow-600 mt-0.5 shrink-0" />
+                                <div className="space-y-0.5 flex-1">
+                                  <span className="font-semibold text-yellow-700 dark:text-yellow-500 block">Finance Note:</span>
+                                  <p className="text-yellow-800 dark:text-yellow-200/80">{term.status_remarks}</p>
+                                </div>
+                                {!term.pic_feedback && replyingTermIndex !== index && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-100 dark:hover:bg-yellow-900/50"
+                                    onClick={() => handleReplyClick(index)}
+                                    title="Reply to note"
+                                  >
+                                    <Reply className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
                               </div>
+                              
+                              {/* Reply Form */}
+                              {replyingTermIndex === index && (
+                                <div className="pl-6 space-y-2 mt-1">
+                                    <Textarea 
+                                        value={feedbackText} 
+                                        onChange={(e) => setFeedbackText(e.target.value)} 
+                                        placeholder="Write your feedback..."
+                                        className="text-xs min-h-[60px] bg-background/80"
+                                    />
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTermIndex(null)}>Cancel</Button>
+                                        <Button size="sm" className="h-6 text-xs px-2" onClick={() => submitFeedback(index)} disabled={isSubmitting || !feedbackText.trim()}>
+                                            {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send Feedback'}
+                                        </Button>
+                                    </div>
+                                </div>
+                              )}
                             </div>
                           )}
                           {term.pic_feedback && (
