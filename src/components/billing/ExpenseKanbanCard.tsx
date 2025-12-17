@@ -34,6 +34,9 @@ const ExpenseKanbanCard = ({ expense, onEdit, onDelete, canDrag }: ExpenseKanban
     if (s === 'paid') return '#22c55e'; // green-500
     if (s === 'pending' || s === 'proposed') return '#eab308'; // yellow-500
     if (s === 'cancelled' || s === 'rejected') return '#ef4444'; // red-500
+    if (s === 'requested') return '#a855f7'; // purple-500
+    if (s === 'on review' || s === 'reviewed') return '#3b82f6'; // blue-500
+    if (s === 'approved') return '#14b8a6'; // teal-500
     return '#cbd5e1'; // slate-300
   };
 
