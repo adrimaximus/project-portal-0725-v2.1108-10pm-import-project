@@ -39,7 +39,8 @@ const formatFileSize = (bytes: number) => {
 
 const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: ExpenseDetailsDialogProps) => {
   const queryClient = useQueryClient();
-  const [replyingTermIndex, setReplyingTermIndex] = useState<number | null>(null);
+  // Use an object to track which specific feedback type is being replied to/edited
+  const [replyingTerm, setReplyingTerm] = useState<{ index: number, type: 'finance' | 'pic' } | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
@@ -205,20 +206,33 @@ Account Name: ${bankDetails.name || '-'}
     }
   };
 
-  const handleReplyClick = (index: number, existingFeedback?: string) => {
-    setReplyingTermIndex(index);
+  const handleReplyClick = (index: number, type: 'finance' | 'pic', existingFeedback?: string) => {
+    setReplyingTerm({ index, type });
     setFeedbackText(existingFeedback || "");
   };
 
-  const submitFeedback = async (index: number) => {
-    if (!expense) return;
+  const submitFeedback = async () => {
+    if (!expense || !replyingTerm) return;
+    
+    const { index, type } = replyingTerm;
     setIsSubmitting(true);
+    
     try {
         const updatedTerms = [...(expense.payment_terms as any[])];
-        updatedTerms[index] = {
-            ...updatedTerms[index],
-            pic_feedback: feedbackText
-        };
+        
+        if (type === 'pic') {
+            // PIC is editing their own feedback
+            updatedTerms[index] = {
+                ...updatedTerms[index],
+                pic_feedback: feedbackText
+            };
+        } else if (type === 'finance') {
+            // PIC is replying to finance note (setting pic_feedback)
+            updatedTerms[index] = {
+                ...updatedTerms[index],
+                pic_feedback: feedbackText
+            };
+        }
 
         const { error } = await supabase
             .from('expenses')
@@ -227,8 +241,8 @@ Account Name: ${bankDetails.name || '-'}
 
         if (error) throw error;
 
-        toast.success("Feedback sent successfully");
-        setReplyingTermIndex(null);
+        toast.success("Feedback saved successfully");
+        setReplyingTerm(null);
         setFeedbackText("");
         
         // Refresh data explicitly for this dialog and the main list
@@ -236,7 +250,7 @@ Account Name: ${bankDetails.name || '-'}
         queryClient.invalidateQueries({ queryKey: ['expenses'] });
         
     } catch (err: any) {
-        toast.error("Failed to send feedback", { description: err.message });
+        toast.error("Failed to save feedback", { description: err.message });
     } finally {
         setIsSubmitting(false);
     }
@@ -266,6 +280,9 @@ Account Name: ${bankDetails.name || '-'}
       toast.error("Failed to update status", { description: err.message });
     }
   };
+
+  const isReplyingTo = (index: number, type: 'finance' | 'pic') => 
+    replyingTerm?.index === index && replyingTerm.type === type;
 
   return (
     <>
@@ -489,7 +506,7 @@ Account Name: ${bankDetails.name || '-'}
                           </div>
                           
                           {/* Conditional Display for Pending/Rejected Reasons */}
-                          {['Pending', 'Rejected'].includes(term.status) && (term.status_remarks || term.pic_feedback || replyingTermIndex === index) && (
+                          {['Pending', 'Rejected'].includes(term.status) && (term.status_remarks || term.pic_feedback || isReplyingTo(index, 'finance') || isReplyingTo(index, 'pic')) && (
                             <div className="px-3 pb-3 pt-0 text-xs space-y-2">
                               {term.status_remarks && (
                                 <div className="bg-yellow-50/50 dark:bg-yellow-900/10 p-2 rounded border border-yellow-100 dark:border-yellow-900/30 flex flex-col gap-2">
@@ -499,21 +516,22 @@ Account Name: ${bankDetails.name || '-'}
                                       <span className="font-semibold text-yellow-700 dark:text-yellow-500 block">Finance Note:</span>
                                       <p className="text-yellow-800 dark:text-yellow-200/80">{term.status_remarks}</p>
                                     </div>
-                                    {isCurrentPic && replyingTermIndex !== index && (
+                                    {/* Reply button for PIC to respond to Finance Note */}
+                                    {isCurrentPic && !term.pic_feedback && !isReplyingTo(index, 'finance') && (
                                       <Button 
                                         variant="ghost" 
                                         size="icon" 
                                         className="h-6 w-6 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-100 dark:hover:bg-yellow-900/50"
-                                        onClick={() => handleReplyClick(index, term.pic_feedback)}
-                                        title={term.pic_feedback ? "Edit Reply" : "Reply to note"}
+                                        onClick={() => handleReplyClick(index, 'finance')}
+                                        title="Reply to note"
                                       >
-                                        {term.pic_feedback ? <Edit className="h-3.5 w-3.5" /> : <Reply className="h-3.5 w-3.5" />}
+                                        <Reply className="h-3.5 w-3.5" />
                                       </Button>
                                     )}
                                   </div>
                                   
-                                  {/* Reply Form */}
-                                  {replyingTermIndex === index && (
+                                  {/* Reply Form (only for replying to Finance Note) */}
+                                  {isReplyingTo(index, 'finance') && (
                                     <div className="pl-6 space-y-2 mt-1">
                                         <Textarea 
                                             value={feedbackText} 
@@ -522,8 +540,8 @@ Account Name: ${bankDetails.name || '-'}
                                             className="text-xs min-h-[60px] bg-background/80"
                                         />
                                         <div className="flex justify-end gap-2">
-                                            <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTermIndex(null)}>Cancel</Button>
-                                            <Button size="sm" className="h-6 text-xs px-2" onClick={() => submitFeedback(index)} disabled={isSubmitting || !feedbackText.trim()}>
+                                            <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTerm(null)}>Cancel</Button>
+                                            <Button size="sm" className="h-6 text-xs px-2" onClick={submitFeedback} disabled={isSubmitting || !feedbackText.trim()}>
                                                 {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send Feedback'}
                                             </Button>
                                         </div>
@@ -539,20 +557,21 @@ Account Name: ${bankDetails.name || '-'}
                                       <span className="font-semibold text-blue-700 dark:text-blue-500 block">{picName} Feedback:</span>
                                       <p className="text-blue-800 dark:text-blue-200/80">{term.pic_feedback}</p>
                                     </div>
-                                    {isCurrentPic && replyingTermIndex !== index && (
+                                    {/* Edit button for PIC to edit their own feedback */}
+                                    {isCurrentPic && !isReplyingTo(index, 'pic') && (
                                       <Button 
                                         variant="ghost" 
                                         size="icon" 
                                         className="h-6 w-6 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50"
-                                        onClick={() => handleReplyClick(index, term.pic_feedback)}
+                                        onClick={() => handleReplyClick(index, 'pic', term.pic_feedback)}
                                         title="Edit Feedback"
                                       >
                                         <Edit className="h-3.5 w-3.5" />
                                       </Button>
                                     )}
                                   </div>
-                                  {/* Reply Form (for editing existing feedback) */}
-                                  {replyingTermIndex === index && (
+                                  {/* Reply Form (for editing existing PIC feedback) */}
+                                  {isReplyingTo(index, 'pic') && (
                                     <div className="pl-6 space-y-2 mt-1">
                                         <Textarea 
                                             value={feedbackText} 
@@ -561,8 +580,8 @@ Account Name: ${bankDetails.name || '-'}
                                             className="text-xs min-h-[60px] bg-background/80"
                                         />
                                         <div className="flex justify-end gap-2">
-                                            <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTermIndex(null)}>Cancel</Button>
-                                            <Button size="sm" className="h-6 text-xs px-2" onClick={() => submitFeedback(index)} disabled={isSubmitting || !feedbackText.trim()}>
+                                            <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTerm(null)}>Cancel</Button>
+                                            <Button size="sm" className="h-6 text-xs px-2" onClick={submitFeedback} disabled={isSubmitting || !feedbackText.trim()}>
                                                 {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save Changes'}
                                             </Button>
                                         </div>
