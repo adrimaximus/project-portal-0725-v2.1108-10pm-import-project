@@ -7,7 +7,7 @@ export const useExpenseExtractor = () => {
   const [isExtracting, setIsExtracting] = useState(false);
   const navigate = useNavigate();
 
-  const extractData = async (file: { url: string; type: string }) => {
+  const extractData = async (file: { url: string; type: string; instructions?: string }) => {
     if (!file?.url) {
         // Just return, don't error, might be a local file not yet uploaded
         return null;
@@ -27,7 +27,8 @@ export const useExpenseExtractor = () => {
       const { data, error } = await supabase.functions.invoke('extract-expense-data', {
         body: { 
           fileUrl: file.url,
-          fileType: file.type 
+          fileType: file.type,
+          instructions: file.instructions
         },
       });
 

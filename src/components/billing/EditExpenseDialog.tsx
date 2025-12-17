@@ -559,22 +559,17 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
         const extractedData = await extractData({ 
             url: file.url, 
             type: file.type, 
-            instructions: "Extract a concise description of the goods or services being paid for. Return it as the 'description' or 'purpose' field." 
+            instructions: "Identify the main purpose of this payment/invoice. Return a short string in a JSON field named 'purpose' (e.g. 'Web Hosting', 'Office Supplies')." 
         });
         
         if (extractedData) {
-            const explicitDescription = extractedData.description || extractedData.purpose;
-            const itemsDescription = Array.isArray(extractedData.items) && extractedData.items.length > 0 
-                ? extractedData.items.map((i: any) => i.description || i.name).filter(Boolean).join(', ') 
-                : null;
-            
-            const purpose = itemsDescription || explicitDescription || extractedData.summary;
+            const purpose = extractedData.purpose || extractedData.description || extractedData.summary;
 
             if (purpose) {
               setValue('purpose_payment', purpose, { shouldValidate: true, shouldDirty: true });
               toast.success("Purpose payment updated.");
             } else {
-              toast.info("Could not extract purpose.");
+              toast.info("Could not extract purpose. Try adding instructions in AI Review Notes.");
             }
         }
     } finally {
@@ -835,7 +830,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                     </div>
                     <FormControl>
                       <Textarea 
-                        placeholder="Instruct AI to check specific details (e.g., 'Verify tax amount', 'Check if date is correct')" 
+                        placeholder="Instruct AI to check for missing details or documents (e.g. 'Check if invoice number is missing', 'Verify tax calculation')" 
                         {...field} 
                         value={field.value || ''}
                         disabled={isFormDisabled} 
