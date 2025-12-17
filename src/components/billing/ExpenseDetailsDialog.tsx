@@ -334,7 +334,7 @@ Account Name: ${bankDetails.name || '-'}
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full h-[100dvh] sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-full max-w-full h-[100dvh] rounded-none border-0 sm:border sm:rounded-lg sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start gap-2 sm:gap-4 pr-8">
               <div>
@@ -512,263 +512,267 @@ Account Name: ${bankDetails.name || '-'}
                       <Wallet className="w-4 h-4 text-muted-foreground" />
                       <h4 className="font-semibold text-sm">Payment Plan</h4>
                     </div>
-                    <div className="border rounded-lg overflow-hidden divide-y">
-                      <div className="grid grid-cols-12 gap-2 bg-muted/50 p-2 text-xs font-medium text-muted-foreground">
-                        <div className="col-span-1 text-center">#</div>
-                        <div className="col-span-4">Amount</div>
-                        <div className="col-span-3">Due Date</div>
-                        <div className="col-span-4 text-right">Status</div>
-                      </div>
-                      {paymentTerms.map((term: any, index: number) => (
-                        <div key={index} className="flex flex-col bg-card">
-                          <div className="grid grid-cols-12 gap-2 p-2 text-sm items-center">
-                            <div className="col-span-1 text-center text-muted-foreground">{index + 1}</div>
-                            <div className="col-span-4 font-medium">{formatCurrency(term.amount || 0)}</div>
-                            <div className="col-span-3 text-xs text-muted-foreground">
-                              {term.release_date ? format(new Date(term.release_date), "dd MMM yyyy") : (term.request_date ? format(new Date(term.request_date), "dd MMM yyyy") : '-')}
-                            </div>
-                            <div className="col-span-4 text-right">
-                              {canEditStatus ? (
-                                <div className="flex justify-end">
-                                  <Select 
-                                    value={term.status || 'Pending'} 
-                                    onValueChange={(val) => updateTermStatus(index, val)}
-                                  >
-                                    <SelectTrigger className={cn("h-6 px-1.5 text-[10px] font-medium border-0 rounded-full w-auto min-w-[70px] gap-1", getStatusBadgeStyle(term.status || 'Pending'))}>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {['Pending', 'Requested', 'On review', 'Paid', 'Rejected'].map((status) => (
-                                         <SelectItem key={status} value={status}>{status}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              ) : (
-                                <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5", getStatusBadgeStyle(term.status || 'Pending'))}>
-                                  {term.status || 'Pending'}
-                                </Badge>
-                              )}
-                            </div>
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <div className="min-w-[500px] divide-y">
+                          <div className="grid grid-cols-12 gap-2 bg-muted/50 p-2 text-xs font-medium text-muted-foreground">
+                            <div className="col-span-1 text-center">#</div>
+                            <div className="col-span-4">Amount</div>
+                            <div className="col-span-3">Due Date</div>
+                            <div className="col-span-4 text-right">Status</div>
                           </div>
-                          
-                          {/* Conditional Display for Pending/Rejected Reasons */}
-                          {['Pending', 'Rejected'].includes(term.status) && (term.status_remarks || term.pic_feedback || isReplyingTo(index, 'finance') || isReplyingTo(index, 'pic')) && (
-                            <div className="px-3 pb-3 pt-0 text-xs space-y-2">
-                              {term.status_remarks && (
-                                <div className="bg-yellow-50/50 dark:bg-yellow-900/10 p-2 rounded border border-yellow-100 dark:border-yellow-900/30 flex flex-col gap-2">
-                                  <div className="flex gap-2">
-                                    <AlertCircle className="h-3.5 w-3.5 text-yellow-600 mt-0.5 shrink-0" />
-                                    <div className="space-y-0.5 flex-1">
-                                      <span className="font-semibold text-yellow-700 dark:text-yellow-500 block">Finance Note:</span>
-                                      <p className="text-yellow-800 dark:text-yellow-200/80">{term.status_remarks}</p>
-                                    </div>
-                                    {/* Reply button for PIC to respond to Finance Note */}
-                                    {isCurrentPic && !term.pic_feedback && !isReplyingTo(index, 'finance') && (
-                                      <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="h-6 w-6 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-100 dark:hover:bg-yellow-900/50"
-                                        onClick={() => handleReplyClick(index, 'finance')}
-                                        title="Reply to note"
+                          {paymentTerms.map((term: any, index: number) => (
+                            <div key={index} className="flex flex-col bg-card">
+                              <div className="grid grid-cols-12 gap-2 p-2 text-sm items-center">
+                                <div className="col-span-1 text-center text-muted-foreground">{index + 1}</div>
+                                <div className="col-span-4 font-medium">{formatCurrency(term.amount || 0)}</div>
+                                <div className="col-span-3 text-xs text-muted-foreground">
+                                  {term.release_date ? format(new Date(term.release_date), "dd MMM yyyy") : (term.request_date ? format(new Date(term.request_date), "dd MMM yyyy") : '-')}
+                                </div>
+                                <div className="col-span-4 text-right">
+                                  {canEditStatus ? (
+                                    <div className="flex justify-end">
+                                      <Select 
+                                        value={term.status || 'Pending'} 
+                                        onValueChange={(val) => updateTermStatus(index, val)}
                                       >
-                                        <Reply className="h-3.5 w-3.5" />
-                                      </Button>
-                                    )}
-                                  </div>
-                                  
-                                  {/* Reply Form (only for replying to Finance Note) */}
-                                  {isReplyingTo(index, 'finance') && (
-                                    <div className="pl-6 space-y-2 mt-1">
-                                        <Textarea 
-                                            value={feedbackText} 
-                                            onChange={(e) => setFeedbackText(e.target.value)} 
-                                            placeholder="Write your feedback..."
-                                            className="text-xs min-h-[60px] bg-background/80"
-                                        />
-                                        {/* Attachment Display for Reply */}
-                                        {feedbackAttachment && (
-                                            <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
-                                                <span className="truncate flex items-center gap-1">
-                                                    <Paperclip className="h-3 w-3" />
-                                                    {feedbackAttachment.name} ({formatFileSize(feedbackAttachment.size)})
-                                                </span>
-                                                <Button 
-                                                    type="button" 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                    className="h-5 w-5 text-red-500" 
-                                                    onClick={() => setFeedbackAttachment(null)}
-                                                >
-                                                    <X className="h-3 w-3" />
-                                                </Button>
-                                            </div>
-                                        )}
-                                        <div className="flex justify-between items-center">
-                                            {/* File Input Button */}
-                                            <input 
-                                                id={`feedback-file-upload-finance-${index}`}
-                                                type="file" 
-                                                className="hidden" 
-                                                onChange={(e) => {
-                                                    if (e.target.files && e.target.files.length > 0) {
-                                                        setFeedbackAttachment(e.target.files[0]);
-                                                    }
-                                                }}
-                                                disabled={isSubmitting}
-                                            />
-                                            <TooltipProvider>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Button 
-                                                            type="button" 
-                                                            variant="ghost" 
-                                                            size="icon" 
-                                                            className="h-6 w-6 text-muted-foreground hover:text-primary"
-                                                            onClick={() => document.getElementById(`feedback-file-upload-finance-${index}`)?.click()}
-                                                            disabled={isSubmitting}
-                                                        >
-                                                            <Paperclip className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>Attach File</TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
-                                            <div className="flex justify-end gap-2">
-                                                <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTerm(null)}>Cancel</Button>
-                                                <Button size="sm" className="h-6 text-xs px-2" onClick={submitFeedback} disabled={isSubmitting || (!feedbackText.trim() && !feedbackAttachment)}>
-                                                    {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send Feedback'}
-                                                </Button>
-                                            </div>
-                                        </div>
+                                        <SelectTrigger className={cn("h-6 px-1.5 text-[10px] font-medium border-0 rounded-full w-auto min-w-[70px] gap-1", getStatusBadgeStyle(term.status || 'Pending'))}>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {['Pending', 'Requested', 'On review', 'Paid', 'Rejected'].map((status) => (
+                                            <SelectItem key={status} value={status}>{status}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
                                     </div>
+                                  ) : (
+                                    <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5", getStatusBadgeStyle(term.status || 'Pending'))}>
+                                      {term.status || 'Pending'}
+                                    </Badge>
                                   )}
                                 </div>
-                              )}
-                              {term.pic_feedback && (
-                                <div className="bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded border border-blue-100 dark:border-blue-900/30 flex flex-col gap-2 ml-4">
-                                  <div className="flex gap-2">
-                                    <MessageCircle className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
-                                    <div className="space-y-0.5 flex-1">
-                                      <span className="font-semibold text-blue-700 dark:text-blue-500 block">{picName} Feedback:</span>
-                                      <p className="text-blue-800 dark:text-blue-200/80">{term.pic_feedback}</p>
-                                    </div>
-                                    {/* Edit button for PIC to edit their own feedback */}
-                                    {isCurrentPic && !isReplyingTo(index, 'pic') && (
-                                      <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="h-6 w-6 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50"
-                                        onClick={() => handleReplyClick(index, 'pic', term.pic_feedback, term.pic_attachment)}
-                                        title="Edit Feedback"
-                                      >
-                                        <Edit className="h-3.5 w-3.5" />
-                                      </Button>
-                                    )}
-                                  </div>
-                                  {/* Display existing attachment */}
-                                  {term.pic_attachment && !isReplyingTo(index, 'pic') && (
-                                      <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
-                                          <span className="truncate flex items-center gap-1">
-                                              <Paperclip className="h-3 w-3" />
-                                              {term.pic_attachment.name} ({formatFileSize(term.pic_attachment.size)})
-                                          </span>
-                                          <div className="flex items-center space-x-1 shrink-0">
-                                              <TooltipProvider>
-                                                  <Tooltip>
-                                                      <TooltipTrigger asChild>
-                                                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleView(term.pic_attachment)}>
-                                                              <Eye className="h-3 w-3" />
-                                                          </Button>
-                                                      </TooltipTrigger>
-                                                      <TooltipContent>View</TooltipContent>
-                                                  </Tooltip>
-                                              </TooltipProvider>
-                                              <TooltipProvider>
-                                                  <Tooltip>
-                                                      <TooltipTrigger asChild>
-                                                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDownload(term.pic_attachment.url, term.pic_attachment.name)}>
-                                                              <Download className="h-3 w-3" />
-                                                          </Button>
-                                                      </TooltipTrigger>
-                                                      <TooltipContent>Download</TooltipContent>
-                                                  </Tooltip>
-                                              </TooltipProvider>
-                                          </div>
-                                      </div>
-                                  )}
-                                  {/* Reply Form (for editing existing PIC feedback) */}
-                                  {isReplyingTo(index, 'pic') && (
-                                    <div className="pl-6 space-y-2 mt-1">
-                                        <Textarea 
-                                            value={feedbackText} 
-                                            onChange={(e) => setFeedbackText(e.target.value)} 
-                                            placeholder="Edit your feedback..."
-                                            className="text-xs min-h-[60px] bg-background/80"
-                                        />
-                                        {/* Attachment Display for Edit */}
-                                        {(feedbackAttachment || term.pic_attachment) && (
-                                            <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
-                                                <span className="truncate flex items-center gap-1">
-                                                    <Paperclip className="h-3 w-3" />
-                                                    {feedbackAttachment ? feedbackAttachment.name : term.pic_attachment.name} ({formatFileSize(feedbackAttachment ? feedbackAttachment.size : term.pic_attachment.size)})
-                                                </span>
-                                                <Button 
-                                                    type="button" 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                    className="h-5 w-5 text-red-500" 
-                                                    onClick={() => setFeedbackAttachment(null)}
-                                                >
-                                                    <X className="h-3 w-3" />
-                                                </Button>
-                                            </div>
+                              </div>
+                              
+                              {/* Conditional Display for Pending/Rejected Reasons */}
+                              {['Pending', 'Rejected'].includes(term.status) && (term.status_remarks || term.pic_feedback || isReplyingTo(index, 'finance') || isReplyingTo(index, 'pic')) && (
+                                <div className="px-3 pb-3 pt-0 text-xs space-y-2">
+                                  {term.status_remarks && (
+                                    <div className="bg-yellow-50/50 dark:bg-yellow-900/10 p-2 rounded border border-yellow-100 dark:border-yellow-900/30 flex flex-col gap-2">
+                                      <div className="flex gap-2">
+                                        <AlertCircle className="h-3.5 w-3.5 text-yellow-600 mt-0.5 shrink-0" />
+                                        <div className="space-y-0.5 flex-1">
+                                          <span className="font-semibold text-yellow-700 dark:text-yellow-500 block">Finance Note:</span>
+                                          <p className="text-yellow-800 dark:text-yellow-200/80">{term.status_remarks}</p>
+                                        </div>
+                                        {/* Reply button for PIC to respond to Finance Note */}
+                                        {isCurrentPic && !term.pic_feedback && !isReplyingTo(index, 'finance') && (
+                                          <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-6 w-6 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-100 dark:hover:bg-yellow-900/50"
+                                            onClick={() => handleReplyClick(index, 'finance')}
+                                            title="Reply to note"
+                                          >
+                                            <Reply className="h-3.5 w-3.5" />
+                                          </Button>
                                         )}
-                                        <div className="flex justify-between items-center">
-                                            {/* File Input Button */}
-                                            <input 
-                                                id={`feedback-file-upload-pic-${index}`}
-                                                type="file" 
-                                                className="hidden" 
-                                                onChange={(e) => {
-                                                    if (e.target.files && e.target.files.length > 0) {
-                                                        setFeedbackAttachment(e.target.files[0]);
-                                                    }
-                                                }}
-                                                disabled={isSubmitting}
+                                      </div>
+                                      
+                                      {/* Reply Form (only for replying to Finance Note) */}
+                                      {isReplyingTo(index, 'finance') && (
+                                        <div className="pl-6 space-y-2 mt-1">
+                                            <Textarea 
+                                                value={feedbackText} 
+                                                onChange={(e) => setFeedbackText(e.target.value)} 
+                                                placeholder="Write your feedback..."
+                                                className="text-xs min-h-[60px] bg-background/80"
                                             />
-                                            <TooltipProvider>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Button 
-                                                            type="button" 
-                                                            variant="ghost" 
-                                                            size="icon" 
-                                                            className="h-6 w-6 text-muted-foreground hover:text-primary"
-                                                            onClick={() => document.getElementById(`feedback-file-upload-pic-${index}`)?.click()}
-                                                            disabled={isSubmitting}
-                                                        >
-                                                            <Paperclip className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>Attach File</TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
-                                            <div className="flex justify-end gap-2">
-                                                <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTerm(null)}>Cancel</Button>
-                                                <Button size="sm" className="h-6 text-xs px-2" onClick={submitFeedback} disabled={isSubmitting || (!feedbackText.trim() && !feedbackAttachment && !term.pic_attachment)}>
-                                                    {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save Changes'}
-                                                </Button>
+                                            {/* Attachment Display for Reply */}
+                                            {feedbackAttachment && (
+                                                <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
+                                                    <span className="truncate flex items-center gap-1">
+                                                        <Paperclip className="h-3 w-3" />
+                                                        {feedbackAttachment.name} ({formatFileSize(feedbackAttachment.size)})
+                                                    </span>
+                                                    <Button 
+                                                        type="button" 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-5 w-5 text-red-500" 
+                                                        onClick={() => setFeedbackAttachment(null)}
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between items-center">
+                                                {/* File Input Button */}
+                                                <input 
+                                                    id={`feedback-file-upload-finance-${index}`}
+                                                    type="file" 
+                                                    className="hidden" 
+                                                    onChange={(e) => {
+                                                        if (e.target.files && e.target.files.length > 0) {
+                                                            setFeedbackAttachment(e.target.files[0]);
+                                                        }
+                                                    }}
+                                                    disabled={isSubmitting}
+                                                />
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button 
+                                                                type="button" 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                                                onClick={() => document.getElementById(`feedback-file-upload-finance-${index}`)?.click()}
+                                                                disabled={isSubmitting}
+                                                            >
+                                                                <Paperclip className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>Attach File</TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                                <div className="flex justify-end gap-2">
+                                                    <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTerm(null)}>Cancel</Button>
+                                                    <Button size="sm" className="h-6 text-xs px-2" onClick={submitFeedback} disabled={isSubmitting || (!feedbackText.trim() && !feedbackAttachment)}>
+                                                        {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send Feedback'}
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </div>
+                                      )}
+                                    </div>
+                                  )}
+                                  {term.pic_feedback && (
+                                    <div className="bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded border border-blue-100 dark:border-blue-900/30 flex flex-col gap-2 ml-4">
+                                      <div className="flex gap-2">
+                                        <MessageCircle className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
+                                        <div className="space-y-0.5 flex-1">
+                                          <span className="font-semibold text-blue-700 dark:text-blue-500 block">{picName} Feedback:</span>
+                                          <p className="text-blue-800 dark:text-blue-200/80">{term.pic_feedback}</p>
+                                        </div>
+                                        {/* Edit button for PIC to edit their own feedback */}
+                                        {isCurrentPic && !isReplyingTo(index, 'pic') && (
+                                          <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-6 w-6 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                                            onClick={() => handleReplyClick(index, 'pic', term.pic_feedback, term.pic_attachment)}
+                                            title="Edit Feedback"
+                                          >
+                                            <Edit className="h-3.5 w-3.5" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                      {/* Display existing attachment */}
+                                      {term.pic_attachment && !isReplyingTo(index, 'pic') && (
+                                          <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
+                                              <span className="truncate flex items-center gap-1">
+                                                  <Paperclip className="h-3 w-3" />
+                                                  {term.pic_attachment.name} ({formatFileSize(term.pic_attachment.size)})
+                                              </span>
+                                              <div className="flex items-center space-x-1 shrink-0">
+                                                  <TooltipProvider>
+                                                      <Tooltip>
+                                                          <TooltipTrigger asChild>
+                                                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleView(term.pic_attachment)}>
+                                                                  <Eye className="h-3 w-3" />
+                                                              </Button>
+                                                          </TooltipTrigger>
+                                                          <TooltipContent>View</TooltipContent>
+                                                      </Tooltip>
+                                                  </TooltipProvider>
+                                                  <TooltipProvider>
+                                                      <Tooltip>
+                                                          <TooltipTrigger asChild>
+                                                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDownload(term.pic_attachment.url, term.pic_attachment.name)}>
+                                                                  <Download className="h-3 w-3" />
+                                                              </Button>
+                                                          </TooltipTrigger>
+                                                          <TooltipContent>Download</TooltipContent>
+                                                      </Tooltip>
+                                                  </TooltipProvider>
+                                              </div>
+                                          </div>
+                                      )}
+                                      {/* Reply Form (for editing existing PIC feedback) */}
+                                      {isReplyingTo(index, 'pic') && (
+                                        <div className="pl-6 space-y-2 mt-1">
+                                            <Textarea 
+                                                value={feedbackText} 
+                                                onChange={(e) => setFeedbackText(e.target.value)} 
+                                                placeholder="Edit your feedback..."
+                                                className="text-xs min-h-[60px] bg-background/80"
+                                            />
+                                            {/* Attachment Display for Edit */}
+                                            {(feedbackAttachment || term.pic_attachment) && (
+                                                <div className="flex items-center justify-between text-xs text-muted-foreground p-2 border rounded bg-background">
+                                                    <span className="truncate flex items-center gap-1">
+                                                        <Paperclip className="h-3 w-3" />
+                                                        {feedbackAttachment ? feedbackAttachment.name : term.pic_attachment.name} ({formatFileSize(feedbackAttachment ? feedbackAttachment.size : term.pic_attachment.size)})
+                                                    </span>
+                                                    <Button 
+                                                        type="button" 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-5 w-5 text-red-500" 
+                                                        onClick={() => setFeedbackAttachment(null)}
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between items-center">
+                                                {/* File Input Button */}
+                                                <input 
+                                                    id={`feedback-file-upload-pic-${index}`}
+                                                    type="file" 
+                                                    className="hidden" 
+                                                    onChange={(e) => {
+                                                        if (e.target.files && e.target.files.length > 0) {
+                                                            setFeedbackAttachment(e.target.files[0]);
+                                                        }
+                                                    }}
+                                                    disabled={isSubmitting}
+                                                />
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button 
+                                                                type="button" 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                                                onClick={() => document.getElementById(`feedback-file-upload-pic-${index}`)?.click()}
+                                                                disabled={isSubmitting}
+                                                            >
+                                                                <Paperclip className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>Attach File</TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                                <div className="flex justify-end gap-2">
+                                                    <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTerm(null)}>Cancel</Button>
+                                                    <Button size="sm" className="h-6 text-xs px-2" onClick={submitFeedback} disabled={isSubmitting || (!feedbackText.trim() && !feedbackAttachment && !term.pic_attachment)}>
+                                                        {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save Changes'}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
                               )}
                             </div>
-                          )}
+                          ))}
                         </div>
-                      ))}
+                      </div>
                     </div>
                   </div>
                 </>
