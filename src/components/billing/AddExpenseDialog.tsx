@@ -768,7 +768,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                   <FormItem>
                     <Button 
                         type="button" 
-                        variant="ghost" 
+                        variant="outline" 
                         size="sm" 
                         className="w-fit justify-start h-auto p-0 text-sm font-medium text-foreground hover:text-primary disabled:opacity-100 disabled:cursor-default"
                         disabled={isExtracting || !watch('attachments_jsonb')?.length}
