@@ -1,12 +1,12 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useState, useMemo } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Expense } from "@/types";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
-import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2, Copy, Download, Edit, Save, X } from "lucide-react";
+import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2, Copy, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,9 +14,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from '@/components/ui/input';
-import { CurrencyInput } from '../ui/currency-input';
-import FileUploader, { FileMetadata } from '../ui/FileUploader';
 
 interface FileMetadata {
   name: string;
@@ -46,13 +43,6 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
   const [feedbackText, setFeedbackText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
-  
-  // Edit State
-  const [isEditing, setIsEditing] = useState(false);
-  const [editAmount, setEditAmount] = useState<number>(0);
-  const [editPurpose, setEditPurpose] = useState<string>('');
-  const [editRemarks, setEditRemarks] = useState<string>('');
-  const [editAttachments, setEditAttachments] = useState<(File | FileMetadata)[]>([]);
 
   const { data: userProfile } = useQuery({
     queryKey: ['profile'],
@@ -69,16 +59,9 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
     const role = userProfile.role?.toLowerCase() || '';
     return ['master admin', 'finance', 'admin', 'admin project'].includes(role);
   }, [userProfile]);
-  
-  const canEditDetails = useMemo(() => {
-    if (!userProfile) return false;
-    const role = userProfile.role?.toLowerCase() || '';
-    // Allow editing if admin, finance, or the original creator
-    return canEditStatus || userProfile.id === propExpense?.created_by;
-  }, [userProfile, propExpense?.created_by, canEditStatus]);
 
   // Fetch latest expense data AND PIC details to ensure UI updates
-  const { data: expense, refetch } = useQuery({
+  const { data: expense } = useQuery({
     queryKey: ['expense_details', propExpense?.id],
     queryFn: async () => {
       if (!propExpense?.id) return null;
@@ -139,16 +122,6 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
     enabled: !!propExpense?.id && open,
     initialData: propExpense,
   });
-  
-  // Sync local edit state when expense data changes or dialog opens
-  useEffect(() => {
-    if (expense) {
-      setEditAmount(Number(expense.tf_amount) || 0);
-      setEditPurpose((expense as any).purpose_payment || '');
-      setEditRemarks(expense.remarks || '');
-      setEditAttachments((expense as any).attachments_jsonb || []);
-    }
-  }, [expense, open]);
 
   // Calculate status based on payment terms
   const derivedStatus = useMemo(() => {
@@ -255,7 +228,7 @@ Account Name: ${bankDetails.name || '-'}
         setFeedbackText("");
         
         // Refresh data explicitly for this dialog and the main list
-        await refetch();
+        await queryClient.invalidateQueries({ queryKey: ['expense_details', expense.id] });
         queryClient.invalidateQueries({ queryKey: ['expenses'] });
         
     } catch (err: any) {
@@ -283,69 +256,11 @@ Account Name: ${bankDetails.name || '-'}
       
       toast.success("Term status updated");
       // Refresh data explicitly for this dialog and the main list
-      await refetch();
+      await queryClient.invalidateQueries({ queryKey: ['expense_details', expense.id] });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
     } catch (err: any) {
       toast.error("Failed to update status", { description: err.message });
     }
-  };
-  
-  const handleSaveDetails = async () => {
-    if (!expense) return;
-    setIsSubmitting(true);
-    try {
-      const newFilesToUpload = editAttachments.filter((f): f is File => f instanceof File);
-      const existingFiles = editAttachments.filter((f): f is FileMetadata => !(f instanceof File));
-      
-      const uploadedFilesMetadata = [...existingFiles];
-
-      for (const file of newFilesToUpload) {
-          const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-          // Use the same bucket and path structure as EditExpenseDialog
-          const filePath = `expense-attachments/${expense.id}/${Date.now()}-${sanitizedFileName}`;
-          
-          const { error: uploadError } = await supabase.storage.from('expense').upload(filePath, file);
-          if (uploadError) throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
-          
-          const { data: urlData } = supabase.storage.from('expense').getPublicUrl(filePath);
-          
-          uploadedFilesMetadata.push({
-              name: file.name,
-              url: urlData.publicUrl,
-              size: file.size,
-              type: file.type,
-              storagePath: filePath
-          });
-      }
-      
-      const { error: updateError } = await supabase.from('expenses').update({
-        tf_amount: editAmount,
-        purpose_payment: editPurpose,
-        remarks: editRemarks,
-        attachments_jsonb: uploadedFilesMetadata,
-        updated_at: new Date().toISOString()
-      }).eq('id', expense.id);
-
-      if (updateError) throw updateError;
-
-      toast.success("Expense details updated successfully.");
-      setIsEditing(false);
-      await refetch();
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
-    } catch (error: any) {
-      toast.error("Failed to save changes.", { description: error.message });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-  
-  const handleCancelEdit = () => {
-    // Reset local state to current expense values
-    setEditAmount(Number(expense.tf_amount) || 0);
-    setEditPurpose((expense as any).purpose_payment || '');
-    setEditRemarks(expense.remarks || '');
-    setEditAttachments((expense as any).attachments_jsonb || []);
-    setIsEditing(false);
   };
 
   return (
@@ -360,29 +275,9 @@ Account Name: ${bankDetails.name || '-'}
                   {expense.project_name}
                 </DialogDescription>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge className={cn("text-sm px-3 py-1", getStatusBadgeStyle(derivedStatus))}>
-                  {derivedStatus}
-                </Badge>
-                {canEditDetails && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8" 
-                          onClick={() => isEditing ? handleCancelEdit() : setIsEditing(true)}
-                          disabled={isSubmitting}
-                        >
-                          {isEditing ? <X className="h-4 w-4 text-red-500" /> : <Edit className="h-4 w-4" />}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{isEditing ? "Cancel Edit" : "Edit Details"}</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </div>
+              <Badge className={cn("text-sm px-3 py-1", getStatusBadgeStyle(derivedStatus))}>
+                {derivedStatus}
+              </Badge>
             </div>
           </DialogHeader>
 
@@ -396,16 +291,7 @@ Account Name: ${bankDetails.name || '-'}
                     </div>
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Amount</p>
-                      {isEditing ? (
-                        <CurrencyInput 
-                          value={editAmount} 
-                          onChange={setEditAmount} 
-                          className="text-lg font-bold h-8 w-full"
-                          disabled={isSubmitting}
-                        />
-                      ) : (
-                        <p className="text-lg font-bold">{formatCurrency(expense.tf_amount)}</p>
-                      )}
+                      <p className="text-lg font-bold">{formatCurrency(expense.tf_amount)}</p>
                     </div>
                   </div>
 
@@ -415,16 +301,7 @@ Account Name: ${bankDetails.name || '-'}
                     </div>
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Purpose</p>
-                      {isEditing ? (
-                        <Input 
-                          value={editPurpose} 
-                          onChange={(e) => setEditPurpose(e.target.value)} 
-                          className="text-sm font-medium h-8 w-full"
-                          disabled={isSubmitting}
-                        />
-                      ) : (
-                        <p className="text-sm font-medium">{(expense as any).purpose_payment || '-'}</p>
-                      )}
+                      <p className="text-sm font-medium">{(expense as any).purpose_payment || '-'}</p>
                     </div>
                   </div>
                 </div>
@@ -467,25 +344,16 @@ Account Name: ${bankDetails.name || '-'}
               </div>
 
               {/* Attachments Section */}
-              <>
-                <Separator />
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-muted-foreground" />
-                    <h4 className="font-semibold text-sm">Attachments ({editAttachments.length})</h4>
-                  </div>
-                  {isEditing ? (
-                    <FileUploader
-                      value={editAttachments}
-                      onValueChange={setEditAttachments}
-                      maxFiles={5}
-                      maxSize={20971520}
-                      accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'], 'application/pdf': ['.pdf'] }}
-                      disabled={isSubmitting}
-                    />
-                  ) : (
+              {attachments.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-muted-foreground" />
+                      <h4 className="font-semibold text-sm">Attachments ({attachments.length})</h4>
+                    </div>
                     <div className="space-y-2">
-                      {attachments.length > 0 ? attachments.map((file, index) => (
+                      {attachments.map((file, index) => (
                         <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/40">
                           <div className="flex items-center space-x-3 truncate">
                             <FileText className="h-4 w-4 text-primary shrink-0" />
@@ -517,13 +385,11 @@ Account Name: ${bankDetails.name || '-'}
                             </TooltipProvider>
                           </div>
                         </div>
-                      )) : (
-                        <p className="text-sm text-muted-foreground p-3 border rounded-lg">No attachments.</p>
-                      )}
+                      ))}
                     </div>
-                  )}
-                </div>
-              </>
+                  </div>
+                </>
+              )}
 
               {/* Bank Details */}
               {bankDetails && (
@@ -599,7 +465,6 @@ Account Name: ${bankDetails.name || '-'}
                                   <Select 
                                     value={term.status || 'Pending'} 
                                     onValueChange={(val) => updateTermStatus(index, val)}
-                                    disabled={isSubmitting}
                                   >
                                     <SelectTrigger className={cn("h-6 px-1.5 text-[10px] font-medium border-0 rounded-full w-auto min-w-[70px] gap-1", getStatusBadgeStyle(term.status || 'Pending'))}>
                                       <SelectValue />
@@ -637,7 +502,6 @@ Account Name: ${bankDetails.name || '-'}
                                         className="h-6 w-6 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-100 dark:hover:bg-yellow-900/50"
                                         onClick={() => handleReplyClick(index)}
                                         title="Reply to note"
-                                        disabled={isSubmitting}
                                       >
                                         <Reply className="h-3.5 w-3.5" />
                                       </Button>
@@ -652,10 +516,9 @@ Account Name: ${bankDetails.name || '-'}
                                             onChange={(e) => setFeedbackText(e.target.value)} 
                                             placeholder="Write your feedback..."
                                             className="text-xs min-h-[60px] bg-background/80"
-                                            disabled={isSubmitting}
                                         />
                                         <div className="flex justify-end gap-2">
-                                            <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTermIndex(null)} disabled={isSubmitting}>Cancel</Button>
+                                            <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => setReplyingTermIndex(null)}>Cancel</Button>
                                             <Button size="sm" className="h-6 text-xs px-2" onClick={() => submitFeedback(index)} disabled={isSubmitting || !feedbackText.trim()}>
                                                 {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send Feedback'}
                                             </Button>
@@ -683,37 +546,13 @@ Account Name: ${bankDetails.name || '-'}
               )}
 
               {/* Remarks */}
-              <div className="space-y-2">
-                <h4 className="font-semibold text-sm text-muted-foreground">Remarks</h4>
-                {isEditing ? (
-                  <Textarea 
-                    value={editRemarks} 
-                    onChange={(e) => setEditRemarks(e.target.value)} 
-                    placeholder="Add remarks..."
-                    className="text-sm min-h-[80px]"
-                    disabled={isSubmitting}
-                  />
-                ) : (
-                  expense.remarks ? (
-                    <p className="text-sm bg-muted/30 p-3 rounded-md border whitespace-pre-wrap">{expense.remarks}</p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md border">No remarks provided.</p>
-                  )
-                )}
-              </div>
+              {expense.remarks && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-sm text-muted-foreground">Remarks</h4>
+                  <p className="text-sm bg-muted/30 p-3 rounded-md border whitespace-pre-wrap">{expense.remarks}</p>
+                </div>
+              )}
             </div>
-            
-            {isEditing && (
-              <DialogFooter className="pt-4">
-                <Button type="button" variant="outline" onClick={handleCancelEdit} disabled={isSubmitting}>
-                  Cancel
-                </Button>
-                <Button type="button" onClick={handleSaveDetails} disabled={isSubmitting || editAmount <= 0 || !editPurpose.trim()}>
-                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                  Save Changes
-                </Button>
-              </DialogFooter>
-            )}
         </DialogContent>
       </Dialog>
       <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
