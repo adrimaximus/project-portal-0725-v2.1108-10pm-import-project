@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, FileText } from 'lucide-react';
+import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, FileText, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isWithinInterval, parseISO } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -50,6 +50,7 @@ const expenseSchema = z.object({
   })).optional(),
   bank_account_id: z.string().optional().nullable(),
   remarks: z.string().optional(),
+  ai_review_notes: z.string().optional(),
   custom_properties: z.record(z.any()).optional(),
   attachments_jsonb: z.array(z.object({
     name: z.string(),
@@ -70,56 +71,40 @@ interface ProjectOption extends Project {
 // Helper function to extract date ranges from project names
 const extractDateFromProjectName = (name: string): { start: Date, end: Date } | null => {
   // 1. Range: dd-ddmmyy (e.g. 05-071225 -> 5 Dec 2025 to 7 Dec 2025)
-  // Look for pattern: 2 digits, hyphen, 6 digits
   const rangeMatch = name.match(/\b(\d{2})-(\d{2})(\d{2})(\d{2})\b/);
   if (rangeMatch) {
     const startDay = parseInt(rangeMatch[1]);
     const endDay = parseInt(rangeMatch[2]);
-    const month = parseInt(rangeMatch[3]) - 1; // JS months are 0-indexed
+    const month = parseInt(rangeMatch[3]) - 1; 
     const year = 2000 + parseInt(rangeMatch[4]);
-    
-    // Basic validation
     if (month >= 0 && month <= 11) {
       const start = new Date(year, month, startDay);
       const end = new Date(year, month, endDay);
-      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-        return { start, end };
-      }
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) return { start, end };
     }
   }
-
-  // 2. Full Date: ddmmyy (e.g. 081125 -> 8 Nov 2025)
-  // Look for pattern: 6 digits exactly at a boundary
+  // 2. Full Date: ddmmyy
   const fullDateMatch = name.match(/\b(\d{2})(\d{2})(\d{2})\b/);
   if (fullDateMatch) {
     const day = parseInt(fullDateMatch[1]);
     const month = parseInt(fullDateMatch[2]) - 1;
     const year = 2000 + parseInt(fullDateMatch[3]);
-    
     if (month >= 0 && month <= 11) {
       const date = new Date(year, month, day);
-      if (!isNaN(date.getTime())) {
-        return { start: date, end: date };
-      }
+      if (!isNaN(date.getTime())) return { start: date, end: date };
     }
   }
-
-  // 3. Month Year: mmyy (e.g. 1025 -> Oct 2025)
-  // Look for pattern: 4 digits exactly at a boundary
+  // 3. Month Year: mmyy
   const monthYearMatch = name.match(/\b(\d{2})(\d{2})\b/);
   if (monthYearMatch) {
     const month = parseInt(monthYearMatch[1]) - 1;
     const year = 2000 + parseInt(monthYearMatch[2]);
-    
     if (month >= 0 && month <= 11) {
       const start = new Date(year, month, 1);
-      const end = new Date(year, month + 1, 0); // Last day of month
-      if (!isNaN(start.getTime())) {
-        return { start, end };
-      }
+      const end = new Date(year, month + 1, 0); 
+      if (!isNaN(start.getTime())) return { start, end };
     }
   }
-
   return null;
 };
 
@@ -142,10 +127,8 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const [newBeneficiaryName, setNewBeneficiaryName] = useState('');
   const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] = useState(false);
   
-  // PIC Selection State
   const [projectMembers, setProjectMembers] = useState<Profile[]>([]);
   
-  // AI Analysis State
   const { extractData, isExtracting } = useExpenseExtractor();
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [currentProcessingFile, setCurrentProcessingFile] = useState<string | null>(null);
@@ -167,7 +150,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       return () => clearInterval(interval);
   }, [isExtracting]);
 
-  // Construct processing files map for FileUploader
   const processingFiles = useMemo(() => {
     if (!currentProcessingFile || !isExtracting) return undefined;
     return {
@@ -178,7 +160,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     };
   }, [currentProcessingFile, isExtracting, analysisProgress]);
 
-  // Fetch extended project data for intelligent matching
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery<ProjectOption[]>({
     queryKey: ['projectsForExpenseForm'],
     queryFn: async () => {
@@ -233,6 +214,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       payment_terms: [{ amount: null, request_type: 'Requested', request_date: new Date(), release_date: undefined, status: 'Pending' }],
       bank_account_id: null,
       remarks: '',
+      ai_review_notes: '',
       custom_properties: {},
       attachments_jsonb: [], 
     },
@@ -347,29 +329,22 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
              if (pVenue.includes(checkVenue) || checkVenue.includes(pVenue)) score += 8;
           }
 
-          if (exDate && !isNaN(exDate.getTime())) {
-              // 1. Check against DB start_date/due_date
-              if (p.start_date) {
-                  const start = new Date(p.start_date);
-                  const end = p.due_date ? new Date(p.due_date) : new Date(start);
-                  const bufferStart = new Date(start); bufferStart.setDate(start.getDate() - 7);
-                  const bufferEnd = new Date(end); bufferEnd.setDate(end.getDate() + 60);
-                  if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) score += 5;
-              }
+          if (exDate && !isNaN(exDate.getTime()) && p.start_date) {
+              const start = new Date(p.start_date);
+              const end = p.due_date ? new Date(p.due_date) : new Date(start);
+              const bufferStart = new Date(start); bufferStart.setDate(start.getDate() - 7);
+              const bufferEnd = new Date(end); bufferEnd.setDate(end.getDate() + 60);
+              if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) score += 5;
+          }
 
-              // 2. Check against date in project name (extracted via logic)
-              const nameDate = extractDateFromProjectName(p.name);
-              if (nameDate) {
-                  const bufferStart = new Date(nameDate.start); 
-                  bufferStart.setDate(bufferStart.getDate() - 7);
-                  
-                  const bufferEnd = new Date(nameDate.end); 
-                  bufferEnd.setDate(bufferEnd.getDate() + 60); // Allow some buffer
-                  
-                  if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) {
-                      score += 10; // High confidence boost if matches name date
-                  }
-              }
+          // Check against date in project name
+          const nameDate = extractDateFromProjectName(p.name);
+          if (nameDate && exDate && !isNaN(exDate.getTime())) {
+              const bufferStart = new Date(nameDate.start); 
+              bufferStart.setDate(bufferStart.getDate() - 7);
+              const bufferEnd = new Date(nameDate.end); 
+              bufferEnd.setDate(bufferEnd.getDate() + 60);
+              if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) score += 10;
           }
 
           if (score > maxScore) {
@@ -409,14 +384,10 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         }
       }
       
-      // Improved Purpose Payment autofill
-      // We gather all possible sources for description
       const explicitDescription = extractedData.description || extractedData.purpose;
       const itemsDescription = Array.isArray(extractedData.items) && extractedData.items.length > 0 
           ? extractedData.items.map((i: any) => i.description || i.name).filter(Boolean).join(', ') 
           : null;
-      
-      // Determine the best description: Prefer detailed items if available, otherwise explicit description
       const purpose = itemsDescription || explicitDescription || extractedData.summary;
 
       if (purpose) {
@@ -555,7 +526,10 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         bank_account_id: (selectedAccount && !isTempAccount) ? selectedAccount.id : null,
         account_bank: bankDetails,
         remarks: values.remarks,
-        custom_properties: values.custom_properties,
+        custom_properties: {
+            ...values.custom_properties,
+            ai_review_notes: values.ai_review_notes
+        },
         attachments_jsonb: values.attachments_jsonb,
       });
 
@@ -687,6 +661,30 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="ai_review_notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                        <Wand2 className="h-4 w-4 text-purple-500" />
+                        AI Review Instructions
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Instruct AI to check specific details (e.g., 'Verify tax amount', 'Check if date is correct')" 
+                        {...field} 
+                        value={field.value || ''}
+                        disabled={isFormDisabled} 
+                        className="bg-purple-50/50 border-purple-100 focus-visible:ring-purple-200"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="attachments_jsonb"

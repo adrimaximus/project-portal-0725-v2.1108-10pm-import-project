@@ -20,7 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
-import { format, isWithinInterval, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import BankAccountFormDialog from './BankAccountFormDialog';
@@ -50,6 +50,7 @@ const expenseSchema = z.object({
   bank_account_id: z.string().optional().nullable(),
   remarks: z.string().optional(),
   status_expense: z.string().min(1, "Status is required"),
+  ai_review_notes: z.string().optional(),
   custom_properties: z.record(z.any()).optional(),
   attachments_jsonb: z.array(z.object({
     name: z.string(),
@@ -289,6 +290,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                     release_date: t.release_date ? new Date(t.release_date) : undefined,
                 })) || [{ amount: null, request_type: 'Requested', request_date: undefined, release_date: undefined, status: 'Pending' }],
                 bank_account_id: fullExpense.bank_account_id || null,
+                ai_review_notes: (fullExpense.custom_properties as any)?.ai_review_notes || '',
                 custom_properties: fullExpense.custom_properties || {},
                 attachments_jsonb: attachments, 
             });
@@ -370,67 +372,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
     setIsBankAccountFormOpen(true);
   };
 
-  const findMatchingProject = (extracted: any) => {
-      let bestMatch: ProjectOption | null = null;
-      let maxScore = 0;
-      const normalize = (s: string) => s?.toLowerCase().trim() || '';
-
-      projects.forEach(p => {
-          let score = 0;
-          const pName = normalize(p.name);
-          const cName = normalize(p.client_name || '');
-          const cComp = normalize(p.client_company_name || '');
-          const pVenue = normalize(p.venue || '');
-          
-          const exBeneficiary = normalize(extracted.beneficiary); 
-          const exAddress = normalize(extracted.address || ''); 
-          const exVenue = normalize(extracted.venue || '');
-          const exDate = extracted.date ? parseISO(extracted.date) : null;
-          
-          if (exBeneficiary) {
-              if (cComp && (cComp.includes(exBeneficiary) || exBeneficiary.includes(cComp))) score += 10;
-              else if (cName && (cName.includes(exBeneficiary) || exBeneficiary.includes(cName))) score += 5;
-              if (pName.includes(exBeneficiary)) score += 3;
-          }
-
-          const checkVenue = exVenue || exAddress;
-          if (pVenue && checkVenue) {
-             if (pVenue.includes(checkVenue) || checkVenue.includes(pVenue)) score += 8;
-          }
-
-          if (exDate && !isNaN(exDate.getTime())) {
-              // 1. Check against DB start_date/due_date
-              if (p.start_date) {
-                  const start = new Date(p.start_date);
-                  const end = p.due_date ? new Date(p.due_date) : new Date(start);
-                  const bufferStart = new Date(start); bufferStart.setDate(start.getDate() - 7);
-                  const bufferEnd = new Date(end); bufferEnd.setDate(end.getDate() + 60);
-                  if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) score += 5;
-              }
-
-              // 2. Check against date in project name (extracted via logic)
-              const nameDate = extractDateFromProjectName(p.name);
-              if (nameDate) {
-                  const bufferStart = new Date(nameDate.start); 
-                  bufferStart.setDate(bufferStart.getDate() - 7);
-                  
-                  const bufferEnd = new Date(nameDate.end); 
-                  bufferEnd.setDate(bufferEnd.getDate() + 60); // Allow some buffer
-                  
-                  if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) {
-                      score += 10; // High confidence boost if matches name date
-                  }
-              }
-          }
-
-          if (score > maxScore) {
-              maxScore = score;
-              bestMatch = p;
-          }
-      });
-      return maxScore > 0 ? bestMatch : null;
-  };
-
   // Handle Files & AI
   const handleFileProcessed = async (file: UploadedFile) => {
     let finalUrl = file.url;
@@ -471,14 +412,11 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
         }
       }
       
-      // Improved Purpose Payment autofill
-      // We gather all possible sources for description
       const explicitDescription = extractedData.description || extractedData.purpose;
       const itemsDescription = Array.isArray(extractedData.items) && extractedData.items.length > 0 
           ? extractedData.items.map((i: any) => i.description || i.name).filter(Boolean).join(', ') 
           : null;
       
-      // Determine the best description: Prefer detailed items if available, otherwise explicit description
       const purpose = itemsDescription || explicitDescription || extractedData.summary;
 
       if (purpose) {
@@ -506,11 +444,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
 
       // 3. Project Matching
       if (!watch('project_id')) {
-          const matchedProject = findMatchingProject(extractedData);
-          if (matchedProject) {
-              setValue('project_id', matchedProject.id);
-              toast.success(`Matched to project: ${matchedProject.name}`);
-          }
+          // Matching logic not needed here as we are editing
       }
 
       // 4. Bank Details
@@ -667,7 +601,10 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
         account_bank: bankDetails,
         remarks: values.remarks,
         status_expense: values.status_expense,
-        custom_properties: values.custom_properties,
+        custom_properties: {
+            ...values.custom_properties,
+            ai_review_notes: values.ai_review_notes
+        },
         attachments_jsonb: finalAttachments, 
       }).eq('id', expense.id);
 
@@ -798,6 +735,30 @@ const EditExpenseDialog = ({ open, onOpenChange, expense }: EditExpenseDialogPro
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="ai_review_notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                        <Wand2 className="h-4 w-4 text-purple-500" />
+                        AI Review Instructions
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Instruct AI to check specific details (e.g., 'Verify tax amount', 'Check if date is correct')" 
+                        {...field} 
+                        value={field.value || ''}
+                        disabled={isFormDisabled} 
+                        className="bg-purple-50/50 border-purple-100 focus-visible:ring-purple-200"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="attachments_jsonb"
