@@ -39,6 +39,23 @@ const ExpenseKanbanView = ({ expenses, statuses, onEditExpense, onDeleteExpense,
     setGroupedExpenses(groups);
   }, [expenses, statuses]);
 
+  const visibleStatuses = useMemo(() => {
+    // Get all statuses that have expenses
+    const activeStatuses = Object.keys(groupedExpenses).filter(status => groupedExpenses[status]?.length > 0);
+    
+    // Create a set for O(1) lookup
+    const activeSet = new Set(activeStatuses);
+    
+    // Filter the provided 'statuses' order to only include active ones
+    const orderedActive = statuses.filter(s => activeSet.has(s));
+    
+    // Find any active statuses that were NOT in the provided 'statuses' list (e.g. Uncategorized)
+    const extraActive = activeStatuses.filter(s => !statuses.includes(s));
+    
+    // Combine them
+    return [...orderedActive, ...extraActive];
+  }, [groupedExpenses, statuses]);
+
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
@@ -116,7 +133,7 @@ const ExpenseKanbanView = ({ expenses, statuses, onEditExpense, onDeleteExpense,
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => setActiveExpense(null)}>
       <div className="flex gap-4 overflow-x-auto p-4">
-        {statuses.map(status => (
+        {visibleStatuses.map(status => (
           <ExpenseKanbanColumn
             key={status}
             status={status}
