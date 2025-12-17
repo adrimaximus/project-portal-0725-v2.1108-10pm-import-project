@@ -11,10 +11,11 @@ interface ExpenseKanbanCardProps {
   expense: Expense;
   onEdit: (expense: Expense) => void;
   onDelete: (expense: Expense) => void;
+  onClick?: (expense: Expense) => void;
   canDrag: boolean;
 }
 
-const ExpenseKanbanCard = ({ expense, onEdit, onDelete, canDrag }: ExpenseKanbanCardProps) => {
+const ExpenseKanbanCard = ({ expense, onEdit, onDelete, onClick, canDrag }: ExpenseKanbanCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
     id: expense.id,
     disabled: !canDrag 
@@ -55,8 +56,9 @@ const ExpenseKanbanCard = ({ expense, onEdit, onDelete, canDrag }: ExpenseKanban
       )}
     >
       <Card 
-        className="hover:shadow-md transition-shadow border-l-4" 
+        className="hover:shadow-md transition-shadow border-l-4 cursor-pointer" 
         style={{ borderLeftColor: borderColor }}
+        onClick={() => onClick?.(expense)}
       >
         <CardHeader className="p-3 pb-2 flex flex-row items-start justify-between">
           <div className="space-y-1">

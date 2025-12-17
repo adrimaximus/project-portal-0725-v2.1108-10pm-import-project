@@ -1,154 +1,233 @@
+import { useMemo, useState } from 'react';
 import { Expense } from '@/types';
+import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, TouchSensor, closestCorners, DragStartEvent, DragEndEvent, DragOverEvent, defaultDropAnimationSideEffects, DropAnimation } from '@dnd-kit/core';
+import { SortableContext, arrayMove } from '@dnd-kit/sortable';
+import { createPortal } from 'react-dom';
 import ExpenseKanbanColumn from './ExpenseKanbanColumn';
-import { useState, useEffect, useMemo } from 'react';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent } from '@dnd-kit/core';
-import { arrayMove } from '@dnd-kit/sortable';
+import ExpenseKanbanCard from './ExpenseKanbanCard';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import ExpenseKanbanCard from './ExpenseKanbanCard';
 
 interface ExpenseKanbanViewProps {
   expenses: Expense[];
   statuses: string[];
   onEditExpense: (expense: Expense) => void;
   onDeleteExpense: (expense: Expense) => void;
+  onClickExpense: (expense: Expense) => void;
   canEditStatus: boolean;
 }
 
-const ExpenseKanbanView = ({ expenses, statuses, onEditExpense, onDeleteExpense, canEditStatus }: ExpenseKanbanViewProps) => {
-  const [activeExpense, setActiveExpense] = useState<Expense | null>(null);
-  const [groupedExpenses, setGroupedExpenses] = useState<Record<string, Expense[]>>({});
+const ExpenseKanbanView = ({ 
+  expenses, 
+  statuses, 
+  onEditExpense, 
+  onDeleteExpense,
+  onClickExpense,
+  canEditStatus 
+}: ExpenseKanbanViewProps) => {
+  const [activeId, setActiveId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const groups: Record<string, Expense[]> = {};
-    statuses.forEach(status => {
-      groups[status] = [];
-    });
-    expenses.forEach(expense => {
-      const status = expense.status_expense || 'Uncategorized';
-      if (!groups[status]) {
-        groups[status] = [];
-      }
-      groups[status].push(expense);
-    });
-    for (const status in groups) {
-      groups[status].sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
-    }
-    setGroupedExpenses(groups);
-  }, [expenses, statuses]);
-
-  const visibleStatuses = useMemo(() => {
-    // Get all statuses that have expenses
-    const activeStatuses = Object.keys(groupedExpenses).filter(status => groupedExpenses[status]?.length > 0);
-    
-    // Create a set for O(1) lookup
-    const activeSet = new Set(activeStatuses);
-    
-    // Filter the provided 'statuses' order to only include active ones
-    const orderedActive = statuses.filter(s => activeSet.has(s));
-    
-    // Find any active statuses that were NOT in the provided 'statuses' list (e.g. Uncategorized)
-    const extraActive = activeStatuses.filter(s => !statuses.includes(s));
-    
-    // Combine them
-    return [...orderedActive, ...extraActive];
-  }, [groupedExpenses, statuses]);
-
   const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    })
   );
 
-  const handleDragStart = (event: DragStartEvent) => {
+  const columns = useMemo(() => {
+    return statuses.map(status => ({
+      id: status,
+      title: status,
+      expenses: expenses
+        .filter(e => (e.status_expense || 'Pending') === status)
+        .sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0))
+    }));
+  }, [expenses, statuses]);
+
+  const onDragStart = (event: DragStartEvent) => {
     if (!canEditStatus) return;
-    setActiveExpense(expenses.find(e => e.id === event.active.id) || null);
+    setActiveId(event.active.id as string);
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    if (!canEditStatus) return;
+  const onDragEnd = async (event: DragEndEvent) => {
+    setActiveId(null);
     const { active, over } = event;
+
     if (!over) return;
-    const activeId = String(active.id);
-    const overId = String(over.id);
-    if (activeId === overId) return;
 
-    const activeContainer = active.data.current?.sortable.containerId as string;
-    const overIsItem = !!over.data.current?.sortable;
-    const overContainer = overIsItem ? over.data.current?.sortable.containerId as string : overId;
+    const activeId = active.id as string;
+    const overId = over.id as string;
 
-    if (!activeContainer || !overContainer || activeContainer === overContainer) {
-      return;
-    }
+    const activeExpense = expenses.find(e => e.id === activeId);
+    if (!activeExpense) return;
 
-    setGroupedExpenses(prev => {
-      const newGroups = { ...prev };
-      const sourceItems = newGroups[activeContainer];
-      const destItems = newGroups[overContainer];
-      if (!sourceItems || !destItems) return prev;
+    // Find destination column and index
+    let newStatus = activeExpense.status_expense;
+    let newIndex = (activeExpense.kanban_order || 0);
 
-      const activeIndex = sourceItems.findIndex(e => e.id === activeId);
-      if (activeIndex === -1) return prev;
+    const overColumn = columns.find(col => col.id === overId);
+    const overExpense = expenses.find(e => e.id === overId);
 
-      const [movedItem] = sourceItems.splice(activeIndex, 1);
-      movedItem.status_expense = overContainer;
-
-      const overIndex = overIsItem ? destItems.findIndex(e => e.id === overId) : destItems.length;
-      destItems.splice(overIndex, 0, movedItem);
+    if (overColumn) {
+      // Dropped on a column header or empty column
+      newStatus = overColumn.id;
+      newIndex = 0; // Move to top? Or end? Usually 0 if empty.
       
-      return newGroups;
-    });
-  };
+      // Calculate index if we want to append
+      const expensesInColumn = expenses.filter(e => e.status_expense === newStatus);
+      if (expensesInColumn.length > 0) {
+         newIndex = expensesInColumn.length; 
+      }
+    } else if (overExpense) {
+      // Dropped on another expense
+      newStatus = overExpense.status_expense;
+      
+      const expensesInColumn = expenses
+        .filter(e => e.status_expense === newStatus)
+        .sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
+        
+      const overIndex = expensesInColumn.findIndex(e => e.id === overId);
+      const activeIndex = expensesInColumn.findIndex(e => e.id === activeId);
+      
+      if (activeIndex !== -1) {
+        // Same column reorder
+        newIndex = arrayMove(expensesInColumn, activeIndex, overIndex).findIndex(e => e.id === activeId);
+      } else {
+        // Different column
+        newIndex = overIndex;
+      }
+    }
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    if (!canEditStatus) return;
-    const { active, over } = event;
-    setActiveExpense(null);
-    if (!over) return;
+    if (newStatus !== activeExpense.status_expense) {
+      // Optimistic update
+      const updatedExpenses = expenses.map(e => {
+        if (e.id === activeId) {
+          return { ...e, status_expense: newStatus };
+        }
+        return e;
+      });
+      // We rely on RQ invalidation mostly, but immediate UI feedback is nice.
+      // However, we are not setting state here because it comes from props.
+      
+      try {
+        // Get ordered IDs for the new status column
+        const targetColumnExpenses = expenses
+          .filter(e => e.status_expense === newStatus && e.id !== activeId)
+          .sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
+          
+        // Insert active item at new index
+        // If it was dropped on a column, we appended or prepended
+        if (overColumn) {
+             targetColumnExpenses.push(activeExpense);
+        } else if (overExpense) {
+             const overIndex = targetColumnExpenses.findIndex(e => e.id === overId);
+             const isBelow = active.rect.current.translated && active.rect.current.translated.top > over.rect.top + over.rect.height;
+             const modifier = isBelow ? 1 : 0;
+             // Logic is complex without arrayMove context, relying on backend simply receiving ordered IDs is safer if we get the full list correctly.
+             // Simplification: just put it at the end if column, or calculate properly.
+             // For now, let's just trigger the status update.
+        }
+        
+        // Actually, let's construct the new order for the column
+        let orderedIds: string[] = [];
+        const sameColumn = activeExpense.status_expense === newStatus;
+        
+        if (sameColumn) {
+             const expensesInColumn = expenses
+                .filter(e => e.status_expense === newStatus)
+                .sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
+             const oldIndex = expensesInColumn.findIndex(e => e.id === activeId);
+             const newIdx = expensesInColumn.findIndex(e => e.id === overId);
+             const reordered = arrayMove(expensesInColumn, oldIndex, newIdx);
+             orderedIds = reordered.map(e => e.id);
+        } else {
+             const targetExpenses = expenses
+                .filter(e => e.status_expense === newStatus)
+                .sort((a, b) => (a.kanban_order || 0) - (b.kanban_order || 0));
+             
+             if (overColumn) {
+                 // Append
+                 targetExpenses.push(activeExpense);
+                 orderedIds = targetExpenses.map(e => e.id);
+             } else {
+                 const overIndex = targetExpenses.findIndex(e => e.id === overId);
+                 // Check if dropping above or below is tricky without detailed collision data
+                 // default to insert before
+                 targetExpenses.splice(overIndex, 0, activeExpense);
+                 orderedIds = targetExpenses.map(e => e.id);
+             }
+        }
 
-    const activeId = String(active.id);
-    const activeContainer = active.data.current?.sortable.containerId as string;
-    const overIsItem = !!over.data.current?.sortable;
-    const overContainer = overIsItem ? over.data.current?.sortable.containerId as string : String(over.id);
+        const { error } = await supabase.rpc('update_expense_status_and_order', {
+          p_expense_id: activeId,
+          p_new_status: newStatus,
+          p_ordered_expense_ids: orderedIds
+        });
 
-    const itemsInDest = groupedExpenses[overContainer];
-    const orderedIds = itemsInDest.map(e => e.id);
-
-    const { error } = await supabase.rpc('update_expense_status_and_order', {
-      p_expense_id: activeId,
-      p_new_status: overContainer,
-      p_ordered_expense_ids: orderedIds,
-    });
-
-    if (error) {
-      toast.error("Failed to update expense.", { description: error.message });
-      queryClient.invalidateQueries({ queryKey: ['expenses'] }); // Revert optimistic update
-    } else {
-      toast.success("Expense updated.");
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+        if (error) throw error;
+        toast.success(`Expense moved to ${newStatus}`);
+        queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      } catch (error: any) {
+        toast.error('Failed to update expense', { description: error.message });
+      }
     }
   };
+
+  const dropAnimation: DropAnimation = {
+    sideEffects: defaultDropAnimationSideEffects({
+      styles: {
+        active: {
+          opacity: '0.5',
+        },
+      },
+    }),
+  };
+
+  const activeExpense = useMemo(() => expenses.find(e => e.id === activeId), [expenses, activeId]);
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => setActiveExpense(null)}>
-      <div className="flex gap-4 overflow-x-auto p-4">
-        {visibleStatuses.map(status => (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+    >
+      <div className="flex h-full gap-4 overflow-x-auto pb-4">
+        {columns.map(col => (
           <ExpenseKanbanColumn
-            key={status}
-            status={status}
-            expenses={groupedExpenses[status] || []}
+            key={col.id}
+            id={col.id}
+            title={col.title}
+            expenses={col.expenses}
             onEditExpense={onEditExpense}
             onDeleteExpense={onDeleteExpense}
+            onClickExpense={onClickExpense}
             canEditStatus={canEditStatus}
           />
         ))}
       </div>
-      <DragOverlay>
-        {activeExpense ? (
-          <ExpenseKanbanCard expense={activeExpense} onEdit={() => {}} onDelete={() => {}} canDrag={true} />
-        ) : null}
-      </DragOverlay>
+      {createPortal(
+        <DragOverlay dropAnimation={dropAnimation}>
+          {activeExpense && (
+            <ExpenseKanbanCard
+              expense={activeExpense}
+              onEdit={() => {}}
+              onDelete={() => {}}
+              canDrag={true}
+            />
+          )}
+        </DragOverlay>,
+        document.body
+      )}
     </DndContext>
   );
 };
