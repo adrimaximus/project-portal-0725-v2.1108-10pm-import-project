@@ -37,21 +37,23 @@ interface EditExpenseDialogProps {
   expense: Expense | null;
 }
 
+const paymentTermSchema = z.object({
+    amount: z.number().nullable(),
+    request_type: z.string().optional(),
+    request_date: z.date().optional().nullable(),
+    release_date: z.date().optional().nullable(),
+    status: z.string().optional(),
+    status_remarks: z.string().optional().nullable(), // Added status_remarks
+    pic_feedback: z.string().optional(),
+});
+
 const expenseSchema = z.object({
   project_id: z.string().uuid("Please select a project."),
   created_by: z.string().uuid().optional(),
   purpose_payment: z.string().optional(),
   beneficiary: z.string().min(1, "Beneficiary is required."),
   tf_amount: z.number().min(1, "Amount must be greater than 0."),
-  payment_terms: z.array(z.object({
-    amount: z.number().nullable(),
-    request_type: z.string().optional(),
-    request_date: z.date().optional().nullable(),
-    release_date: z.date().optional().nullable(),
-    status: z.string().optional(),
-    status_remarks: z.string().optional(),
-    pic_feedback: z.string().optional(),
-  })).optional(),
+  payment_terms: z.array(paymentTermSchema).optional(),
   bank_account_id: z.string().optional().nullable(),
   remarks: z.string().optional(),
   ai_review_notes: z.string().optional(),
@@ -159,7 +161,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
       created_by: user?.id,
       beneficiary: '',
       tf_amount: 0,
-      payment_terms: [{ amount: null, request_type: 'Requested', request_date: new Date(), release_date: undefined, status: 'Requested' }],
+      payment_terms: [{ amount: null, request_type: 'Requested', request_date: new Date(), release_date: undefined, status: 'Requested', status_remarks: null }],
       bank_account_id: null,
       remarks: '',
       ai_review_notes: '',
@@ -187,9 +189,10 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
                 ...term,
                 request_date: term.request_date ? new Date(term.request_date) : null,
                 release_date: term.release_date ? new Date(term.release_date) : null,
-                amount: Number(term.amount) || null
+                amount: Number(term.amount) || null,
+                status_remarks: term.status_remarks || null, // Ensure remarks are loaded
             }))
-            : [{ amount: null, request_type: 'Requested', request_date: new Date(), status: 'Requested' }];
+            : [{ amount: null, request_type: 'Requested', request_date: new Date(), status: 'Requested', status_remarks: null }];
 
         // Set beneficiary state for bank account fetching
         if (expense.beneficiary) {
@@ -855,13 +858,49 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
                             <FormItem><FormLabel className="text-xs">Payment Schedule</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
                           )} />
                           <FormField control={form.control} name={`payment_terms.${index}.status`} render={({ field }) => (
-                            <FormItem><FormLabel className="text-xs">Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="bg-background"><SelectValue placeholder="Status" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Requested">Requested</SelectItem><SelectItem value="On review">On review</SelectItem><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Rejected">Rejected</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                            <FormItem>
+                                <FormLabel className="text-xs">Status</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}>
+                                    <FormControl>
+                                        <SelectTrigger className="bg-background">
+                                            <SelectValue placeholder="Status" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Requested">Requested</SelectItem>
+                                        <SelectItem value="On review">On review</SelectItem>
+                                        <SelectItem value="Pending">Pending</SelectItem>
+                                        <SelectItem value="Paid">Paid</SelectItem>
+                                        <SelectItem value="Rejected">Rejected</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
                           )} />
                         </div>
+                        
+                        {/* Conditional Status Remarks Field */}
+                        {['Pending', 'Rejected'].includes(watch(`payment_terms.${index}.status`) || '') && (
+                            <FormField control={form.control} name={`payment_terms.${index}.status_remarks`} render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-xs">Status Note (Required for {watch(`payment_terms.${index}.status`)})</FormLabel>
+                                    <FormControl>
+                                        <Textarea 
+                                            placeholder={`Enter reason for ${watch(`payment_terms.${index}.status`)}...`} 
+                                            {...field} 
+                                            value={field.value || ''}
+                                            disabled={isFormDisabled} 
+                                            className="min-h-[60px]"
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                        )}
                       </div>
                     </div>
                   ))}
-                  <Button type="button" variant="outline" size="sm" onClick={() => append({ amount: null, request_type: 'Requested', request_date: new Date(), release_date: undefined, status: 'Requested' })} disabled={isFormDisabled}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => append({ amount: null, request_type: 'Requested', request_date: new Date(), release_date: undefined, status: 'Requested', status_remarks: null })} disabled={isFormDisabled}>
                     <Plus className="mr-2 h-4 w-4" /> Add Term
                   </Button>
                 </div>
