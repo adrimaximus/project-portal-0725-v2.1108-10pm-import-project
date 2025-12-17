@@ -36,6 +36,8 @@ const formSchema = z.object({
   project_id: z.string().optional(),
   created_by: z.string().optional(), // PIC
   attachments: z.array(z.any()).optional().default([]),
+  due_date: z.string().optional(),
+  bank_account_id: z.string().optional(),
 });
 
 interface EditExpenseDialogProps {
@@ -69,7 +71,6 @@ const EditExpenseDialog = ({ expense: propExpense, open, onOpenChange }: EditExp
   const { data: picOptions } = useQuery({
     queryKey: ['pics'],
     queryFn: async () => {
-      // Fetch users who are likely PICs (e.g., all profiles)
       const { data, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, email')
@@ -86,6 +87,18 @@ const EditExpenseDialog = ({ expense: propExpense, open, onOpenChange }: EditExp
     }
   });
 
+  const { data: bankAccounts } = useQuery({
+    queryKey: ['bank_accounts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .select('id, bank_name, account_number, account_name')
+        .order('bank_name');
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -96,6 +109,8 @@ const EditExpenseDialog = ({ expense: propExpense, open, onOpenChange }: EditExp
       status_expense: "Pending",
       created_by: "",
       attachments: [],
+      due_date: "",
+      bank_account_id: "",
     },
   });
 
@@ -109,8 +124,9 @@ const EditExpenseDialog = ({ expense: propExpense, open, onOpenChange }: EditExp
         status_expense: expense.status_expense,
         project_id: expense.project_id,
         created_by: expense.created_by || "",
-        // Important: Load existing attachments from jsonb
-        attachments: (expense as any).attachments_jsonb || [], 
+        attachments: (expense as any).attachments_jsonb || [],
+        due_date: expense.due_date ? new Date(expense.due_date).toISOString().split('T')[0] : "",
+        bank_account_id: expense.bank_account_id || "",
       });
     }
   }, [expense, form]);
@@ -135,7 +151,7 @@ const EditExpenseDialog = ({ expense: propExpense, open, onOpenChange }: EditExp
           const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
           const filePath = `${expense.project_id}/${fileName}`;
 
-          const { error: uploadError, data } = await supabase.storage
+          const { error: uploadError } = await supabase.storage
             .from('project-files')
             .upload(filePath, file);
 
@@ -165,6 +181,8 @@ const EditExpenseDialog = ({ expense: propExpense, open, onOpenChange }: EditExp
           status_expense: values.status_expense,
           created_by: values.created_by || null,
           attachments_jsonb: finalAttachments as any,
+          due_date: values.due_date ? new Date(values.due_date).toISOString() : null,
+          bank_account_id: values.bank_account_id || null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", expense.id);
@@ -241,6 +259,20 @@ const EditExpenseDialog = ({ expense: propExpense, open, onOpenChange }: EditExp
 
               <FormField
                 control={form.control}
+                name="due_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Due Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="created_by"
                 render={({ field }) => (
                   <FormItem>
@@ -255,6 +287,32 @@ const EditExpenseDialog = ({ expense: propExpense, open, onOpenChange }: EditExp
                         {picOptions?.map((pic) => (
                           <SelectItem key={pic.id} value={pic.id}>
                             {pic.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="bank_account_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bank Account</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Bank Account" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {bankAccounts?.map((acc) => (
+                          <SelectItem key={acc.id} value={acc.id}>
+                            {acc.bank_name} - {acc.account_number} ({acc.account_name})
                           </SelectItem>
                         ))}
                       </SelectContent>
