@@ -42,22 +42,65 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
   const [feedbackText, setFeedbackText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch latest expense data to ensure UI updates after actions
+  // Fetch latest expense data AND PIC details to ensure UI updates
   const { data: expense } = useQuery({
     queryKey: ['expense_details', propExpense?.id],
     queryFn: async () => {
       if (!propExpense?.id) return null;
-      const { data, error } = await supabase
+      
+      // 1. Fetch raw expense data
+      const { data: expenseData, error } = await supabase
         .from('expenses')
         .select('*')
         .eq('id', propExpense.id)
         .single();
       
       if (error) throw error;
-      return data as Expense;
+
+      // 2. Fetch PIC details if created_by exists
+      let pic = null;
+      if (expenseData.created_by) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email, avatar_url')
+          .eq('id', expenseData.created_by)
+          .maybeSingle();
+          
+        if (profile) {
+          const firstName = profile.first_name || '';
+          const lastName = profile.last_name || '';
+          const fullName = (firstName + ' ' + lastName).trim() || profile.email;
+          const initials = (firstName && lastName) 
+            ? (firstName[0] + lastName[0]).toUpperCase() 
+            : (firstName ? firstName[0].toUpperCase() : (profile.email?.substring(0, 2).toUpperCase() || 'NN'));
+            
+          pic = {
+            id: profile.id,
+            name: fullName,
+            avatar_url: profile.avatar_url,
+            initials: initials,
+            email: profile.email
+          };
+        }
+      }
+
+      // 3. Fetch Project Name if needed (since raw expense table only has project_id)
+      let projectName = propExpense.project_name;
+      if (expenseData.project_id && !projectName) {
+         const { data: proj } = await supabase.from('projects').select('name').eq('id', expenseData.project_id).maybeSingle();
+         if (proj) projectName = proj.name;
+      }
+
+      return {
+        ...expenseData,
+        pic: pic, // Use the fetched PIC details
+        project_name: projectName,
+        // Keep fallback to prop if PIC fetch failed but prop had it (though unlikely with fresh fetch)
+        project_owner: propExpense.project_owner 
+      } as unknown as Expense;
     },
     enabled: !!propExpense?.id && open,
-    initialData: propExpense, // Show initial data immediately
+    initialData: propExpense,
   });
 
   // Calculate status based on payment terms
@@ -99,7 +142,7 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
   const bankDetails = expense.account_bank;
   const attachments: FileMetadata[] = (expense as any).attachments_jsonb || [];
 
-  // Use PIC if available, otherwise fallback to project owner (for backward compatibility)
+  // Use PIC if available, otherwise fallback to project owner
   const pic = expense.pic || expense.project_owner;
 
   const handleDownload = (url: string) => {
