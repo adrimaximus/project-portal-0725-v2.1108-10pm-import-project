@@ -184,8 +184,13 @@ Account Name: ${bankDetails.name || '-'}
     });
   };
 
-  const handleDownload = (url: string) => {
-    window.open(url, '_blank');
+  const handleDownload = (url: string, fileName: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
   
   const handleView = (file: FileMetadata) => {
@@ -371,7 +376,7 @@ Account Name: ${bankDetails.name || '-'}
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(file.url)}>
+                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(file.url, file.name)}>
                                     <Download className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
