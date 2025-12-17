@@ -593,7 +593,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
                         <FileText className="h-4 w-4" /> Attachments
                       </FormLabel>
                     </div>
-                    <div className="text-xs text-muted-foreground mb-1">
+                    <div className="text-xs text-muted-foreground mb-1 whitespace-normal">
                         Upload invoice or receipt to auto-fill details (Image & PDF supported)
                     </div>
                     <FormControl>
@@ -651,8 +651,8 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
                     <Popover open={projectPopoverOpen} onOpenChange={setProjectPopoverOpen} modal={true}>
                       <PopoverTrigger asChild>
                         <FormControl>
-                          <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>
-                            {field.value ? projects.find((project) => project.id === field.value)?.name : "Select a project"}
+                          <Button variant="outline" role="combobox" className={cn("w-full justify-between h-auto whitespace-normal text-left", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>
+                            <span className="truncate flex-1 text-left whitespace-normal break-words">{field.value ? projects.find((project) => project.id === field.value)?.name : "Select a project"}</span>
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </FormControl>
@@ -911,7 +911,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
               </div>
               
               <FormField control={form.control} name="remarks" render={({ field }) => (
-                <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} disabled={isFormDisabled} className="whitespace-normal break-words" /></FormControl><FormMessage /></FormItem>
               )} />
               
               {isLoadingProperties ? (
