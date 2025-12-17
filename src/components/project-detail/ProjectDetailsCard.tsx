@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 import { useProjectStatuses } from "@/hooks/useProjectStatuses";
 import { usePaymentStatuses } from "@/hooks/usePaymentStatuses";
-import { DatePickerWithRange } from "../ui/DatePickerWithRange"; // Corrected import name
+import { DatePickerWithRange } from "../ui/DatePickerWithRange";
 
 // Extend types to include the new optional company_id field for a robust relationship.
 type LocalPerson = Person & { company_id?: string | null };
@@ -54,6 +54,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
     };
   }, [project]);
 
+  // Remove 'enabled: isEditing' to allow data fetching for quick-edit dropdown
   const { data: allPeople, isLoading: isLoadingPeople } = useQuery<LocalPerson[]>({
     queryKey: ['allPeople'],
     queryFn: async () => {
@@ -61,7 +62,6 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
         if (error) throw error;
         return data;
     },
-    enabled: isEditing,
   });
 
   const { data: allCompanies, isLoading: isLoadingCompanies } = useQuery<Company[]>({
@@ -71,7 +71,6 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
         if (error) throw error;
         return data;
     },
-    enabled: isEditing,
   });
 
   const updatePaymentStatusMutation = useMutation({
@@ -89,6 +88,54 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
     },
     onError: (error) => {
       toast.error(`Error updating payment status: ${error.message}`);
+    }
+  });
+
+  const updateClientMutation = useMutation({
+    mutationFn: async (value: string) => {
+      if (value.startsWith('company-')) {
+        const companyId = value.replace('company-', '');
+        // Update project to set client_company_id and clear people links
+        const { error: projError } = await supabase
+          .from('projects')
+          .update({ client_company_id: companyId })
+          .eq('id', project.id);
+        if (projError) throw projError;
+
+        const { error: peopleError } = await supabase
+          .from('people_projects')
+          .delete()
+          .eq('project_id', project.id);
+        if (peopleError) throw peopleError;
+      } else {
+        const personId = value;
+        // Update project to clear client_company_id
+        const { error: projError } = await supabase
+          .from('projects')
+          .update({ client_company_id: null })
+          .eq('id', project.id);
+        if (projError) throw projError;
+
+        // Update people_projects: delete old, insert new
+        const { error: delError } = await supabase
+          .from('people_projects')
+          .delete()
+          .eq('project_id', project.id);
+        if (delError) throw delError;
+        
+        const { error: insError } = await supabase
+          .from('people_projects')
+          .insert({ project_id: project.id, person_id: personId });
+        if (insError) throw insError;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Client updated");
+      queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+    onError: (error) => {
+      toast.error(`Error updating client: ${error.message}`);
     }
   });
 
@@ -186,6 +233,37 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
   const paymentTextColor = getTextColor(paymentBgColor);
   const selectedValue = project.person_ids?.[0] || (project.client_company_id ? `company-${project.client_company_id}` : '');
 
+  const renderClientSelectContent = () => (
+    <SelectContent className="max-h-72">
+      {isLoadingPeople || isLoadingCompanies ? (
+        <SelectItem value="loading" disabled>Loading...</SelectItem>
+      ) : (
+        <>
+          {allCompanies && allCompanies.length > 0 && (
+            <SelectGroup>
+              <SelectLabel>Companies</SelectLabel>
+              {allCompanies.map(company => (
+                <SelectItem key={`company-${company.id}`} value={`company-${company.id}`}>
+                  {company.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          )}
+          {allPeople && allPeople.length > 0 && (
+            <SelectGroup>
+              <SelectLabel>People</SelectLabel>
+              {allPeople.map(person => (
+                <SelectItem key={person.id} value={person.id}>
+                  {person.full_name} {person.company && `(${person.company})`}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          )}
+        </>
+      )}
+    </SelectContent>
+  );
+
   return (
     <Card>
       <Collapsible defaultOpen>
@@ -215,7 +293,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
                         to: project.due_date ? new Date(project.due_date) : undefined,
                       }}
                       onDateChange={handleDateChange}
-                      className="w-full" // Added w-full here to ensure it takes up the space
+                      className="w-full"
                     />
                   ) : (
                     <p className="text-muted-foreground">
@@ -404,61 +482,43 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
                       <SelectTrigger>
                         <SelectValue placeholder="Select a client or company..." />
                       </SelectTrigger>
-                      <SelectContent className="max-h-72">
-                        {isLoadingPeople || isLoadingCompanies ? (
-                          <SelectItem value="loading" disabled>Loading...</SelectItem>
-                        ) : (
-                          <>
-                            {allCompanies && allCompanies.length > 0 && (
-                              <SelectGroup>
-                                <SelectLabel>Companies</SelectLabel>
-                                {allCompanies.map(company => (
-                                  <SelectItem key={`company-${company.id}`} value={`company-${company.id}`}>
-                                    {company.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            )}
-                            {allPeople && allPeople.length > 0 && (
-                              <SelectGroup>
-                                <SelectLabel>People</SelectLabel>
-                                {allPeople.map(person => (
-                                  <SelectItem key={person.id} value={person.id}>
-                                    {person.full_name} {person.company && `(${person.company})`}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            )}
-                          </>
-                        )}
-                      </SelectContent>
+                      {renderClientSelectContent()}
                     </Select>
                   ) : (
                     <div className="pt-1">
-                      {clientInfo.name ? (
-                        <div className="flex items-center gap-3">
-                          {clientInfo.logoUrl ? (
-                            <img src={clientInfo.logoUrl} alt={clientInfo.companyName || ''} className="h-8 w-8 object-contain rounded-md bg-muted p-1" />
-                          ) : clientInfo.avatarUrl ? (
-                             <Avatar className="h-8 w-8">
-                                <AvatarImage src={clientInfo.avatarUrl} />
-                                <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
-                             </Avatar>
-                          ) : (
-                            <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center">
-                              <Building className="h-4 w-4 text-muted-foreground" />
+                      <Select
+                        value={selectedValue}
+                        onValueChange={(value) => updateClientMutation.mutate(value)}
+                        disabled={updateClientMutation.isPending || isLoadingPeople || isLoadingCompanies}
+                      >
+                        <SelectTrigger className="w-full h-auto p-0 border-none bg-transparent focus:ring-0 shadow-none hover:bg-accent/50 rounded-md transition-colors text-left flex items-center justify-between group">
+                          {clientInfo.name ? (
+                            <div className="flex items-center gap-3 py-1 px-1">
+                              {clientInfo.logoUrl ? (
+                                <img src={clientInfo.logoUrl} alt={clientInfo.companyName || ''} className="h-8 w-8 object-contain rounded-md bg-muted p-1" />
+                              ) : clientInfo.avatarUrl ? (
+                                 <Avatar className="h-8 w-8">
+                                    <AvatarImage src={clientInfo.avatarUrl} />
+                                    <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
+                                 </Avatar>
+                              ) : (
+                                <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center">
+                                  <Building className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                              )}
+                              <div>
+                                <p className="text-foreground font-semibold text-sm">{clientInfo.name}</p>
+                                {clientInfo.companyName && clientInfo.companyName !== clientInfo.name && (
+                                  <p className="text-muted-foreground text-xs">{clientInfo.companyName}</p>
+                                )}
+                              </div>
                             </div>
+                          ) : (
+                            <p className="text-muted-foreground py-1 px-1">No client assigned</p>
                           )}
-                          <div>
-                            <p className="text-foreground font-semibold">{clientInfo.name}</p>
-                            {clientInfo.companyName && clientInfo.companyName !== clientInfo.name && (
-                              <p className="text-muted-foreground text-xs">{clientInfo.companyName}</p>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-muted-foreground">No client assigned</p>
-                      )}
+                        </SelectTrigger>
+                        {renderClientSelectContent()}
+                      </Select>
                     </div>
                   )}
                 </div>
