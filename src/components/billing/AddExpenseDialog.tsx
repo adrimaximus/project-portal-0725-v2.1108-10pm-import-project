@@ -761,14 +761,13 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                         type="button" 
                         variant="ghost" 
                         size="sm" 
-                        className="w-full justify-start h-auto p-0 text-base font-semibold text-purple-600 hover:text-purple-700 disabled:opacity-100 disabled:cursor-default"
+                        className="w-full justify-start h-auto p-0 text-sm font-medium text-foreground hover:text-primary disabled:opacity-100 disabled:cursor-default"
                         disabled={isExtracting || !watch('attachments_jsonb')?.length}
                         onClick={handleRunAiCheck}
                     >
                         <Wand2 className="h-4 w-4 text-purple-500 mr-2" />
                         AI Review Instructions 
                         {isExtracting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                        {!isExtracting && watch('attachments_jsonb')?.length > 0 && <Sparkles className="ml-2 h-4 w-4" />}
                     </Button>
                     <FormControl>
                       <Textarea 
