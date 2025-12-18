@@ -500,7 +500,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           {description ? (
             <div className="pt-4 border-t">
               <h4 className="font-semibold mb-2">Description</h4>
-              <div className="prose prose-sm dark:prose-invert max-w-none break-word">
+              <div className="prose prose-sm dark:prose-invert max-w-none break-words">
                 <InteractiveText text={displayedDescription} members={taskAssignees} />
               </div>
               {isLongDescription && (
