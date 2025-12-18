@@ -215,8 +215,9 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
 
   const handleDateChange = (range: DateRange | undefined) => {
     const startDate = range?.from ? range.from.toISOString() : undefined;
-    const endDateValue = range?.to || range?.from;
-    const endDate = endDateValue ? endDateValue.toISOString() : undefined;
+    // Fix: Allow due_date to be undefined if user has only selected 'from' date.
+    // This allows the range picker to wait for the second click.
+    const endDate = range?.to ? range.to.toISOString() : undefined;
 
     onFieldChange('start_date', startDate);
     onFieldChange('due_date', endDate);
