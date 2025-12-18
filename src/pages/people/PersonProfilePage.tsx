@@ -422,28 +422,34 @@ const PersonProfilePage = () => {
               <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><Landmark className="h-5 w-5 text-muted-foreground" /> Bank Information</CardTitle></CardHeader>
                 <CardContent className="space-y-4 text-sm">
-                  {bankAccounts.map((account) => (
-                    <div key={account.id} className="flex items-start gap-3">
-                      <span className="font-semibold w-32 flex-shrink-0">Bank Account:</span>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-muted-foreground block">
-                          {account.bank_name} - <span className="font-mono">{account.account_number}</span>
-                        </span>
-                        <span className="text-muted-foreground block">
-                          {account.account_name}
-                        </span>
-                        {account.swift_code && (
-                          <span className="text-muted-foreground text-xs block">
-                            SWIFT: {account.swift_code}
-                          </span>
-                        )}
-                      </div>
+                  {bankAccounts.map((account, index) => (
+                    <div key={account.id} className={index > 0 ? "pt-4 border-t" : ""}>
+                        <div className="space-y-4">
+                            <div className="flex items-start gap-3">
+                                <span className="font-semibold w-40 flex-shrink-0">Bank Beneficiary Name:</span>
+                                <span className="text-muted-foreground flex-1">{account.account_name}</span>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <span className="font-semibold w-40 flex-shrink-0">Bank Account:</span>
+                                <span className="text-muted-foreground flex-1">{account.bank_name}</span>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <span className="font-semibold w-40 flex-shrink-0">Bank Account Number:</span>
+                                <span className="text-muted-foreground flex-1 font-mono">{account.account_number}</span>
+                            </div>
+                            {account.swift_code && (
+                                <div className="flex items-start gap-3">
+                                    <span className="font-semibold w-40 flex-shrink-0">Swift Code:</span>
+                                    <span className="text-muted-foreground flex-1 font-mono">{account.swift_code}</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
                   ))}
                   
                   {bankProperties.map(prop => (
                     <div key={prop.id} className="flex items-start gap-3">
-                      <span className="font-semibold w-32 flex-shrink-0">{prop.label}:</span>
+                      <span className="font-semibold w-40 flex-shrink-0">{prop.label}:</span>
                       <div className="flex-1 min-w-0">
                         {renderCustomPropertyValue(prop, person.custom_properties?.[prop.name])}
                       </div>
