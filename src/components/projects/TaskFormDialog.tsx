@@ -15,7 +15,8 @@ import { CalendarIcon, Loader2 } from 'lucide-react';
 import { cn, getTaskStatusStyles, getPriorityStyles } from '@/lib/utils';
 import { format, addHours } from 'date-fns';
 import { useProjects } from '@/hooks/useProjects';
-import { Task, TaskStatus, TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS, Tag, User as Profile, Project, TaskAttachment, UpsertTaskPayload, TaskPriority } from '@/types';
+import { Task, TaskStatus, Tag, User as Profile, Project, TaskAttachment, UpsertTaskPayload, TaskPriority } from '@/types';
+import { TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS } from '@/data/projectOptions';
 import { useTags } from '@/hooks/useTags';
 import { TagsMultiselect } from '@/components/ui/TagsMultiselect';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,7 +44,7 @@ interface TaskFormDialogProps {
 
 const taskFormSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  project_id: z.string().optional().nullable(),
+  project_id: z.string().uuid("Please select a project.").optional().nullable(),
   description: z.string().optional().nullable(),
   due_date: z.date().optional().nullable(),
   priority: z.enum(TASK_PRIORITY_OPTIONS.map(o => o.value) as [TaskPriority, ...TaskPriority[]]).optional().nullable(),

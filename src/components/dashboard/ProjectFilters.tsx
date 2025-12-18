@@ -6,7 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/types";
+import { PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/data/projectOptions";
 
 interface ProjectFiltersProps {
   statusFilter: string;

@@ -33,13 +33,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
+import { TASK_PRIORITY_OPTIONS } from '@/data/projectOptions';
 
-const PRIORITY_OPTIONS = [
-  { value: 'Low', label: 'Low' },
-  { value: 'Normal', label: 'Normal' },
-  { value: 'High', label: 'High' },
-  { value: 'Urgent', label: 'Urgent' },
-];
+const PRIORITY_OPTIONS = TASK_PRIORITY_OPTIONS;
 
 interface TasksTableViewProps {
   tasks: ProjectTask[];
