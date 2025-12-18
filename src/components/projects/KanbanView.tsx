@@ -1,12 +1,13 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { DndContext, DragOverlay, DragStartEvent, DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent, DropAnimation, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import { Project, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, ProjectStatus, PaymentStatus } from '@/types';
+import { Project, ProjectStatus, PaymentStatus } from '@/types';
 import { useProjectKanbanMutations } from '@/hooks/useProjectKanbanMutations';
 import KanbanCard from './KanbanCard';
 import KanbanColumn from './KanbanColumn';
 import { useProjectStatuses } from '@/hooks/useProjectStatuses';
 import { usePaymentStatuses } from '@/hooks/usePaymentStatuses';
+import { PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/data/projectOptions';
 
 const dropAnimation: DropAnimation = {
   sideEffects: defaultDropAnimationSideEffects({
@@ -178,7 +179,7 @@ const KanbanView = ({ projects, groupBy }: { projects: Project[], groupBy: 'stat
     if (finalUpdates.length > 0) {
         const newStatusLabel = columns.find(opt => opt.value === overContainer)?.label || overContainer;
         updateProjectOrder({
-            newProjects: newProjectsState,
+            newProjects: newProjectsState.map(inv => ({ ...inv, id: inv.rawProjectId } as unknown as Project)),
             finalUpdates,
             groupBy,
             activeProjectName: activeProjectInstance.name,
