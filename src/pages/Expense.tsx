@@ -307,7 +307,7 @@ const ExpensePage = () => {
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <Paperclip className="h-3 w-3 text-muted-foreground" />
+                                      <span className="text-muted-foreground text-xs">({(expense as any).attachments_jsonb.length})</span>
                                     </TooltipTrigger>
                                     <TooltipContent>
                                       {`${(expense as any).attachments_jsonb.length} Attachment(s)`}
@@ -354,7 +354,6 @@ const ExpensePage = () => {
                           </TableCell>
                           <TableCell>
                             <div className="max-w-[300px] text-xs">
-                              <div className="line-clamp-2 text-muted-foreground">
                                 <ReactMarkdown
                                   components={{
                                     p: ({node, ...props}) => <span className="mr-1" {...props} />,
@@ -366,7 +365,6 @@ const ExpensePage = () => {
                                 >
                                   {expense.remarks || ''}
                                 </ReactMarkdown>
-                              </div>
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
