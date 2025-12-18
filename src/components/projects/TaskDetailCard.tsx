@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatus, TASK_STATUS_OPTIONS, TaskPriority } from '@/types';
+import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatus, TaskPriority } from '@/types';
+import { TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS } from '@/data/projectOptions';
 import { DrawerContent } from '@/components/ui/drawer';
 import { Button } from '../ui/button';
 import { format, isPast, formatDistanceToNow } from 'date-fns';
@@ -44,7 +45,6 @@ import { Input } from '../ui/input';
 import InteractiveText from '../InteractiveText';
 import AttachmentViewerModal from '../AttachmentViewerModal';
 import CommentReactions from '../CommentReactions';
-import { TASK_PRIORITY_OPTIONS } from '@/data/projectOptions';
 
 interface TaskDetailCardProps {
   task: Task;
