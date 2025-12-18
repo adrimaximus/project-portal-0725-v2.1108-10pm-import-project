@@ -47,6 +47,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import ExpenseDetailsDialog from "@/components/billing/ExpenseDetailsDialog";
+import ReactMarkdown from 'react-markdown';
 
 const ExpensePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -351,7 +352,20 @@ const ExpensePage = () => {
                               {derivedStatus}
                             </Badge>
                           </TableCell>
-                          <TableCell>{expense.remarks}</TableCell>
+                          <TableCell>
+                            <div className="max-w-[300px] text-xs">
+                              <ReactMarkdown
+                                components={{
+                                  ul: ({node, ...props}) => <ul className="list-none space-y-0.5 m-0 p-0" {...props} />,
+                                  li: ({node, ...props}) => <li className="flex gap-1" {...props} />, 
+                                  p: ({node, ...props}) => <span className="block" {...props} />,
+                                  strong: ({node, ...props}) => <span className="font-semibold" {...props} />,
+                                }}
+                              >
+                                {expense.remarks || ''}
+                              </ReactMarkdown>
+                            </div>
+                          </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>

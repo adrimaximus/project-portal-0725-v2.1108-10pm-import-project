@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import ReactMarkdown from 'react-markdown';
 
 interface FileMetadata {
   name: string;
@@ -784,7 +785,17 @@ Account Name: ${bankDetails.name || '-'}
       {expense.remarks && (
         <div className="space-y-2 w-full">
           <h4 className="font-semibold text-sm text-muted-foreground">Remarks</h4>
-          <p className="text-sm bg-muted/30 p-3 rounded-md border whitespace-pre-wrap break-words">{expense.remarks}</p>
+          <div className="text-sm bg-muted/30 p-3 rounded-md border break-words">
+            <ReactMarkdown 
+              components={{
+                ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-1" {...props} />,
+                p: ({node, ...props}) => <p className="mb-1 last:mb-0" {...props} />,
+                a: ({node, ...props}) => <a className="text-primary hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+              }}
+            >
+              {expense.remarks}
+            </ReactMarkdown>
+          </div>
         </div>
       )}
     </div>
