@@ -88,6 +88,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   
   const { extractData, isExtracting } = useExpenseExtractor();
   const [currentProcessingFile, setCurrentProcessingFile] = useState<string | null>(null);
+  const [detectedBeneficiaryType, setDetectedBeneficiaryType] = useState<'person' | 'company' | null>(null);
 
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery<ProjectOption[]>({
     queryKey: ['projectsForExpenseForm'],
@@ -186,7 +187,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
   useEffect(() => {
     const fetchBankAccounts = async () => {
-      if (beneficiary) {
+      if (beneficiary && beneficiary.id !== 'unknown' && beneficiary.id !== 'new') {
         setIsLoadingBankAccounts(true);
         const { data, error } = await supabase.rpc('get_beneficiary_bank_accounts', {
             p_owner_id: beneficiary.id,
@@ -199,6 +200,8 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           setBankAccounts(data || []);
         }
         setIsLoadingBankAccounts(false);
+      } else if (beneficiary) {
+          // Keep existing bank account info if beneficiary is just text/unknown ID
       } else {
         const currentBankId = form.getValues('bank_account_id');
         if (!currentBankId || !currentBankId.startsWith('temp-')) {
@@ -316,6 +319,10 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         setValue('beneficiary', matchedBeneficiary.name, { shouldValidate: true });
       } else {
         setValue('beneficiary', extractedData.beneficiary, { shouldValidate: true });
+        // Set detected type if available, default to company if undefined
+        const type = extractedData.beneficiary_type?.toLowerCase() === 'person' ? 'person' : 'company';
+        setBeneficiary({ id: 'new', name: extractedData.beneficiary, type });
+        setDetectedBeneficiaryType(type);
       }
     }
 
@@ -330,7 +337,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     if (extractedData.bank_details && extractedData.bank_details.account_number) {
       const extractedBank = extractedData.bank_details;
       
-      if (currentBeneficiary) {
+      if (currentBeneficiary && currentBeneficiary.id !== 'new') {
         try {
           const { data: existingAccounts } = await supabase.from('bank_accounts')
             .select('*')
@@ -432,7 +439,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         finalUrl = urlData.publicUrl;
 
         // Pass instructions to the extractor
-        const instructions = form.getValues('ai_review_notes');
+        const instructions = (form.getValues('ai_review_notes') || '') + "\nIdentify if the beneficiary is a 'person' or 'company' and return it as 'beneficiary_type'.";
 
         const extractedData = await extractData({ 
             url: finalUrl, 
@@ -480,6 +487,30 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const onSubmit = async (values: ExpenseFormValues) => {
     setIsSubmitting(true);
     try {
+      // Check if beneficiary is new and needs creation
+      const existingBeneficiary = beneficiaries.find(b => b.name === values.beneficiary);
+      // Determine type: existing type, detected type from AI, or default to company
+      const finalBeneficiaryType = existingBeneficiary?.type || detectedBeneficiaryType || 'company';
+
+      if (!existingBeneficiary && values.beneficiary) {
+          try {
+              if (finalBeneficiaryType === 'person') {
+                  const { error } = await supabase.from('people').insert({ full_name: values.beneficiary }).select().single();
+                  if (error) throw error;
+                  toast.success(`Created new person: ${values.beneficiary}`);
+              } else {
+                  const { error } = await supabase.from('companies').insert({ name: values.beneficiary }).select().single();
+                  if (error) throw error;
+                  toast.success(`Created new company: ${values.beneficiary}`);
+              }
+              // Refresh beneficiaries list
+              await queryClient.invalidateQueries({ queryKey: ['beneficiaries'] });
+          } catch (err) {
+              console.error("Failed to auto-create beneficiary", err);
+              toast.error("Failed to create new beneficiary record, saving expense anyway.");
+          }
+      }
+
       const currentFiles = values.attachments_jsonb || [];
       const newFilesToUpload = currentFiles.filter((f): f is File => f instanceof File);
       const existingFiles = currentFiles.filter((f): f is FileMetadata => !(f instanceof File));
