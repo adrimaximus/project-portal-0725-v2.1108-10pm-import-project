@@ -39,12 +39,12 @@ interface CreateProjectDialogProps {
   onSuccess?: (project: Project) => void;
 }
 
-export function CreateProjectDialog({ 
+const CreateProjectDialog = ({ 
   open: controlledOpen, 
   onOpenChange: setControlledOpen, 
   initialName, 
   onSuccess 
-}: CreateProjectDialogProps = {}) {
+}: CreateProjectDialogProps = {}) => {
   const [internalOpen, setInternalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
@@ -68,9 +68,6 @@ export function CreateProjectDialog({
   useEffect(() => {
     if (open && initialName) {
       form.setValue('name', initialName);
-    } else if (!open) {
-      // Reset when closed? Optional.
-      // form.reset();
     }
   }, [open, initialName, form]);
 
@@ -297,3 +294,5 @@ export function CreateProjectDialog({
     </Dialog>
   );
 }
+
+export default CreateProjectDialog;
