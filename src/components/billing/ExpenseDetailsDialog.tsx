@@ -376,6 +376,18 @@ Account Name: ${bankDetails.name || '-'}
 
           <div className="flex items-start gap-3">
             <div className="bg-primary/10 p-2 rounded-full shrink-0">
+              <CalendarIcon className="w-4 h-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-muted-foreground">Due Date</p>
+              <p className="text-sm font-medium">
+                {expense.due_date ? format(new Date(expense.due_date), "PPP") : '-'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="bg-primary/10 p-2 rounded-full shrink-0">
               <User className="w-4 h-4 text-primary" />
             </div>
             <div className="min-w-0">
