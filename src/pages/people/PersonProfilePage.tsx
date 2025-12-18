@@ -423,13 +423,21 @@ const PersonProfilePage = () => {
                 <CardHeader><CardTitle className="flex items-center gap-2"><Landmark className="h-5 w-5 text-muted-foreground" /> Bank Information</CardTitle></CardHeader>
                 <CardContent className="space-y-4 text-sm">
                   {bankAccounts.map((account) => (
-                    <div key={account.id} className="p-3 border rounded-md bg-muted/20 space-y-1">
-                        <div className="flex justify-between items-start">
-                            <span className="font-semibold">{account.bank_name}</span>
-                            <span className="text-xs text-muted-foreground font-mono">{account.account_number}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">{account.account_name}</div>
-                        {account.swift_code && <div className="text-xs text-muted-foreground">SWIFT: {account.swift_code}</div>}
+                    <div key={account.id} className="flex items-start gap-3">
+                      <span className="font-semibold w-32 flex-shrink-0">Bank Account:</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-muted-foreground block">
+                          {account.bank_name} - <span className="font-mono">{account.account_number}</span>
+                        </span>
+                        <span className="text-muted-foreground block">
+                          {account.account_name}
+                        </span>
+                        {account.swift_code && (
+                          <span className="text-muted-foreground text-xs block">
+                            SWIFT: {account.swift_code}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   ))}
                   
