@@ -660,7 +660,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         };
       }
 
-      const { error: updateError } = await supabase.from('expenses').update({
+      const { data: newExpense, error: insertError } = await supabase.from('expenses').insert({
         project_id: values.project_id,
         created_by: values.created_by,
         purpose_payment: values.purpose_payment,
@@ -680,17 +680,15 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         bank_account_id: (selectedAccount && !isTempAccount) ? selectedAccount.id : null,
         account_bank: bankDetails,
         attachments_jsonb: uploadedFilesMetadata,
-        updated_at: new Date().toISOString()
-      }).eq('id', expense.id);
+      }).select().single();
 
-      if (updateError) throw updateError;
+      if (insertError) throw insertError;
 
-      toast.success("Expense updated successfully.");
+      toast.success("Expense added successfully.");
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      queryClient.invalidateQueries({ queryKey: ['expense_details', expense.id] });
       onOpenChange(false);
     } catch (error: any) {
-      toast.error("Failed to update expense.", { description: error.message });
+      toast.error("Failed to add expense.", { description: error.message });
     } finally {
       setIsSubmitting(false);
     }
@@ -703,11 +701,11 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="w-full h-[100dvh] sm:h-auto sm:max-w-lg md:max-w-xl sm:max-h-[95vh] flex flex-col p-0 sm:p-6 sm:rounded-lg">
           <DialogHeader className="p-4 sm:p-0">
-            <DialogTitle>Edit Expense</DialogTitle>
-            <DialogDescription>Update expense details.</DialogDescription>
+            <DialogTitle>Add New Expense</DialogTitle>
+            <DialogDescription>Fill in the details for the new expense.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form id="edit-expense-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex-1 overflow-y-auto p-4 sm:p-0">
+            <form id="add-expense-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex-1 overflow-y-auto p-4 sm:p-0">
               
               <FormField
                 control={form.control}
@@ -1090,9 +1088,9 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           </Form>
           <DialogFooter className="p-4 sm:p-0 sm:pt-4 border-t sm:border-t-0 mt-auto">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isFormDisabled}>Cancel</Button>
-            <Button type="submit" form="edit-expense-form" disabled={isFormDisabled}>
+            <Button type="submit" form="add-expense-form" disabled={isFormDisabled}>
               {(isSubmitting || isExtracting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isExtracting ? 'Analyzing...' : 'Save Changes'}
+              {isExtracting ? 'Analyzing...' : 'Add Expense'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1137,4 +1135,4 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   );
 };
 
-export default EditExpenseDialog;
+export default AddExpenseDialog;
