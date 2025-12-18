@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Building, Edit, Trash2, User, Briefcase, Landmark } from 'lucide-react';
+import { ArrowLeft, Building, Edit, Trash2, User, Briefcase, Landmark, MapPin } from 'lucide-react';
 import { Company, Person, Project, CustomProperty } from '@/types';
 import { getInitials, generatePastelColor, getAvatarUrl, formatInJakarta } from '@/lib/utils';
 import CompanyFormDialog from '@/components/people/CompanyFormDialog';
@@ -120,6 +120,30 @@ const CompanyProfilePage = () => {
     return { bankProperties: bankProps, otherCustomProperties: otherProps };
   }, [customProperties, company?.custom_properties]);
 
+  const addressObject = useMemo(() => {
+    if (!company?.address) return null;
+    
+    // If it's already an object (from JSONB column)
+    if (typeof company.address === 'object' && company.address !== null) {
+      return company.address as { name?: string; address?: string };
+    }
+    
+    // If it's a string, try to parse it as JSON, otherwise treat as plain string
+    if (typeof company.address === 'string') {
+      try {
+        const parsed = JSON.parse(company.address);
+        if (typeof parsed === 'object' && parsed !== null) {
+          return parsed as { name?: string; address?: string };
+        }
+      } catch (e) {
+        // Not a JSON string, treat as simple address string
+      }
+      return { address: company.address };
+    }
+    
+    return null;
+  }, [company?.address]);
+
   const handleDelete = async () => {
     if (!company) return;
     const { error } = await supabase.from('companies').delete().eq('id', company.id);
@@ -168,7 +192,39 @@ const CompanyProfilePage = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">{company.address}</p>
+                {addressObject ? (
+                  <div className="flex items-start gap-3 text-sm">
+                    <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                    <div>
+                      {addressObject.name && (
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressObject.name + ' ' + (addressObject.address || ''))}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium hover:underline block"
+                        >
+                          {addressObject.name}
+                        </a>
+                      )}
+                      {addressObject.address && (
+                        <p className={addressObject.name ? "text-muted-foreground" : ""}>
+                          {!addressObject.name ? (
+                             <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressObject.address)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:underline text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              {addressObject.address}
+                            </a>
+                          ) : addressObject.address}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center italic">No address provided</p>
+                )}
               </CardContent>
             </Card>
 
