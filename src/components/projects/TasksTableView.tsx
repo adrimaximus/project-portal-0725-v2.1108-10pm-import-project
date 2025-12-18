@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Task as ProjectTask, User, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
+import { Task as ProjectTask, User, TaskStatus, TaskPriority } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -33,7 +33,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
-import { TASK_PRIORITY_OPTIONS } from '@/data/projectOptions';
+import { TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS } from '@/data/projectOptions';
 
 const PRIORITY_OPTIONS = TASK_PRIORITY_OPTIONS;
 

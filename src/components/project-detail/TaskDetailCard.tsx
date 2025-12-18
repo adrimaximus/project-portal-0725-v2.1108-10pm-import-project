@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatus, TASK_STATUS_OPTIONS, TaskPriority } from '@/types';
+import { Task, TaskAttachment, Reaction, User, Comment as CommentType, TaskStatus, TaskPriority } from '@/types';
 import { DrawerContent } from '@/components/ui/drawer';
 import { Button } from '../ui/button';
 import { format, isPast, formatDistanceToNow } from 'date-fns';
@@ -44,6 +44,7 @@ import { Input } from '../ui/input';
 import InteractiveText from '../InteractiveText';
 import AttachmentViewerModal from '../AttachmentViewerModal';
 import CommentReactions from '../CommentReactions';
+import { TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS } from '@/data/projectOptions';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -54,12 +55,7 @@ interface TaskDetailCardProps {
   onHighlightComplete?: () => void;
 }
 
-const PRIORITY_OPTIONS = [
-  { value: 'Low', label: 'Low' },
-  { value: 'Normal', label: 'Normal' },
-  { value: 'High', label: 'High' },
-  { value: 'Urgent', label: 'Urgent' },
-];
+const PRIORITY_OPTIONS = TASK_PRIORITY_OPTIONS;
 
 const aggregateAttachments = (task: Task): TaskAttachment[] => {
   let attachments: TaskAttachment[] = [...(task.attachments || [])];
@@ -363,11 +359,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {TASK_STATUS_OPTIONS.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
+                    {TASK_STATUS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -389,9 +381,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
                   </SelectTrigger>
                   <SelectContent>
                     {PRIORITY_OPTIONS.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
+                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

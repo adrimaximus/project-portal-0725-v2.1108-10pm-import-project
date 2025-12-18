@@ -1,5 +1,14 @@
 import { Json } from './supabase';
-import { TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS, PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '@/data/projectOptions';
+import { ProjectStatus, PaymentStatus, TaskPriority, TaskStatus } from '@/data/projectOptions';
+
+// --- Derived Types ---
+
+export type ProjectStatus = ProjectStatus;
+export type PaymentStatus = PaymentStatus;
+export type TaskPriority = TaskPriority;
+export type TaskStatus = TaskStatus;
+export type CustomPropertyType = CustomProperty['type'];
+export const CUSTOM_PROPERTY_TYPES = ['text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'select', 'multi-select', 'checkbox'] as const;
 
 export interface Profile {
   id: string;
@@ -148,13 +157,6 @@ export interface BankAccount {
 }
 
 // --- Derived Types ---
-
-export type ProjectStatus = typeof PROJECT_STATUS_OPTIONS[number]['value'];
-export type PaymentStatus = typeof PAYMENT_STATUS_OPTIONS[number]['value'];
-export type TaskPriority = typeof TASK_PRIORITY_OPTIONS[number]['value'];
-export type TaskStatus = typeof TASK_STATUS_OPTIONS[number]['value'];
-export type CustomPropertyType = CustomProperty['type'];
-export const CUSTOM_PROPERTY_TYPES = ['text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'select', 'multi-select', 'checkbox'] as const;
 
 export interface ProjectStatusDef {
   id: string;
