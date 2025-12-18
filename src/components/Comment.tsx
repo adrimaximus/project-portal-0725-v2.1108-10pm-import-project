@@ -208,13 +208,13 @@ const Comment: React.FC<CommentProps> = ({
                   <div className="flex-1 overflow-hidden">
                     <p className="font-semibold text-primary">Replying to {comment.repliedMessage.senderName}</p>
                     <div className="italic line-clamp-3 prose prose-sm dark:prose-invert max-w-none text-muted-foreground [&_p]:m-0 [&_p]:inline">
-                      <MarkdownRenderer>{comment.repliedMessage.content || ''}</MarkdownRenderer>
+                      <MarkdownRenderer content={comment.repliedMessage.content || ''} />
                     </div>
                   </div>
                 </button>
               )}
               <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-0 [&_p]:text-justify">
-                <MarkdownRenderer>{comment.text || ''}</MarkdownRenderer>
+                <MarkdownRenderer content={comment.text || ''} />
               </div>
               {attachments.length > 0 && (
                 <div className="mt-2">
