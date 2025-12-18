@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 import { useProjectStatuses } from "@/hooks/useProjectStatuses";
 import { usePaymentStatuses } from "@/hooks/usePaymentStatuses";
-import { DatePickerWithRange } from "../ui/DatePickerWithRange";
+import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
