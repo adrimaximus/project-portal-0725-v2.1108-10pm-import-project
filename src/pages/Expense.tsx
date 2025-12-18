@@ -180,6 +180,13 @@ const ExpensePage = () => {
     );
   }
 
+  const truncateText = (text: string, limit: number) => {
+    if (!text) return '';
+    const cleanText = text.replace(/[\r\n]+/g, ' ').trim(); // Replace newlines with space
+    if (cleanText.length <= limit) return cleanText;
+    return cleanText.substring(0, limit) + '...';
+  };
+
   return (
     <PortalLayout>
       <div className="space-y-6">
@@ -353,18 +360,10 @@ const ExpensePage = () => {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <div className="max-w-[300px] text-xs">
-                                <ReactMarkdown
-                                  components={{
-                                    p: ({node, ...props}) => <span className="mr-1" {...props} />,
-                                    ul: ({node, ...props}) => <span className="mr-1" {...props} />,
-                                    ol: ({node, ...props}) => <span className="mr-1" {...props} />,
-                                    li: ({node, ...props}) => <span className="mr-1 after:content-['|'] last:after:content-none" {...props} />,
-                                    a: ({node, ...props}) => <span className="text-primary underline" {...props} />,
-                                  }}
-                                >
-                                  {expense.remarks || ''}
-                                </ReactMarkdown>
+                            <div className="max-w-[150px] text-xs">
+                                <p className="text-muted-foreground line-clamp-1">
+                                    {truncateText(expense.remarks || '', 20)}
+                                </p>
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
