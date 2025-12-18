@@ -24,45 +24,43 @@ const BillingKanbanColumn = ({ status, invoices, onEditInvoice, isCollapsed, onT
         <div 
           ref={setNodeRef} 
           className={cn(
-            "flex-shrink-0 transition-all duration-300 ease-in-out",
-            isCollapsed ? "w-14" : "w-72"
+            "flex-shrink-0 transition-all duration-300 ease-in-out h-full flex flex-col bg-muted/50 rounded-lg max-h-[700px]",
+            isCollapsed ? "w-14" : "w-[280px] sm:w-72"
           )}
         >
-            <div className="flex flex-col bg-muted/50 rounded-lg">
-                <div className="font-semibold p-3 text-base flex items-center justify-between flex-shrink-0">
-                    {!isCollapsed && (
-                        <h3 className="flex items-center gap-2 truncate">
-                            <span className="truncate">{status.label}</span>
-                            <Badge variant="secondary">{invoices.length}</Badge>
-                        </h3>
-                    )}
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onToggleCollapse(status.value)}>
-                        <ChevronsLeft className={cn("h-4 w-4 transition-transform", !isCollapsed && "rotate-180")} />
-                    </Button>
-                </div>
-                
-                {isCollapsed ? (
-                    <div className="flex-grow min-h-[6rem] flex items-center justify-center cursor-pointer p-3" onClick={() => onToggleCollapse(status.value)}>
-                        <div className="[writing-mode:vertical-rl] rotate-180 whitespace-nowrap flex items-center gap-2 text-sm font-medium">
-                            <span className="truncate">{status.label}</span>
-                            <Badge variant="secondary">{invoices.length}</Badge>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="min-h-[6rem] p-2 pt-0">
-                        <SortableContext id={status.value} items={invoiceIds} strategy={verticalListSortingStrategy}>
-                            {invoices.map(invoice => (
-                                <BillingKanbanCard key={invoice.id} invoice={invoice} onEdit={onEditInvoice} />
-                            ))}
-                        </SortableContext>
-                        {invoices.length === 0 && (
-                            <div className="flex items-center justify-center h-20 m-2 border-2 border-dashed border-border rounded-lg">
-                                <p className="text-sm text-muted-foreground">No invoices</p>
-                            </div>
-                        )}
-                    </div>
+            <div className="font-semibold p-3 text-base flex items-center justify-between flex-shrink-0">
+                {!isCollapsed && (
+                    <h3 className="flex items-center gap-2 truncate">
+                        <span className="truncate">{status.label}</span>
+                        <Badge variant="secondary">{invoices.length}</Badge>
+                    </h3>
                 )}
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onToggleCollapse(status.value)}>
+                    <ChevronsLeft className={cn("h-4 w-4 transition-transform", !isCollapsed && "rotate-180")} />
+                </Button>
             </div>
+            
+            {isCollapsed ? (
+                <div className="flex-grow min-h-0 flex items-center justify-center cursor-pointer" onClick={() => onToggleCollapse(status.value)}>
+                    <div className="[writing-mode:vertical-rl] rotate-180 whitespace-nowrap flex items-center gap-2 text-sm font-medium">
+                        <span className="truncate">{status.label}</span>
+                        <Badge variant="secondary">{invoices.length}</Badge>
+                    </div>
+                </div>
+            ) : (
+                <div className="flex-grow min-h-0 overflow-y-auto p-2 pt-0">
+                    <SortableContext id={status.value} items={invoiceIds} strategy={verticalListSortingStrategy}>
+                        {invoices.map(invoice => (
+                            <BillingKanbanCard key={invoice.id} invoice={invoice} onEdit={onEditInvoice} />
+                        ))}
+                    </SortableContext>
+                    {invoices.length === 0 && (
+                        <div className="flex items-center justify-center h-20 m-2 border-2 border-dashed border-border rounded-lg">
+                            <p className="text-sm text-muted-foreground">No invoices</p>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
