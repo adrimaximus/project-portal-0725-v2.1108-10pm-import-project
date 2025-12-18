@@ -1,4 +1,7 @@
-import { ProjectStatus, PaymentStatus, TaskPriority, TaskStatus } from "@/types";
+export type ProjectStatus = 'Requested' | 'Proposed' | 'Quo Approved' | 'In Process' | 'On Track' | 'At Risk' | 'Off Track' | 'On Hold' | 'Completed' | 'Cancelled' | 'Bid Lost';
+export type PaymentStatus = 'Proposed' | 'Unpaid' | 'Pending' | 'Partially Paid' | 'In Process' | 'Overdue' | 'Paid' | 'Cancelled';
+export type TaskPriority = 'Urgent' | 'High' | 'Normal' | 'Low';
+export type TaskStatus = 'To do' | 'In progress' | 'In review' | 'Done';
 
 export const PROJECT_STATUS_OPTIONS: { value: ProjectStatus; label: string }[] = [
   { value: 'Requested', label: 'Requested' },
