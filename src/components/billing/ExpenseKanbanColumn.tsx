@@ -52,7 +52,7 @@ const ExpenseKanbanColumn = ({
   }).format(amount);
 
   return (
-    <div className="flex h-full w-[350px] min-w-[350px] flex-col rounded-md border bg-muted/50">
+    <div className="flex-shrink-0 transition-all duration-300 ease-in-out h-full flex flex-col bg-muted/50 rounded-lg max-h-[700px] w-[280px] sm:w-72">
       <div className="p-4 border-b bg-background/50 backdrop-blur rounded-t-md">
         <div className="flex items-center justify-between mb-2">
           <Badge variant="outline" className={cn("font-semibold capitalize", getStatusColor(title))}>

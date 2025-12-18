@@ -178,7 +178,7 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
 
     return (
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
-            <div className="flex gap-4 overflow-x-auto p-4">
+            <div className="flex gap-4 overflow-x-auto p-4 h-full items-start">
                 {PAYMENT_STATUS_OPTIONS.map(statusOption => (
                     <BillingKanbanColumn
                         key={statusOption.value}
