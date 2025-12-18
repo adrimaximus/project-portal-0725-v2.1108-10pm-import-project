@@ -21,7 +21,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import CompanyFormDialog from "@/components/companies/CompanyFormDialog";
+import CompanyFormDialog from "@/components/people/CompanyFormDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,

@@ -94,11 +94,21 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
   const [currentProcessingFile, setCurrentProcessingFile] = useState<string | null>(null);
   const [detectedBeneficiaryType, setDetectedBeneficiaryType] = useState<'person' | 'company' | null>(null);
 
-  const canManageBankAccounts = useMemo(() => {
-    if (!user?.role) return false;
-    const role = user.role.toLowerCase();
-    return role === 'master admin' || role === 'finance';
-  }, [user?.role]);
+  const { data: userProfile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      return data;
+    }
+  });
+
+  const canEditStatus = useMemo(() => {
+    if (!userProfile) return false;
+    const role = userProfile.role?.toLowerCase() || '';
+    return ['master admin', 'finance', 'admin', 'admin project'].includes(role);
+  }, [userProfile]);
 
   // Fetch full expense details if needed
   const { data: expense } = useQuery({
