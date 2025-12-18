@@ -299,6 +299,51 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
     setIsBankAccountFormOpen(true);
   };
 
+  const findMatchingProject = (extracted: any) => {
+      let bestMatch: ProjectOption | null = null;
+      let maxScore = 0;
+      const normalize = (s: string) => s?.toLowerCase().trim() || '';
+
+      projects.forEach(p => {
+          let score = 0;
+          const pName = normalize(p.name);
+          const cName = normalize(p.client_name || '');
+          const cComp = normalize(p.client_company_name || '');
+          const pVenue = normalize(p.venue || '');
+          
+          const exBeneficiary = normalize(extracted.beneficiary); 
+          const exAddress = normalize(extracted.address || ''); 
+          const exVenue = normalize(extracted.venue || '');
+          const exDate = extracted.date ? new Date(extracted.date) : null;
+          
+          if (exBeneficiary) {
+              if (cComp && (cComp.includes(exBeneficiary) || exBeneficiary.includes(cComp))) score += 10;
+              else if (cName && (cName.includes(exBeneficiary) || exBeneficiary.includes(cName))) score += 5;
+              if (pName.includes(exBeneficiary)) score += 3;
+          }
+
+          const checkVenue = exVenue || exAddress;
+          if (pVenue && checkVenue) {
+             if (pVenue.includes(checkVenue) || checkVenue.includes(pVenue)) score += 8;
+          }
+
+          if (exDate && !isNaN(exDate.getTime()) && p.start_date) {
+              const start = new Date(p.start_date);
+              const end = p.due_date ? new Date(p.due_date) : new Date(start);
+              const bufferStart = new Date(start); bufferStart.setDate(start.getDate() - 7);
+              const bufferEnd = new Date(end); bufferEnd.setDate(end.getDate() + 60);
+              
+              if (isWithinInterval(exDate, { start: bufferStart, end: bufferEnd })) score += 5;
+          }
+
+          if (score > maxScore) {
+              maxScore = score;
+              bestMatch = p;
+          }
+      });
+      return maxScore > 0 ? bestMatch : null;
+  };
+
   const applyExtractedData = async (extractedData: any) => {
     if (extractedData.amount && extractedData.amount > 0) {
       setValue('tf_amount', extractedData.amount, { shouldValidate: true });
@@ -309,6 +354,14 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
       if (terms && terms.length === 1) {
            setValue('payment_terms.0.amount', extractedData.amount);
            setValue('payment_terms.0.release_date', dueDate);
+      } else {
+           setValue('payment_terms', [{
+               amount: extractedData.amount,
+               request_type: 'Requested',
+               request_date: new Date(),
+               release_date: dueDate,
+               status: 'Requested'
+           }]);
       }
     }
     
@@ -340,7 +393,11 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
     }
 
     if (!watch('project_id')) {
-        // findMatchingProject logic would be similar to AddExpenseDialog
+        const matchedProject = findMatchingProject(extractedData);
+        if (matchedProject) {
+            setValue('project_id', matchedProject.id);
+            toast.success(`Matched to project: ${matchedProject.name}`);
+        }
     }
 
     if (extractedData.bank_details && extractedData.bank_details.account_number) {
@@ -418,6 +475,8 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
     try {
         let fileToProcess = file;
 
+        // Convert PDF to Image if necessary for AI analysis
+        // Using relaxed check for 'pdf' string in type
         if (file.type.includes('pdf')) {
             toast.info("Converting PDF to image for analysis...");
             const imageFile = await convertPdfToImage(file);
@@ -427,6 +486,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
                 toast.success("PDF successfully converted to image for analysis");
             } else {
                 toast.error("Could not convert PDF to image. AI analysis skipped.");
+                // We stop here for analysis, but the file is still uploaded below in onSubmit if saved
                 return;
             }
         }
@@ -471,6 +531,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
        return;
     }
     
+    // Find first NEW file if possible, else take last file
     const lastFile = [...attachments].reverse().find(f => f instanceof File) as File | undefined;
 
     if (!lastFile) {
@@ -804,6 +865,19 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
                                 <span className="flex-grow">{item.name}</span>
                               </CommandItem>
                             ))}
+                            {beneficiarySearch && !beneficiaries.some(b => b.name.toLowerCase() === beneficiarySearch.toLowerCase()) && (
+                                <CommandItem 
+                                    value={beneficiarySearch} 
+                                    onSelect={() => { 
+                                        form.setValue("beneficiary", beneficiarySearch); 
+                                        setBeneficiary({ id: 'new', name: beneficiarySearch, type: 'company' }); // Default to company, can be changed later or detected by AI
+                                        setBeneficiaryPopoverOpen(false); 
+                                    }}
+                                >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Use "{beneficiarySearch}"
+                                </CommandItem>
+                            )}
                           </CommandGroup>
                         </CommandList>
                       </Command>
@@ -887,24 +961,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
                             <FormItem><FormLabel className="text-xs">Payment Schedule</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
                           )} />
                           <FormField control={form.control} name={`payment_terms.${index}.status`} render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="text-xs">Status</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}>
-                                    <FormControl>
-                                        <SelectTrigger className="bg-background">
-                                            <SelectValue placeholder="Status" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="Requested">Requested</SelectItem>
-                                        <SelectItem value="On review">On review</SelectItem>
-                                        <SelectItem value="Pending">Pending</SelectItem>
-                                        <SelectItem value="Paid">Paid</SelectItem>
-                                        <SelectItem value="Rejected">Rejected</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
+                            <FormItem><FormLabel className="text-xs">Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="bg-background"><SelectValue placeholder="Status" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Requested">Requested</SelectItem><SelectItem value="On review">On review</SelectItem><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Rejected">Rejected</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                           )} />
                         </div>
                         
@@ -941,7 +998,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
               </div>
               
               <FormField control={form.control} name="remarks" render={({ field }) => (
-                <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} disabled={isFormDisabled} className="whitespace-normal break-words" /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
               )} />
               
               {isLoadingProperties ? (
