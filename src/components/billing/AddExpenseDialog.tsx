@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, FileText, Wand2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 import { format, isWithinInterval } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,6 +30,7 @@ import CustomPropertyInput from '../settings/CustomPropertyInput';
 import FileUploader, { FileMetadata } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
 import { convertPdfToImage } from '@/lib/pdfUtils';
+import { PAYMENT_STATUS_OPTIONS } from '@/data/projectOptions';
 
 interface AddExpenseDialogProps {
   open: boolean;
@@ -659,7 +660,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         };
       }
 
-      const { data: newExpense, error: insertError } = await supabase.from('expenses').insert({
+      const { error: updateError } = await supabase.from('expenses').update({
         project_id: values.project_id,
         created_by: values.created_by,
         purpose_payment: values.purpose_payment,
@@ -679,15 +680,17 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         bank_account_id: (selectedAccount && !isTempAccount) ? selectedAccount.id : null,
         account_bank: bankDetails,
         attachments_jsonb: uploadedFilesMetadata,
-      }).select().single();
+        updated_at: new Date().toISOString()
+      }).eq('id', expense.id);
 
-      if (insertError) throw insertError;
+      if (updateError) throw updateError;
 
-      toast.success("Expense added successfully.");
+      toast.success("Expense updated successfully.");
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['expense_details', expense.id] });
       onOpenChange(false);
     } catch (error: any) {
-      toast.error("Failed to add expense.", { description: error.message });
+      toast.error("Failed to update expense.", { description: error.message });
     } finally {
       setIsSubmitting(false);
     }
@@ -700,11 +703,11 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="w-full h-[100dvh] sm:h-auto sm:max-w-lg md:max-w-xl sm:max-h-[95vh] flex flex-col p-0 sm:p-6 sm:rounded-lg">
           <DialogHeader className="p-4 sm:p-0">
-            <DialogTitle>Add New Expense</DialogTitle>
-            <DialogDescription>Record a new expense for a project.</DialogDescription>
+            <DialogTitle>Edit Expense</DialogTitle>
+            <DialogDescription>Update expense details.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form id="expense-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex-1 overflow-y-auto p-4 sm:p-0">
+            <form id="edit-expense-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex-1 overflow-y-auto p-4 sm:p-0">
               
               <FormField
                 control={form.control}
@@ -716,7 +719,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                         <FileText className="h-4 w-4" /> Attachments
                       </FormLabel>
                     </div>
-                    <div className="text-xs text-muted-foreground mb-1">
+                    <div className="text-xs text-muted-foreground mb-1 whitespace-normal">
                         Upload invoice or receipt to auto-fill details (Image & PDF supported)
                     </div>
                     <FormControl>
@@ -774,8 +777,8 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                     <Popover open={projectPopoverOpen} onOpenChange={setProjectPopoverOpen} modal={true}>
                       <PopoverTrigger asChild>
                         <FormControl>
-                          <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>
-                            {field.value ? projects.find((project) => project.id === field.value)?.name : "Select a project"}
+                          <Button variant="outline" role="combobox" className={cn("w-full justify-between h-auto whitespace-normal text-left", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>
+                            <span className="truncate flex-1 text-left whitespace-normal break-words">{field.value ? projects.find((project) => project.id === field.value)?.name : "Select a project"}</span>
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </FormControl>
@@ -809,7 +812,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                                         <span>{project.name}</span>
                                         {(project.client_company_name || project.client_name) && (
                                           <span className="text-xs text-muted-foreground">
-                                            {project.client_company_name || project.client_name}
+                                            {project.client_company_name || project.client_company_name}
                                           </span>
                                         )}
                                     </div>
@@ -899,6 +902,19 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                                 <span className="flex-grow">{item.name}</span>
                               </CommandItem>
                             ))}
+                            {beneficiarySearch && !beneficiaries.some(b => b.name.toLowerCase() === beneficiarySearch.toLowerCase()) && (
+                                <CommandItem 
+                                    value={beneficiarySearch} 
+                                    onSelect={() => { 
+                                        form.setValue("beneficiary", beneficiarySearch); 
+                                        setBeneficiary({ id: 'new', name: beneficiarySearch, type: 'company' }); // Default to company, can be changed later or detected by AI
+                                        setBeneficiaryPopoverOpen(false); 
+                                    }}
+                                >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Use "{beneficiarySearch}"
+                                </CommandItem>
+                            )}
                           </CommandGroup>
                         </CommandList>
                       </Command>
@@ -912,9 +928,11 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 <FormItem>
                   <div className="flex justify-between items-center">
                     <FormLabel>Bank Account</FormLabel>
-                    <Button type="button" variant="outline" size="sm" onClick={() => setIsBankAccountFormOpen(true)} disabled={!beneficiary || isFormDisabled}>
-                      <Plus className="mr-2 h-4 w-4" /> Add New
-                    </Button>
+                    {canManageBankAccounts && (
+                      <Button type="button" variant="outline" size="sm" onClick={() => setIsBankAccountFormOpen(true)} disabled={!beneficiary || isFormDisabled}>
+                        <Plus className="mr-2 h-4 w-4" /> Add New
+                      </Button>
+                    )}
                   </div>
                   <FormControl>
                     <div className="space-y-2">
@@ -1001,9 +1019,30 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                             <FormItem><FormLabel className="text-xs">Payment Schedule</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal bg-background", !field.value && "text-muted-foreground")} disabled={isFormDisabled}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
                           )} />
                           <FormField control={form.control} name={`payment_terms.${index}.status`} render={({ field }) => (
-                            <FormItem><FormLabel className="text-xs">Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="bg-background"><SelectValue placeholder="Status" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Requested">Requested</SelectItem><SelectItem value="On review">On review</SelectItem><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Rejected">Rejected</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                            <FormItem><FormLabel className="text-xs">Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}><FormControl><SelectTrigger className="bg-background"><SelectValue placeholder="Status" /></SelectTrigger></FormControl><SelectContent>
+                                {PAYMENT_STATUS_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                            </SelectContent></Select><FormMessage /></FormItem>
                           )} />
                         </div>
+                        
+                        {/* Conditional Status Remarks Field */}
+                        {['Pending', 'Rejected'].includes(watch(`payment_terms.${index}.status`) || '') && (
+                            <FormField control={form.control} name={`payment_terms.${index}.status_remarks`} render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-xs">Status Note (Required for {watch(`payment_terms.${index}.status`)})</FormLabel>
+                                    <FormControl>
+                                        <Textarea 
+                                            placeholder={`Enter reason for ${watch(`payment_terms.${index}.status`)}...`} 
+                                            {...field} 
+                                            value={field.value || ''}
+                                            disabled={isFormDisabled} 
+                                            className="min-h-[60px]"
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                        )}
                       </div>
                     </div>
                   ))}
@@ -1051,9 +1090,9 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           </Form>
           <DialogFooter className="p-4 sm:p-0 sm:pt-4 border-t sm:border-t-0 mt-auto">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isFormDisabled}>Cancel</Button>
-            <Button type="submit" form="expense-form" disabled={isFormDisabled}>
+            <Button type="submit" form="edit-expense-form" disabled={isFormDisabled}>
               {(isSubmitting || isExtracting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isExtracting ? 'Analyzing...' : 'Add Expense'}
+              {isExtracting ? 'Analyzing...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1098,4 +1137,4 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   );
 };
 
-export default AddExpenseDialog;
+export default EditExpenseDialog;
