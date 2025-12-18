@@ -58,7 +58,7 @@ const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererProps) =>
             if (href.startsWith('mention:')) {
               // const id = href.replace('mention:', '');
               return (
-                <span className="font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded text-xs hover:bg-primary/20 transition-colors cursor-pointer whitespace-nowrap inline-flex items-center gap-0.5 align-middle">
+                <span className="font-semibold text-primary hover:underline cursor-pointer">
                   @{children}
                 </span>
               );
