@@ -1,12 +1,13 @@
+import React, { useMemo } from 'react';
 import { Task, TaskStatus } from '@/types';
 import TasksKanbanCard from './TasksKanbanCard';
 import { Badge } from '@/components/ui/badge';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { useMemo } from 'react';
 import { Button } from '../ui/button';
 import { ChevronsLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { TASK_STATUS_OPTIONS } from '@/data/projectOptions';
 
 interface TasksKanbanColumnProps {
   status: TaskStatus;
@@ -21,7 +22,7 @@ const TasksKanbanColumn = ({ status, tasks, isCollapsed, onToggleCollapse, onEdi
   const { setNodeRef } = useDroppable({ id: status });
   const taskIds = useMemo(() => tasks.map(t => t.id), [tasks]);
 
-  const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+  const statusLabel = TASK_STATUS_OPTIONS.find(opt => opt.value === status)?.label || status;
 
   return (
     <div
