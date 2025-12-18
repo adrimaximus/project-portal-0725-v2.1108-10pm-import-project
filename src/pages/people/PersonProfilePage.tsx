@@ -161,6 +161,7 @@ const PersonProfilePage = () => {
   }, [company, customProperties]);
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master admin';
+  const canViewBankInfo = currentUser?.role === 'master admin' || currentUser?.role === 'finance';
 
   const handleDelete = async () => {
     if (!person) return;
@@ -402,7 +403,7 @@ const PersonProfilePage = () => {
               </CardContent>
             </Card>
 
-            {bankProperties.length > 0 && (
+            {canViewBankInfo && bankProperties.length > 0 && (
               <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><Landmark className="h-5 w-5 text-muted-foreground" /> Bank Information</CardTitle></CardHeader>
                 <CardContent className="space-y-4 text-sm">

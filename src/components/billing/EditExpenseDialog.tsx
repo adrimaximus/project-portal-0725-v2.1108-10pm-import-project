@@ -93,6 +93,12 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
   const [currentProcessingFile, setCurrentProcessingFile] = useState<string | null>(null);
   const [detectedBeneficiaryType, setDetectedBeneficiaryType] = useState<'person' | 'company' | null>(null);
 
+  const canManageBankAccounts = useMemo(() => {
+    if (!user?.role) return false;
+    const role = user.role.toLowerCase();
+    return role === 'master admin' || role === 'finance';
+  }, [user?.role]);
+
   // Fetch full expense details if needed
   const { data: expense } = useQuery({
     queryKey: ['expense_edit', propExpense?.id],
@@ -811,9 +817,11 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
                 <FormItem>
                   <div className="flex justify-between items-center">
                     <FormLabel>Bank Account</FormLabel>
-                    <Button type="button" variant="outline" size="sm" onClick={() => setIsBankAccountFormOpen(true)} disabled={!beneficiary || isFormDisabled}>
-                      <Plus className="mr-2 h-4 w-4" /> Add New
-                    </Button>
+                    {canManageBankAccounts && (
+                      <Button type="button" variant="outline" size="sm" onClick={() => setIsBankAccountFormOpen(true)} disabled={!beneficiary || isFormDisabled}>
+                        <Plus className="mr-2 h-4 w-4" /> Add New
+                      </Button>
+                    )}
                   </div>
                   <FormControl>
                     <div className="space-y-2">
