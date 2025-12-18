@@ -10,6 +10,9 @@ export type TaskStatus = TaskStatus;
 export type CustomPropertyType = CustomProperty['type'];
 export const CUSTOM_PROPERTY_TYPES = ['text', 'textarea', 'number', 'date', 'email', 'phone', 'url', 'image', 'select', 'multi-select', 'checkbox'] as const;
 
+// --- Re-exporting Constants ---
+export { PROJECT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS } from '@/data/projectOptions';
+
 export interface Profile {
   id: string;
   first_name: string | null;
@@ -276,7 +279,7 @@ export interface Comment {
     content: string | null;
     senderName: string;
     isDeleted: boolean;
-    attachment?: { name: string; url: string; type: string } | null;
+    attachment?: ChatMessageAttachment | null;
   } | null;
 }
 
@@ -366,7 +369,6 @@ export interface Goal {
   slug: string;
   tags: Tag[];
   collaborators: Collaborator[];
-  completions: GoalCompletion[];
   reactions: Reaction[] | null;
 }
 
