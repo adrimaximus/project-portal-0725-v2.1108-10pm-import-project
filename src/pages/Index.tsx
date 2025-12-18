@@ -40,17 +40,26 @@ const Index = () => {
   const filteredProjects = projects.filter(project => {
     if (date?.from && project.start_date) {
         const projectStart = new Date(project.start_date);
-        const pickerFrom = date.from;
-        const pickerTo = date.to || date.from;
+        
+        // Normalize filter dates
+        const pickerFrom = new Date(date.from);
+        pickerFrom.setHours(0, 0, 0, 0); // Start of the "from" day
+
+        const pickerTo = date.to ? new Date(date.to) : new Date(date.from);
+        pickerTo.setHours(23, 59, 59, 999); // End of the "to" day
 
         if (project.due_date) {
             const projectEnd = new Date(project.due_date);
+            // Check for overlap: 
+            // The project's timeline overlaps with the selected range if:
+            // Project Start is before or equal to Range End AND Project End is after or equal to Range Start
             return projectStart <= pickerTo && projectEnd >= pickerFrom;
         }
+        
+        // For single-date projects, check if it falls within the range
         return projectStart >= pickerFrom && projectStart <= pickerTo;
     }
-    // If no date range is selected, we still might have a year filter from the hook
-    // but for client-side filtering, we show all fetched projects if no date range is set.
+    // If no date range is selected, show all (filtered by year via hook if applicable)
     return true;
   });
 
