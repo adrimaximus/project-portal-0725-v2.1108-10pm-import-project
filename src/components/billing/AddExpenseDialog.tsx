@@ -225,12 +225,53 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     else setIsCompanyFormOpen(true);
   };
 
-  const handleBeneficiaryCreated = (newItem: Person | Company, type: 'person' | 'company') => {
+  const handleBeneficiaryCreated = async (newItem: Person | Company, type: 'person' | 'company') => {
     queryClient.invalidateQueries({ queryKey: ['beneficiaries'] });
     const beneficiaryData = { id: newItem.id, name: type === 'person' ? (newItem as Person).full_name : (newItem as Company).name, type };
+    
+    // Check for temp account from AI extraction
+    const tempAccount = bankAccounts.find(acc => acc.id.startsWith('temp-'));
+    let autoCreatedAccountId: string | null = null;
+
+    if (tempAccount) {
+        try {
+            const { data: newAccount, error } = await supabase.from('bank_accounts').insert({
+                owner_id: newItem.id,
+                owner_type: type,
+                bank_name: tempAccount.bank_name,
+                account_number: tempAccount.account_number,
+                account_name: tempAccount.account_name,
+                swift_code: tempAccount.swift_code,
+                created_by: user?.id
+            }).select().single();
+            
+            if (error) throw error;
+            autoCreatedAccountId = newAccount.id;
+            toast.success("Bank account automatically added to new beneficiary.");
+        } catch (err) {
+            console.error("Failed to auto-create bank account", err);
+            // Fallback to manual creation if auto fails
+            setIsBankAccountFormOpen(true);
+        }
+    } else {
+        setIsBankAccountFormOpen(true);
+    }
+
     setBeneficiary(beneficiaryData);
     form.setValue('beneficiary', beneficiaryData.name);
-    setIsBankAccountFormOpen(true);
+    
+    // If auto created, ensure we select it
+    if (autoCreatedAccountId) {
+        // Force a refresh immediately to ensure state is consistent
+        const { data } = await supabase.rpc('get_beneficiary_bank_accounts', {
+            p_owner_id: beneficiaryData.id,
+            p_owner_type: beneficiaryData.type,
+        });
+        if (data) {
+            setBankAccounts(data);
+            form.setValue('bank_account_id', autoCreatedAccountId);
+        }
+    }
   };
 
   const findMatchingProject = (extracted: any) => {
