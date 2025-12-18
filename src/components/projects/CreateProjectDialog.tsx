@@ -116,7 +116,7 @@ const CreateProjectDialog = ({
           .update({ status: values.status })
           .eq('id', data.id);
          
-         if (updateError) console.error("Failed to update status", updateError);
+         if (updateError) console.error("Failed to update initial status", updateError);
          else data.status = values.status;
       }
 
