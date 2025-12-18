@@ -8,12 +8,13 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Building, Edit, Trash2, User, Briefcase, Landmark, MapPin } from 'lucide-react';
-import { Company, Person, Project, CustomProperty } from '@/types';
+import { ArrowLeft, Building, Edit, Trash2, User, Briefcase, Landmark, MapPin, Copy } from 'lucide-react';
+import { Company, Person, Project, CustomProperty, BankAccount } from '@/types';
 import { getInitials, generatePastelColor, getAvatarUrl, formatInJakarta } from '@/lib/utils';
 import CompanyFormDialog from '@/components/people/CompanyFormDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import StatusBadge from '@/components/StatusBadge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type CompanyProfile = Company & {
   contacts: Person[];
@@ -29,6 +30,7 @@ const CompanyProfileSkeleton = () => (
         <Skeleton className="h-64 w-full" />
       </div>
       <div className="lg:col-span-2 space-y-6">
+        <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
       </div>
     </div>
@@ -51,6 +53,19 @@ const CompanyProfilePage = () => {
       return data as CompanyProfile;
     },
     enabled: !!slug,
+  });
+
+  const companyId = company?.id;
+
+  const { data: bankAccounts = [], isLoading: isLoadingBankAccounts } = useQuery<BankAccount[]>({
+    queryKey: ['company_bank_accounts', companyId],
+    queryFn: async () => {
+      if (!companyId) return [];
+      const { data, error } = await supabase.from('bank_accounts').select('*').eq('owner_id', companyId).eq('owner_type', 'company');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!companyId,
   });
 
   const { data: customProperties = [], isLoading: isLoadingCustomProperties } = useQuery<CustomProperty[]>({
@@ -89,35 +104,21 @@ const CompanyProfilePage = () => {
     }
   };
 
-  const { bankProperties, otherCustomProperties } = useMemo(() => {
-    const bankPropertyLabels = [
-      'bank account number',
-      'bank beneficiary name',
-      'bank account',
+  // Filter out any custom properties that are typically bank-related, as we now use the dedicated table.
+  const otherCustomProperties = useMemo(() => {
+    const bankPropertyNames = [
+      'bank_account_number',
+      'bank_beneficiary_name',
+      'bank_account',
+      'bank_name',
     ];
-    const bankProps: CustomProperty[] = [];
-    const otherProps: CustomProperty[] = [];
-
-    customProperties.forEach(prop => {
+    
+    return customProperties.filter(prop => {
         const hasValue = company?.custom_properties && typeof company.custom_properties[prop.name] !== 'undefined' && company.custom_properties[prop.name] !== null && company.custom_properties[prop.name] !== '';
-        if (!hasValue) return;
-
-        const labelLower = prop.label.toLowerCase().trim();
-        if (bankPropertyLabels.includes(labelLower)) {
-            bankProps.push(prop);
-        } else {
-            otherProps.push(prop);
-        }
+        if (!hasValue) return false;
+        
+        return !bankPropertyNames.includes(prop.name.toLowerCase().trim());
     });
-
-    const order = ['bank beneficiary name', 'bank account', 'bank account number'];
-    bankProps.sort((a, b) => {
-        const aIndex = order.indexOf(a.label.toLowerCase().trim());
-        const bIndex = order.indexOf(b.label.toLowerCase().trim());
-        return aIndex - bIndex;
-    });
-
-    return { bankProperties: bankProps, otherCustomProperties: otherProps };
   }, [customProperties, company?.custom_properties]);
 
   const addressObject = useMemo(() => {
@@ -157,7 +158,22 @@ const CompanyProfilePage = () => {
     setIsDeleteDialogOpen(false);
   };
 
-  if (isLoading || isLoadingCustomProperties) return <CompanyProfileSkeleton />;
+  const handleCopyBankDetails = (account: BankAccount) => {
+    const textToCopy = `
+Account Name: ${account.account_name}
+Bank Name: ${account.bank_name}
+Account Number: ${account.account_number}
+    `.trim();
+
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        toast.success("Bank details copied to clipboard.");
+    }).catch(err => {
+        console.error("Failed to copy text: ", err);
+        toast.error("Failed to copy bank details.");
+    });
+  };
+
+  if (isLoading || isLoadingCustomProperties || isLoadingBankAccounts) return <CompanyProfileSkeleton />;
   if (error || !company) {
     toast.error("Could not load company profile.");
     navigate('/people?tab=companies');
@@ -248,16 +264,58 @@ const CompanyProfilePage = () => {
           </div>
 
           <div className="lg:col-span-2 space-y-6">
-            {bankProperties.length > 0 && (
+            {/* New Bank Accounts Section */}
+            {bankAccounts.length > 0 && (
               <Card>
-                <CardHeader><CardTitle className="flex items-center gap-2"><Landmark className="h-5 w-5 text-muted-foreground" /> Bank Information</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="flex items-center gap-2"><Landmark className="h-5 w-5 text-muted-foreground" /> Bank Accounts ({bankAccounts.length})</CardTitle></CardHeader>
                 <CardContent className="space-y-4 text-sm">
-                  {bankProperties.map(prop => (
-                    <div key={prop.id} className="flex items-start gap-3">
-                      <span className="font-semibold w-32 flex-shrink-0">{prop.label}:</span>
-                      <div className="flex-1 min-w-0">
-                        {renderCustomPropertyValue(prop, company.custom_properties?.[prop.name])}
+                  {bankAccounts.map((account) => (
+                    <div key={account.id} className="bg-muted/40 p-4 rounded-lg border text-sm space-y-1 w-full relative">
+                      <div className="absolute top-2 right-2">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                onClick={() => handleCopyBankDetails(account)}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copy Details</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <span className="text-muted-foreground">Bank Name:</span>
+                        <span className="col-span-2 font-medium break-words">{account.bank_name || '-'}</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <span className="text-muted-foreground">Account Number:</span>
+                        <span className="col-span-2 font-medium font-mono break-all">{account.account_number || '-'}</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <span className="text-muted-foreground">Account Name:</span>
+                        <span className="col-span-2 font-medium break-words">{account.account_name || '-'}</span>
+                      </div>
+                      {(account.swift_code || account.country) && (
+                        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/50 mt-2">
+                          {account.swift_code && (
+                            <>
+                              <span className="text-muted-foreground">SWIFT:</span>
+                              <span className="col-span-2 font-medium break-words">{account.swift_code}</span>
+                            </>
+                          )}
+                          {account.country && (
+                            <>
+                              <span className="text-muted-foreground">Location:</span>
+                              <span className="col-span-2 font-medium break-words">{account.city ? `${account.city}, ` : ''}{account.country}</span>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </CardContent>
