@@ -354,16 +354,9 @@ const ExpensePage = () => {
                           </TableCell>
                           <TableCell>
                             <div className="max-w-[300px] text-xs">
-                              <ReactMarkdown
-                                components={{
-                                  ul: ({node, ...props}) => <ul className="list-none space-y-0.5 m-0 p-0" {...props} />,
-                                  li: ({node, ...props}) => <li className="flex gap-1" {...props} />, 
-                                  p: ({node, ...props}) => <span className="block" {...props} />,
-                                  strong: ({node, ...props}) => <span className="font-semibold" {...props} />,
-                                }}
-                              >
-                                {expense.remarks || ''}
-                              </ReactMarkdown>
+                                <p className="text-muted-foreground line-clamp-2">
+                                    {(expense.remarks || '').split('\n').filter(Boolean).join(' | ')}
+                                </p>
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
