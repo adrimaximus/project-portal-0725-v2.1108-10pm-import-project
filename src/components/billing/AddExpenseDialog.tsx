@@ -442,9 +442,60 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       }
     }
 
+    // New remarks logic to include extra details like CP, Invoice No, etc.
+    const additionalInfo: string[] = [];
+
+    if (extractedData.invoice_number) {
+        additionalInfo.push(`- **Invoice No:** ${extractedData.invoice_number}`);
+    }
+    
+    if (extractedData.date) {
+        try {
+            const d = new Date(extractedData.date);
+            if (!isNaN(d.getTime())) {
+                 additionalInfo.push(`- **Date:** ${format(d, 'dd MMMM yyyy')}`);
+            } else {
+                 additionalInfo.push(`- **Date:** ${extractedData.date}`);
+            }
+        } catch (e) {
+            additionalInfo.push(`- **Date:** ${extractedData.date}`);
+        }
+    }
+
+    const contactParts = [
+        extractedData.contact_person,
+        extractedData.contact_phone,
+        extractedData.contact_email
+    ].filter(Boolean);
+
+    if (contactParts.length > 0) {
+        additionalInfo.push(`- **CP:** ${contactParts.join(' - ')}`);
+    }
+
+    if (Array.isArray(extractedData.items) && extractedData.items.length > 0) {
+        additionalInfo.push(`- **Items:**`);
+        extractedData.items.forEach((item: any) => {
+             const desc = typeof item === 'string' ? item : (item.description || item.name || item.item);
+             const price = item.total || item.price || item.amount;
+             if (desc) {
+                 // Clean up price if it's a string with formatting
+                 let formattedPrice = price;
+                 if (typeof price === 'number') {
+                     formattedPrice = price.toLocaleString('id-ID');
+                 }
+                 additionalInfo.push(`  - ${desc}${formattedPrice ? ` (${formattedPrice})` : ''}`);
+             }
+        });
+    }
+
     if (extractedData.remarks) {
+        additionalInfo.push(`\n**Notes:** ${extractedData.remarks}`);
+    }
+
+    if (additionalInfo.length > 0) {
       const currentRemarks = watch('remarks') || '';
-      const newRemarks = currentRemarks ? `${currentRemarks}\n\n--- AI Extracted Notes ---\n${extractedData.remarks}` : extractedData.remarks;
+      const infoString = additionalInfo.join('\n');
+      const newRemarks = currentRemarks ? `${currentRemarks}\n\n${infoString}` : infoString;
       setValue('remarks', newRemarks, { shouldValidate: true });
     }
     
@@ -488,7 +539,9 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         finalUrl = urlData.publicUrl;
 
         // Pass instructions to the extractor
-        const instructions = (form.getValues('ai_review_notes') || '') + "\nIdentify if the beneficiary is a 'person' or 'company' and return it as 'beneficiary_type'.";
+        const instructions = (form.getValues('ai_review_notes') || '') + 
+            "\nIdentify if the beneficiary is a 'person' or 'company' and return it as 'beneficiary_type'." +
+            "\nExtract 'invoice_number', 'date' (invoice date), 'contact_person' (CP name), 'contact_phone', 'contact_email', and 'items' (line items with description and amount).";
 
         const extractedData = await extractData({ 
             url: finalUrl, 
