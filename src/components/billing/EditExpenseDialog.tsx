@@ -385,23 +385,31 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
   };
 
   const applyExtractedData = async (extractedData: any) => {
-    if (extractedData.amount && extractedData.amount > 0) {
-      setValue('tf_amount', extractedData.amount, { shouldValidate: true });
-      const terms = form.getValues('payment_terms');
-      const invoiceDate = extractedData.date ? new Date(extractedData.date) : new Date();
-      const dueDate = extractedData.due_date ? new Date(extractedData.due_date) : invoiceDate;
+    if (extractedData.amount) {
+      // Force conversion to number if it's a string, removing non-numeric chars except dot/comma
+      const rawAmount = extractedData.amount;
+      const amountStr = typeof rawAmount === 'string' ? rawAmount.replace(/[^0-9.-]+/g, "") : String(rawAmount);
+      const amount = parseFloat(amountStr);
 
-      if (terms && terms.length === 1) {
-           setValue('payment_terms.0.amount', extractedData.amount);
-           setValue('payment_terms.0.release_date', dueDate);
-      } else {
-           setValue('payment_terms', [{
-               amount: extractedData.amount,
-               request_type: 'Requested',
-               request_date: new Date(),
-               release_date: dueDate,
-               status: 'Requested'
-           }]);
+      if (!isNaN(amount) && amount > 0) {
+        setValue('tf_amount', amount, { shouldValidate: true });
+        
+        const terms = form.getValues('payment_terms');
+        const invoiceDate = extractedData.date ? new Date(extractedData.date) : new Date();
+        const dueDate = extractedData.due_date ? new Date(extractedData.due_date) : invoiceDate;
+
+        if (terms && terms.length === 1) {
+             setValue('payment_terms.0.amount', amount);
+             setValue('payment_terms.0.release_date', dueDate);
+        } else {
+             setValue('payment_terms', [{
+                 amount: amount,
+                 request_type: 'Requested',
+                 request_date: new Date(),
+                 release_date: dueDate,
+                 status: 'Requested'
+             }]);
+        }
       }
     }
     
@@ -972,7 +980,17 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
               )} />
               
               <FormField control={form.control} name="tf_amount" render={({ field }) => (
-                <FormItem><FormLabel>Total Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
+                <FormItem>
+                    <FormLabel>Total Amount</FormLabel>
+                    <FormControl>
+                        <CurrencyInput 
+                            value={field.value} 
+                            onChange={(val) => field.onChange(Number(val) || 0)} 
+                            disabled={isFormDisabled} 
+                        />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
               )} />
               
               <div>
@@ -986,7 +1004,18 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
                       </div>
                       <div className="grid grid-cols-1 gap-4">
                         <FormField control={form.control} name={`payment_terms.${index}.amount`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Amount</FormLabel><FormControl><CurrencyInput value={field.value} onChange={field.onChange} placeholder="Amount" disabled={isFormDisabled} /></FormControl><FormMessage /></FormItem>
+                          <FormItem>
+                            <FormLabel className="text-xs">Amount</FormLabel>
+                            <FormControl>
+                                <CurrencyInput 
+                                    value={field.value ?? ''} 
+                                    onChange={(val) => field.onChange(Number(val) || 0)} 
+                                    placeholder="Amount" 
+                                    disabled={isFormDisabled} 
+                                />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
                         )} />
                         <FormField control={form.control} name={`payment_terms.${index}.request_date`} render={({ field }) => (
                           <FormItem><FormLabel className="text-xs">Requested Date</FormLabel><div className="flex gap-1">
