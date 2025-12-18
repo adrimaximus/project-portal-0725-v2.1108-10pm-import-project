@@ -11,7 +11,7 @@ import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, Mo
 import { Badge } from '@/components/ui/badge';
 import { formatInJakarta, generatePastelColor, getInitials, getAvatarUrl, formatPhoneNumberForApi } from '@/lib/utils';
 import PeopleFormDialog from '@/components/people/PersonFormDialog';
-import { Person as BasePerson, CustomProperty, Collaborator, ProjectStatus } from '@/types';
+import { Person as BasePerson, CustomProperty, Collaborator, ProjectStatus, BankAccount } from '@/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import WhatsappIcon from '@/components/icons/WhatsappIcon';
@@ -70,6 +70,21 @@ const PersonProfilePage = () => {
       if (error) throw error;
       return data;
     }
+  });
+
+  const { data: bankAccounts = [] } = useQuery<BankAccount[]>({
+    queryKey: ['bank_accounts', person?.id],
+    queryFn: async () => {
+      if (!person) return [];
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .select('*')
+        .eq('owner_id', person.id)
+        .eq('owner_type', 'person');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!person,
   });
 
   const { personalEmail, phone2 } = useMemo(() => {
@@ -403,10 +418,21 @@ const PersonProfilePage = () => {
               </CardContent>
             </Card>
 
-            {canViewBankInfo && bankProperties.length > 0 && (
+            {canViewBankInfo && (bankProperties.length > 0 || bankAccounts.length > 0) && (
               <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><Landmark className="h-5 w-5 text-muted-foreground" /> Bank Information</CardTitle></CardHeader>
                 <CardContent className="space-y-4 text-sm">
+                  {bankAccounts.map((account) => (
+                    <div key={account.id} className="p-3 border rounded-md bg-muted/20 space-y-1">
+                        <div className="flex justify-between items-start">
+                            <span className="font-semibold">{account.bank_name}</span>
+                            <span className="text-xs text-muted-foreground font-mono">{account.account_number}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">{account.account_name}</div>
+                        {account.swift_code && <div className="text-xs text-muted-foreground">SWIFT: {account.swift_code}</div>}
+                    </div>
+                  ))}
+                  
                   {bankProperties.map(prop => (
                     <div key={prop.id} className="flex items-start gap-3">
                       <span className="font-semibold w-32 flex-shrink-0">{prop.label}:</span>
