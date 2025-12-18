@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,24 +28,51 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Project } from "@/types";
 
-export function CreateProjectDialog() {
-  const [open, setOpen] = useState(false);
-  const { toast } = useToast();
+interface CreateProjectDialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  initialName?: string;
+  onSuccess?: (project: Project) => void;
+}
+
+export function CreateProjectDialog({ 
+  open: controlledOpen, 
+  onOpenChange: setControlledOpen, 
+  initialName, 
+  onSuccess 
+}: CreateProjectDialogProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
+
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? setControlledOpen : setInternalOpen;
 
   const form = useForm({
     defaultValues: {
       name: "",
       description: "",
       category: "General",
-      status: "Requested", // Changed default status to 'Requested'
+      status: "Requested",
       venue: "",
       client_company_id: "none",
     },
   });
+
+  // Update form default name if initialName provided
+  useEffect(() => {
+    if (open && initialName) {
+      form.setValue('name', initialName);
+    } else if (!open) {
+      // Reset when closed? Optional.
+      // form.reset();
+    }
+  }, [open, initialName, form]);
 
   const { data: companies } = useQuery({
     queryKey: ["companies-list"],
@@ -61,6 +88,7 @@ export function CreateProjectDialog() {
   });
 
   const onSubmit = async (values: any) => {
+    setIsSubmitting(true);
     try {
       const projectData: any = {
         name: values.name,
@@ -78,42 +106,54 @@ export function CreateProjectDialog() {
           p_category: projectData.category,
           p_venue: projectData.venue,
           p_client_company_id: projectData.client_company_id,
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
       // If status is not the default created by function, update it
       if (data && values.status !== 'Requested') {
-         await supabase
+         const { error: updateError } = await supabase
           .from('projects')
           .update({ status: values.status })
           .eq('id', data.id);
+         
+         if (updateError) console.error("Failed to update status", updateError);
+         else data.status = values.status;
       }
 
-      toast({
-        title: "Success",
-        description: "Project created successfully.",
-      });
+      toast.success("Project created successfully.");
 
-      queryClient.invalidateQueries({ queryKey: ["dashboard-projects"] });
-      setOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard_projects"] });
+      
+      if (setOpen) setOpen(false);
       form.reset();
+      
+      if (onSuccess && data) {
+        onSuccess(data as Project);
+      }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Failed to create project", { description: error.message });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  const handleOpenChange = (newOpen: boolean) => {
+    if (setOpen) setOpen(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> New Project
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" /> New Project
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Create New Project</DialogTitle>
@@ -242,10 +282,13 @@ export function CreateProjectDialog() {
               />
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button type="submit">Create Project</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Create Project
+                </Button>
               </div>
             </form>
           </Form>
