@@ -1,7 +1,10 @@
+import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import rehypeRaw from 'rehype-raw';
 import { Components } from 'react-markdown';
+import { Link } from 'react-router-dom';
 
 interface MarkdownRendererProps {
   content: string;
@@ -9,10 +12,21 @@ interface MarkdownRendererProps {
 }
 
 const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererProps) => {
+  // Preprocess content to handle custom syntax like mentions
+  const processedContent = useMemo(() => {
+    if (!content) return "";
+    
+    // Convert @[Name](id) to [Name](mention:id)
+    // This allows the markdown parser to treat it as a link, which we then intercept
+    let processed = content.replace(/@\[([^\]]+)\]\s*\(([^)]+)\)/g, '[$1](mention:$2)');
+    
+    return processed;
+  }, [content]);
+
   return (
     <div className={`markdown-content ${className}`}>
       <ReactMarkdown 
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkBreaks]}
         rehypePlugins={[rehypeRaw]}
         components={{
           // Enhanced paragraph styling with relaxed line height
@@ -29,11 +43,60 @@ const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererProps) =>
           h3: ({node, ...props}) => <h3 className="text-base font-semibold mb-2 mt-2 text-foreground/90" {...props} />,
           h4: ({node, ...props}) => <h4 className="text-sm font-semibold mb-1 mt-2 text-foreground/90" {...props} />,
           
-          // Enhanced link styling with word break to prevent overflow
-          a: ({node, ...props}) => <a className="text-primary underline hover:text-primary/80 break-all transition-colors" target="_blank" rel="noopener noreferrer" {...props} />,
+          // Custom link handling for mentions and tasks
+          a: ({node, href, children, ...props}) => {
+            if (!href) return <a {...props}>{children}</a>;
+
+            // Handle Mentions
+            if (href.startsWith('mention:')) {
+              // const id = href.replace('mention:', '');
+              return (
+                <span className="font-bold text-primary bg-primary/10 px-1 py-0.5 rounded-sm hover:underline cursor-pointer whitespace-nowrap">
+                  @{children}
+                </span>
+              );
+            }
+
+            // Handle Task Links
+            if (href.startsWith('task:')) {
+              const segments = href.split(':');
+              if (segments.length >= 3) {
+                  const slug = segments[1];
+                  const taskId = segments[2];
+                  const url = `/projects/${slug}?tab=tasks&task=${taskId}`;
+                  return (
+                    <Link to={url} className="text-primary underline hover:text-primary/80 break-words transition-colors">
+                      {children}
+                    </Link>
+                  );
+              }
+            }
+
+            // Internal Links
+            if (href.startsWith('/')) {
+              return (
+                <Link to={href} className="text-primary underline hover:text-primary/80 break-all transition-colors">
+                  {children}
+                </Link>
+              );
+            }
+
+            // External Links
+            return (
+              <a 
+                href={href} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-primary underline hover:text-primary/80 break-all transition-colors"
+                {...props}
+              >
+                {children}
+              </a>
+            );
+          },
           
           // Enhanced blockquote
-          blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary/20 bg-muted/30 pl-4 py-1 italic my-2 text-muted-foreground rounded-r text-sm" {...props} />,
+          blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary/20 bg-muted/30 pl-4 py-2 italic my-2 text-muted-foreground rounded-r-md text-sm" {...props} />,
           
           // Enhanced table support
           table: ({node, ...props}) => <div className="overflow-x-auto my-4 rounded-md border"><table className="w-full text-sm text-left" {...props} /></div>,
@@ -44,7 +107,7 @@ const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererProps) =>
           td: ({node, ...props}) => <td className="px-4 py-2" {...props} />,
 
           // Enhanced image styling
-          img: ({node, ...props}) => <img className="max-w-full h-auto rounded-md my-2 border shadow-sm" {...props} />,
+          img: ({node, ...props}) => <img className="max-w-full h-auto rounded-md my-2 border shadow-sm max-h-[400px] object-contain bg-muted/20" {...props} />,
 
           // Enhanced divider
           hr: ({node, ...props}) => <hr className="my-4 border-muted" {...props} />,
@@ -58,14 +121,16 @@ const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererProps) =>
                 {children}
               </code>
             ) : (
-              <code className="block bg-muted/80 p-3 rounded-md text-xs font-mono overflow-x-auto my-2 text-foreground border" {...props}>
-                {children}
-              </code>
+              <pre className="block bg-muted/80 p-3 rounded-md text-xs font-mono overflow-x-auto my-2 text-foreground border">
+                <code className={className} {...props}>
+                  {children}
+                </code>
+              </pre>
             );
           },
         } as Components}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
   );
