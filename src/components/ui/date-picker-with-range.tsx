@@ -56,7 +56,17 @@ export function DatePickerWithRange({
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={onDateChange}
+            onSelect={(newDate) => {
+              // Set jam ke 12:00 siang untuk menghindari masalah timezone shifting (mundur sehari)
+              // saat dikonversi ke ISO String / UTC oleh sistem.
+              if (newDate?.from) {
+                newDate.from.setHours(12, 0, 0, 0);
+              }
+              if (newDate?.to) {
+                newDate.to.setHours(12, 0, 0, 0);
+              }
+              onDateChange?.(newDate);
+            }}
             numberOfMonths={2}
           />
         </PopoverContent>
