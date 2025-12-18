@@ -1,3 +1,5 @@
+"use client"
+
 import * as React from "react"
 import { format } from "date-fns"
 import { Calendar as CalendarIcon } from "lucide-react"
@@ -12,26 +14,16 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-interface DatePickerWithRangeProps extends React.HTMLAttributes<HTMLDivElement> {
-  date?: DateRange
-  setDate?: (date: DateRange | undefined) => void
+export interface DatePickerWithRangeProps extends React.HTMLAttributes<HTMLDivElement> {
+  date: DateRange | undefined
+  onDateChange: (date: DateRange | undefined) => void
 }
 
 export function DatePickerWithRange({
   className,
-  date: externalDate,
-  setDate: externalSetDate,
+  date,
+  onDateChange,
 }: DatePickerWithRangeProps) {
-  const [internalDate, setInternalDate] = React.useState<DateRange | undefined>()
-  
-  const date = externalDate !== undefined ? externalDate : internalDate
-  const setDate = externalSetDate || setInternalDate
-
-  // Wrapper to handle potential timezone issues or unwanted time components
-  const handleSelect = (newDate: DateRange | undefined) => {
-    setDate(newDate)
-  }
-
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover>
@@ -40,8 +32,9 @@ export function DatePickerWithRange({
             id="date"
             variant={"outline"}
             className={cn(
-              "w-[260px] justify-start text-left font-normal",
-              !date && "text-muted-foreground"
+              "w-[300px] justify-start text-left font-normal",
+              !date && "text-muted-foreground",
+              className && "w-full" // Allow overriding width via className
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
@@ -65,9 +58,8 @@ export function DatePickerWithRange({
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={handleSelect}
+            onSelect={onDateChange}
             numberOfMonths={2}
-            // Ensure locale consistency if needed, though default usually works
           />
         </PopoverContent>
       </Popover>

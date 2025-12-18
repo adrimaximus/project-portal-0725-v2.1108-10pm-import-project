@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import MonthlyProgressChart from "@/components/dashboard/MonthlyProgressChart";
 import UnsplashImage from "@/components/dashboard/UnsplashImage";
 import ActivityHubWidget from "@/components/dashboard/ActivityHubWidget";
-import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
+import { DatePickerWithRange } from "@/components/ui/DatePickerWithRange";
 
 const Index = () => {
   const [date, setDate] = useState<DateRange | undefined>({
