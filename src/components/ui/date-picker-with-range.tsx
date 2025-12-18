@@ -22,11 +22,15 @@ export function DatePickerWithRange({
   date: externalDate,
   setDate: externalSetDate,
 }: DatePickerWithRangeProps) {
-  // Use internal state if no props are provided, otherwise use props
   const [internalDate, setInternalDate] = React.useState<DateRange | undefined>()
   
   const date = externalDate !== undefined ? externalDate : internalDate
   const setDate = externalSetDate || setInternalDate
+
+  // Wrapper to handle potential timezone issues or unwanted time components
+  const handleSelect = (newDate: DateRange | undefined) => {
+    setDate(newDate)
+  }
 
   return (
     <div className={cn("grid gap-2", className)}>
@@ -57,11 +61,13 @@ export function DatePickerWithRange({
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
+            initialFocus
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={setDate}
+            onSelect={handleSelect}
             numberOfMonths={2}
+            // Ensure locale consistency if needed, though default usually works
           />
         </PopoverContent>
       </Popover>

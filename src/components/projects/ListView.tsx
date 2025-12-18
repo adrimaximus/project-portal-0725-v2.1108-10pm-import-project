@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Project, ProjectStatusDef } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -44,9 +44,8 @@ const ProjectListItem = ({
 
   const isMultiDay = displayDueDate && !isSameDay(startDate, displayDueDate);
 
-  // Find dynamic color from statuses prop based on LOCAL currentStatus
   const statusDef = statuses.find(s => s.name === currentStatus);
-  const borderColor = statusDef?.color || '#94a3b8'; // Default fallback
+  const borderColor = statusDef?.color || '#94a3b8';
   
   const hasOpenTasks = project.tasks?.some(t => !t.completed) ?? false;
 
@@ -142,14 +141,14 @@ const DayEntry = ({
   return (
     <div key={dateStr}>
       {showMonthHeader && (
-        <h2 className="text-lg font-semibold my-4 pl-2">{currentMonth}</h2>
+        <h2 className="text-lg font-semibold my-4 pl-2 sticky top-0 bg-background/95 backdrop-blur z-10 py-2 border-b">{currentMonth}</h2>
       )}
       <div className="flex items-start space-x-2 sm:space-x-4">
-        <div className="flex flex-col items-center w-8 sm:w-12 text-center flex-shrink-0">
+        <div className="flex flex-col items-center w-8 sm:w-12 text-center flex-shrink-0 pt-1">
           <span className="text-xs sm:text-sm text-muted-foreground">{dayOfWeek}</span>
           <span className="text-base sm:text-xl font-bold text-primary">{dayOfMonth}</span>
         </div>
-        <div className="flex-1 space-y-3 pt-1 min-w-0 w-full">
+        <div className="flex-1 space-y-3 min-w-0 w-full">
           {projectsOnDay.map((project: Project) => (
             <ProjectListItem 
               key={project.id} 
@@ -167,11 +166,17 @@ const DayEntry = ({
 
 const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDeleteProject: (projectId: string) => void }) => {
   const navigate = useNavigate();
-  const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(10);
-  const [visiblePastCount, setVisiblePastCount] = useState(5);
+  // Increased default counts to show more items initially, especially when filtering
+  const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(20);
+  const [visiblePastCount, setVisiblePastCount] = useState(20);
   
-  // Fetch statuses here to pass down to DayEntry
   const { data: statuses = [] } = useProjectStatuses();
+
+  // Reset visible counts when projects change (e.g. filter applied)
+  useEffect(() => {
+    setVisibleUpcomingCount(20);
+    setVisiblePastCount(20);
+  }, [projects]);
 
   const { upcomingDayEntries, pastDayEntries } = useMemo(() => {
     const today = startOfToday();
@@ -206,65 +211,80 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
   let lastUpcomingMonth: string | null = null;
   let lastPastMonth: string | null = null;
 
-  if (projects.length > 0 && upcomingDayEntries.length === 0 && pastDayEntries.length === 0) {
+  if (projects.length === 0) {
     return (
-      <div className="flex items-center justify-center h-40 text-muted-foreground px-4">
-        Tidak ada proyek yang dijadwalkan.
+      <div className="flex flex-col items-center justify-center h-40 text-muted-foreground px-4">
+        <p>No projects found.</p>
+        <p className="text-xs">Try adjusting your filters.</p>
       </div>
     );
   }
 
+  // If we only have past entries (common when filtering for past dates), show them more prominently
+  const onlyPastProjects = upcomingDayEntries.length === 0 && pastDayEntries.length > 0;
+
   return (
-    <div className="space-y-4 w-full px-4">
-      {upcomingDayEntries.slice(0, visibleUpcomingCount).map(([dateStr, projectsOnDay]) => {
-        const currentMonth = formatInJakarta(new Date(`${dateStr}T00:00:00`), 'MMMM yyyy');
-        const showMonthHeader = currentMonth !== lastUpcomingMonth;
-        if (showMonthHeader) lastUpcomingMonth = currentMonth;
-        return <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} statuses={statuses} />;
-      })}
+    <div className="space-y-4 w-full px-4 pb-20">
+      {/* Upcoming Section */}
+      {upcomingDayEntries.length > 0 && (
+        <>
+          {upcomingDayEntries.slice(0, visibleUpcomingCount).map(([dateStr, projectsOnDay]) => {
+            const currentMonth = formatInJakarta(new Date(`${dateStr}T00:00:00`), 'MMMM yyyy');
+            const showMonthHeader = currentMonth !== lastUpcomingMonth;
+            if (showMonthHeader) lastUpcomingMonth = currentMonth;
+            return <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} statuses={statuses} />;
+          })}
 
-      {upcomingDayEntries.length > visibleUpcomingCount && (
-        <div className="text-center mt-6">
-          <Button 
-            variant="outline" 
-            onClick={() => setVisibleUpcomingCount(upcomingDayEntries.length)}
-            className="border-primary text-primary hover:bg-primary/10"
-          >
-            Load More Upcoming
-          </Button>
-        </div>
+          {upcomingDayEntries.length > visibleUpcomingCount && (
+            <div className="text-center mt-6">
+              <Button 
+                variant="outline" 
+                onClick={() => setVisibleUpcomingCount(prev => prev + 20)}
+                className="border-primary text-primary hover:bg-primary/10"
+              >
+                Load More Upcoming
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
+      {/* Past Section */}
       {pastDayEntries.length > 0 && (
-        <div className="relative my-8">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center">
-            <span className="bg-background px-4 text-sm font-medium text-muted-foreground">
-              Past Events
-            </span>
-          </div>
-        </div>
-      )}
+        <>
+          {/* Only show separator if we have upcoming projects too, or if we want to explicitly denote past */}
+          {!onlyPastProjects && (
+            <div className="relative my-8">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-background px-4 text-sm font-medium text-muted-foreground">
+                  Past Events
+                </span>
+              </div>
+            </div>
+          )}
 
-      {pastDayEntries.slice(0, visiblePastCount).map(([dateStr, projectsOnDay]) => {
-        const currentMonth = formatInJakarta(new Date(`${dateStr}T00:00:00`), 'MMMM yyyy');
-        const showMonthHeader = currentMonth !== lastPastMonth;
-        if (showMonthHeader) lastPastMonth = currentMonth;
-        return <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} statuses={statuses} />;
-      })}
+          {pastDayEntries.slice(0, visiblePastCount).map(([dateStr, projectsOnDay]) => {
+            const currentMonth = formatInJakarta(new Date(`${dateStr}T00:00:00`), 'MMMM yyyy');
+            const showMonthHeader = currentMonth !== lastPastMonth;
+            if (showMonthHeader) lastPastMonth = currentMonth;
+            return <DayEntry key={dateStr} dateStr={dateStr} projectsOnDay={projectsOnDay} showMonthHeader={showMonthHeader} onDeleteProject={onDeleteProject} navigate={navigate} statuses={statuses} />;
+          })}
 
-      {pastDayEntries.length > visiblePastCount && (
-        <div className="text-center mt-6">
-          <Button 
-            variant="outline" 
-            onClick={() => setVisiblePastCount(pastDayEntries.length)}
-            className="border-primary text-primary hover:bg-primary/10"
-          >
-            Load More Past
-          </Button>
-        </div>
+          {pastDayEntries.length > visiblePastCount && (
+            <div className="text-center mt-6">
+              <Button 
+                variant="outline" 
+                onClick={() => setVisiblePastCount(prev => prev + 20)}
+                className="border-primary text-primary hover:bg-primary/10"
+              >
+                Load More Past
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
