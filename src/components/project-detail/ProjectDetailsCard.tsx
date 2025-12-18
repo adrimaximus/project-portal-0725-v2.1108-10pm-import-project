@@ -1,19 +1,19 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project as BaseProject, PROJECT_STATUS_OPTIONS, Person, Company, ProjectStatus } from "@/types";
-import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard, User, Building, ChevronsUpDown } from "lucide-react";
+import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard, User, Building, ChevronsUpDown, Plus } from "lucide-react";
 import { isSameDay, subDays } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { CurrencyInput } from "../ui/currency-input";
 import ProjectServices from "./ProjectServices";
 import { formatInJakarta, cn, getTextColor } from "@/lib/utils";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue, SelectSeparator } from "@/components/ui/select";
 import StatusBadge from "../StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import AddressAutocompleteInput from '../AddressAutocompleteInput';
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -21,6 +21,10 @@ import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 import { useProjectStatuses } from "@/hooks/useProjectStatuses";
 import { usePaymentStatuses } from "@/hooks/usePaymentStatuses";
 import { DatePickerWithRange } from "../ui/DatePickerWithRange";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Extend types to include the new optional company_id field for a robust relationship.
 type LocalPerson = Person & { company_id?: string | null };
@@ -44,6 +48,11 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
   const canViewValue = hasPermission('projects:view_value');
   const { data: projectStatuses = [] } = useProjectStatuses();
   const { data: paymentStatuses = [], isLoading: isLoadingPaymentStatuses } = usePaymentStatuses();
+
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newClientType, setNewClientType] = useState<'person' | 'company'>('person');
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientEmail, setNewClientEmail] = useState('');
 
   const clientInfo = useMemo(() => {
     return {
@@ -139,6 +148,71 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
     }
   });
 
+  const createClientMutation = useMutation({
+    mutationFn: async () => {
+      if (newClientType === 'person') {
+        const { data, error } = await supabase
+          .from('people')
+          .insert({
+            full_name: newClientName,
+            email: newClientEmail || null,
+            contact: newClientEmail ? { emails: [newClientEmail] } : {}
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        return { type: 'person', data };
+      } else {
+        const { data, error } = await supabase
+          .from('companies')
+          .insert({
+            name: newClientName
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        return { type: 'company', data };
+      }
+    },
+    onSuccess: async (result) => {
+      toast.success(`${newClientType === 'person' ? 'Person' : 'Company'} created`);
+      setIsCreateDialogOpen(false);
+      setNewClientName('');
+      setNewClientEmail('');
+      
+      // Refresh lists
+      await queryClient.invalidateQueries({ queryKey: ['allPeople'] });
+      await queryClient.invalidateQueries({ queryKey: ['allCompanies'] });
+
+      // If we are editing, update the field
+      if (isEditing) {
+        if (result.type === 'person') {
+          // We need to fetch the full object from the cache or use the returned data
+          // For simplicity in edit mode, we mimic what handleClientChange does
+          const personId = result.data.id;
+          const selectedPerson = { ...result.data, company_id: null } as LocalPerson; // Minimal required
+          onFieldChange('person_ids', [personId]);
+          onFieldChange('people', [selectedPerson]);
+          onFieldChange('client_company_id', null);
+        } else {
+          onFieldChange('person_ids', []);
+          onFieldChange('people', []);
+          onFieldChange('client_company_id', result.data.id);
+        }
+      } else {
+        // If not in editing mode (direct update via dropdown)
+        if (result.type === 'person') {
+          updateClientMutation.mutate(result.data.id);
+        } else {
+          updateClientMutation.mutate(`company-${result.data.id}`);
+        }
+      }
+    },
+    onError: (error) => {
+      toast.error(`Error creating client: ${error.message}`);
+    }
+  });
+
   const handleDateChange = (range: DateRange | undefined) => {
     const startDate = range?.from ? range.from.toISOString() : undefined;
     const endDateValue = range?.to || range?.from;
@@ -153,6 +227,11 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
   };
 
   const handleClientChange = async (value: string) => {
+    if (value === 'create-new') {
+      setIsCreateDialogOpen(true);
+      return;
+    }
+
     if (value.startsWith('company-')) {
       const companyId = value.replace('company-', '');
       onFieldChange('person_ids', []);
@@ -235,6 +314,15 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
 
   const renderClientSelectContent = () => (
     <SelectContent className="max-h-72">
+      <SelectGroup>
+        <SelectItem value="create-new" className="cursor-pointer font-medium text-primary focus:text-primary focus:bg-primary/10">
+          <div className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Create New Client
+          </div>
+        </SelectItem>
+      </SelectGroup>
+      <SelectSeparator />
       {isLoadingPeople || isLoadingCompanies ? (
         <SelectItem value="loading" disabled>Loading...</SelectItem>
       ) : (
@@ -263,6 +351,17 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
       )}
     </SelectContent>
   );
+
+  const handleDropdownChange = (value: string) => {
+    if (value === 'create-new') {
+        setIsCreateDialogOpen(true);
+        // Reset form
+        setNewClientName('');
+        setNewClientEmail('');
+        return;
+    }
+    updateClientMutation.mutate(value);
+  }
 
   return (
     <Card>
@@ -488,7 +587,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
                     <div className="pt-1">
                       <Select
                         value={selectedValue}
-                        onValueChange={(value) => updateClientMutation.mutate(value)}
+                        onValueChange={handleDropdownChange}
                         disabled={updateClientMutation.isPending || isLoadingPeople || isLoadingCompanies}
                       >
                         <SelectTrigger className="w-full h-auto p-0 border-none bg-transparent focus:ring-0 shadow-none hover:bg-accent/50 rounded-md transition-colors text-left flex items-center justify-between group">
@@ -527,6 +626,42 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
+
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Client</DialogTitle>
+          </DialogHeader>
+          <Tabs defaultValue="person" onValueChange={(v) => setNewClientType(v as 'person' | 'company')}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="person">Person</TabsTrigger>
+              <TabsTrigger value="company">Company</TabsTrigger>
+            </TabsList>
+            <TabsContent value="person" className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input id="name" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} placeholder="e.g. John Doe" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email (Optional)</Label>
+                <Input id="email" type="email" value={newClientEmail} onChange={(e) => setNewClientEmail(e.target.value)} placeholder="john@example.com" />
+              </div>
+            </TabsContent>
+            <TabsContent value="company" className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Company Name</Label>
+                <Input id="companyName" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} placeholder="e.g. Acme Corp" />
+              </div>
+            </TabsContent>
+          </Tabs>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => createClientMutation.mutate()} disabled={!newClientName || createClientMutation.isPending}>
+              {createClientMutation.isPending ? 'Creating...' : 'Create & Select'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
