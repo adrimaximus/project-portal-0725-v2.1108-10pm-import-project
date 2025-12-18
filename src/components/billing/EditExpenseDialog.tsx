@@ -25,7 +25,7 @@ import BankAccountFormDialog from './BankAccountFormDialog';
 import BeneficiaryTypeDialog from './BeneficiaryTypeDialog';
 import PersonFormDialog from '../people/PersonFormDialog';
 import CompanyFormDialog from '../people/CompanyFormDialog';
-import { CreateProjectDialog } from '../projects/CreateProjectDialog';
+import CreateProjectDialog from '../projects/CreateProjectDialog';
 import CustomPropertyInput from '../settings/CustomPropertyInput';
 import FileUploader, { FileMetadata } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
@@ -94,21 +94,11 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
   const [currentProcessingFile, setCurrentProcessingFile] = useState<string | null>(null);
   const [detectedBeneficiaryType, setDetectedBeneficiaryType] = useState<'person' | 'company' | null>(null);
 
-  const { data: userProfile } = useQuery({
-    queryKey: ['profile'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-      return data;
-    }
-  });
-
-  const canEditStatus = useMemo(() => {
-    if (!userProfile) return false;
-    const role = userProfile.role?.toLowerCase() || '';
-    return ['master admin', 'finance', 'admin', 'admin project'].includes(role);
-  }, [userProfile]);
+  const canManageBankAccounts = useMemo(() => {
+    if (!user?.role) return false;
+    const role = user.role.toLowerCase();
+    return role === 'master admin' || role === 'finance';
+  }, [user?.role]);
 
   // Fetch full expense details if needed
   const { data: expense } = useQuery({
@@ -737,7 +727,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
         };
       }
 
-      const { data: newExpense, error: updateError } = await supabase.from('expenses').update({
+      const { data: newExpense, error: insertError } = await supabase.from('expenses').insert({
         project_id: values.project_id,
         created_by: values.created_by,
         purpose_payment: values.purpose_payment,
@@ -757,15 +747,15 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
         bank_account_id: (selectedAccount && !isTempAccount) ? selectedAccount.id : null,
         account_bank: bankDetails,
         attachments_jsonb: uploadedFilesMetadata,
-      }).eq('id', expense?.id).select().single();
+      }).select().single();
 
-      if (updateError) throw updateError;
+      if (insertError) throw insertError;
 
-      toast.success("Expense updated successfully.");
+      toast.success("Expense added successfully.");
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       onOpenChange(false);
     } catch (error: any) {
-      toast.error("Failed to update expense.", { description: error.message });
+      toast.error("Failed to add expense.", { description: error.message });
     } finally {
       setIsSubmitting(false);
     }
@@ -778,11 +768,11 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="w-full h-[100dvh] sm:h-auto sm:max-w-lg md:max-w-xl sm:max-h-[95vh] flex flex-col p-0 sm:p-6 sm:rounded-lg">
           <DialogHeader className="p-4 sm:p-0">
-            <DialogTitle>Edit Expense</DialogTitle>
-            <DialogDescription>Update the details for the expense.</DialogDescription>
+            <DialogTitle>Add New Expense</DialogTitle>
+            <DialogDescription>Fill in the details for the new expense.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form id="edit-expense-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex-1 overflow-y-auto p-4 sm:p-0">
+            <form id="add-expense-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex-1 overflow-y-auto p-4 sm:p-0">
               
               <FormField
                 control={form.control}

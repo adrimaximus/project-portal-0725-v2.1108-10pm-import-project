@@ -21,7 +21,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import CompanyFormDialog from "@/components/people/CompanyFormDialog";
+import { CompanyFormDialog } from "@/components/companies/CompanyFormDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -306,8 +306,8 @@ const CompanyProfilePage = () => {
       <CompanyFormDialog 
         open={isFormOpen} 
         onOpenChange={setIsFormOpen}
-        company={company}
-        onSuccess={() => refetch()}
+        companyToEdit={company}
+        onSuccess={refetch}
       />
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

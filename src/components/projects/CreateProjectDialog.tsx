@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,48 +28,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Project } from "@/types";
 
-interface CreateProjectDialogProps {
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  initialName?: string;
-  onSuccess?: (project: Project) => void;
-}
-
-export function CreateProjectDialog({ 
-  open: controlledOpen, 
-  onOpenChange: setControlledOpen, 
-  initialName, 
-  onSuccess 
-}: CreateProjectDialogProps = {}) {
-  const [internalOpen, setInternalOpen] = useState(false);
-  const isControlled = controlledOpen !== undefined;
-  const open = isControlled ? controlledOpen : internalOpen;
-  const setOpen = isControlled && setControlledOpen ? setControlledOpen : setInternalOpen;
-
+export function CreateProjectDialog() {
+  const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm({
     defaultValues: {
       name: "",
       description: "",
       category: "General",
-      status: "Requested",
+      status: "Requested", // Changed default status to 'Requested'
       venue: "",
       client_company_id: "none",
     },
   });
-
-  useEffect(() => {
-    if (open && initialName) {
-      form.setValue('name', initialName);
-    }
-  }, [open, initialName, form]);
 
   const { data: companies } = useQuery({
     queryKey: ["companies-list"],
@@ -85,7 +61,6 @@ export function CreateProjectDialog({
   });
 
   const onSubmit = async (values: any) => {
-    setIsSubmitting(true);
     try {
       const projectData: any = {
         name: values.name,
@@ -103,9 +78,7 @@ export function CreateProjectDialog({
           p_category: projectData.category,
           p_venue: projectData.venue,
           p_client_company_id: projectData.client_company_id,
-        })
-        .select()
-        .single();
+        });
 
       if (error) throw error;
 
@@ -115,7 +88,6 @@ export function CreateProjectDialog({
           .from('projects')
           .update({ status: values.status })
           .eq('id', data.id);
-         data.status = values.status;
       }
 
       toast({
@@ -124,12 +96,6 @@ export function CreateProjectDialog({
       });
 
       queryClient.invalidateQueries({ queryKey: ["dashboard-projects"] });
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      
-      if (onSuccess && data) {
-        onSuccess(data as Project);
-      }
-
       setOpen(false);
       form.reset();
     } catch (error: any) {
@@ -138,20 +104,16 @@ export function CreateProjectDialog({
         description: error.message,
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {!isControlled && (
-        <DialogTrigger asChild>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> New Project
-          </Button>
-        </DialogTrigger>
-      )}
+      <DialogTrigger asChild>
+        <Button>
+          <Plus className="mr-2 h-4 w-4" /> New Project
+        </Button>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Create New Project</DialogTitle>
@@ -280,13 +242,10 @@ export function CreateProjectDialog({
               />
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isSubmitting}>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create Project
-                </Button>
+                <Button type="submit">Create Project</Button>
               </div>
             </form>
           </Form>
