@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Task, TaskStatus, TASK_STATUS_OPTIONS } from '@/types';
+import { Task, TaskStatus } from '@/types';
 import TasksKanbanColumn from './TasksKanbanColumn';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, DragOverEvent, DropAnimation, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import TasksKanbanCard from './TasksKanbanCard';
+import { TASK_STATUS_OPTIONS } from '@/data/projectOptions';
 
 interface TasksKanbanViewProps {
   tasks: Task[];
@@ -153,10 +154,9 @@ const TasksKanbanView = ({ tasks, onEdit, onDelete, refetch, tasksQueryKey, onTa
     }
 
     const activeId = String(active.id);
-    const overId = String(over.id);
-
-    const activeContainer = active.data.current?.sortable.containerId as TaskStatus;
-    const overContainer = (over.data.current?.sortable?.containerId || over.id) as TaskStatus;
+    const activeContainer = active.data.current?.sortable.containerId as string;
+    const overIsItem = !!over.data.current?.sortable;
+    const overContainer = overIsItem ? over.data.current?.sortable.containerId as string : String(over.id);
 
     if (!activeContainer || !overContainer) {
         console.error("Could not determine drag and drop containers.");
