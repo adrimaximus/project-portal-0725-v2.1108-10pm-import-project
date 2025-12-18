@@ -29,14 +29,27 @@ const BillingKanbanCard = ({ invoice, onEdit }: BillingKanbanCardProps) => {
         transition: isDragging ? 'none' : undefined,
     };
 
+    const getStatusColor = (status?: string) => {
+        const s = status?.toLowerCase() || '';
+        if (s === 'paid') return '#22c55e'; // green-500
+        if (s === 'pending' || s === 'proposed' || s === 'sent') return '#eab308'; // yellow-500
+        if (s === 'cancelled' || s === 'void' || s === 'rejected') return '#ef4444'; // red-500
+        return '#cbd5e1'; // slate-300
+    };
+
+    const borderColor = getStatusColor(invoice.payment_status);
+
     return (
         <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={cn(isDragging && "opacity-30")}>
-            <Card className="mb-3 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing">
+            <Card 
+                className="mb-3 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing border-l-4"
+                style={{ borderLeftColor: borderColor }}
+            >
                 <CardContent className="p-3">
                     <div className="flex justify-between items-start">
                         <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">{invoice.id}</p>
-                            <h4 className="font-semibold text-sm leading-snug">{invoice.projectName}</h4>
+                            <p className="text-xs text-muted-foreground">{invoice.invoiceNumber || 'No Ref'}</p>
+                            <h4 className="font-semibold text-sm leading-snug line-clamp-2">{invoice.projectName}</h4>
                         </div>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -54,17 +67,17 @@ const BillingKanbanCard = ({ invoice, onEdit }: BillingKanbanCardProps) => {
                     <div className="flex items-center gap-2 mt-2">
                         <Avatar className="h-6 w-6">
                             <AvatarImage src={invoice.clientLogo || undefined} alt={invoice.clientName || ''} />
-                            <AvatarFallback>{invoice.clientName?.charAt(0)}</AvatarFallback>
+                            <AvatarFallback>{invoice.clientName?.charAt(0) || 'C'}</AvatarFallback>
                         </Avatar>
-                        <div>
-                            <p className="text-xs font-medium">{invoice.clientName}</p>
-                            <p className="text-xs text-muted-foreground">{invoice.clientCompanyName}</p>
+                        <div className="overflow-hidden">
+                            <p className="text-xs font-medium truncate">{invoice.clientName || 'Unknown Client'}</p>
+                            <p className="text-xs text-muted-foreground truncate">{invoice.clientCompanyName}</p>
                         </div>
                     </div>
                     <div className="flex justify-between items-end mt-3">
                         <div className="text-sm">
                             <p className="text-xs text-muted-foreground">Amount</p>
-                            <p className="font-semibold">{'Rp ' + invoice.amount.toLocaleString('id-ID')}</p>
+                            <p className="font-semibold">{'Rp ' + (invoice.amount || 0).toLocaleString('id-ID')}</p>
                         </div>
                         <div className="text-right text-sm flex items-center gap-2">
                           {invoice.last_billing_reminder_sent_at && (
@@ -81,7 +94,7 @@ const BillingKanbanCard = ({ invoice, onEdit }: BillingKanbanCardProps) => {
                           )}
                           <div>
                             <p className="text-xs text-muted-foreground">Due</p>
-                            <p className="font-semibold">{format(invoice.dueDate, 'MMM dd, yyyy')}</p>
+                            <p className="font-semibold">{invoice.dueDate ? format(new Date(invoice.dueDate), 'MMM dd') : '-'}</p>
                           </div>
                         </div>
                     </div>
