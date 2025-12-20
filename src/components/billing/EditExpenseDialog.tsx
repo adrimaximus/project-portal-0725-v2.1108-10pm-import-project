@@ -805,11 +805,10 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
   const tagOptions = expenseTags.map(t => ({ value: t.id, label: t.name, color: t.color }));
 
   const handleCreateTag = async (tagName: string) => {
-      // Optimistically add tag locally? Or insert to DB immediately
       // Inserting to DB
       const { data: newTag, error } = await supabase.from('tags').insert({
           name: tagName,
-          groups: ['expense'],
+          groups: ['expense'], // Explicitly add 'expense' group
           color: '#' + Math.floor(Math.random()*16777215).toString(16), // Random color
           user_id: user?.id
       }).select().single();

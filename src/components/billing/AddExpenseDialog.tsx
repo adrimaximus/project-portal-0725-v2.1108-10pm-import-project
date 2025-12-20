@@ -132,6 +132,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     enabled: open,
   });
 
+  // Fetch tags specifically with group 'expense'
   const { data: expenseTags = [] } = useQuery<Tag[]>({
     queryKey: ['tags', 'expense'],
     queryFn: async () => {
@@ -343,7 +344,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
   const applyExtractedData = async (extractedData: any) => {
     if (extractedData.amount) {
-      // Force conversion to number if it's a string, removing non-numeric chars except dot/comma
       const rawAmount = extractedData.amount;
       const amountStr = typeof rawAmount === 'string' ? rawAmount.replace(/[^0-9.-]+/g, "") : String(rawAmount);
       const amount = parseFloat(amountStr);
@@ -370,8 +370,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       }
     }
     
-    // Skipping description field as we use tags now
-    
     let currentBeneficiary = beneficiary;
     
     if (extractedData.beneficiary && !watch('beneficiary')) {
@@ -387,7 +385,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         setValue('beneficiary', matchedBeneficiary.name, { shouldValidate: true });
       } else {
         setValue('beneficiary', extractedData.beneficiary, { shouldValidate: true });
-        // Set detected type if available, default to company if undefined
         const type = extractedData.beneficiary_type?.toLowerCase() === 'person' ? 'person' : 'company';
         setBeneficiary({ id: 'new', name: extractedData.beneficiary, type });
         setDetectedBeneficiaryType(type);
@@ -461,7 +458,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       }
     }
 
-    // New remarks logic to include extra details like CP, Invoice No, etc.
     const additionalInfo: string[] = [];
 
     if (extractedData.invoice_number) {
@@ -497,7 +493,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
              const desc = typeof item === 'string' ? item : (item.description || item.name || item.item);
              const price = item.total || item.price || item.amount;
              if (desc) {
-                 // Clean up price if it's a string with formatting
                  let formattedPrice = price;
                  if (typeof price === 'number') {
                      formattedPrice = price.toLocaleString('id-ID');
@@ -528,8 +523,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     try {
         let fileToProcess = file;
 
-        // Convert PDF to Image if necessary for AI analysis
-        // Using relaxed check for 'pdf' string in type
         if (file.type.includes('pdf')) {
             toast.info("Converting PDF to image for analysis...");
             const imageFile = await convertPdfToImage(file);
@@ -539,7 +532,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                 toast.success("PDF successfully converted to image for analysis");
             } else {
                 toast.error("Could not convert PDF to image. AI analysis skipped.");
-                // We stop here for analysis, but the file is still uploaded below in onSubmit if saved
                 return;
             }
         }
@@ -557,7 +549,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         const { data: urlData } = supabase.storage.from('expense').getPublicUrl(filePath);
         finalUrl = urlData.publicUrl;
 
-        // Pass instructions to the extractor
         const instructions = (form.getValues('ai_review_notes') || '') + 
             "\nIdentify if the beneficiary is a 'person' or 'company' and return it as 'beneficiary_type'." +
             "\nExtract 'invoice_number', 'date' (invoice date), 'contact_person' (CP name), 'contact_phone', 'contact_email', and 'items' (line items with description and amount).";
@@ -586,7 +577,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
        return;
     }
     
-    // Find first NEW file if possible, else take last file
     const lastFile = [...attachments].reverse().find(f => f instanceof File) as File | undefined;
 
     if (!lastFile) {
@@ -608,9 +598,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const onSubmit = async (values: ExpenseFormValues) => {
     setIsSubmitting(true);
     try {
-      // Check if beneficiary is new and needs creation
       const existingBeneficiary = beneficiaries.find(b => b.name === values.beneficiary);
-      // Determine type: existing type, detected type from AI, or default to company
       const finalBeneficiaryType = existingBeneficiary?.type || detectedBeneficiaryType || 'company';
 
       if (!existingBeneficiary && values.beneficiary) {
@@ -624,7 +612,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                   if (error) throw error;
                   toast.success(`Created new company: ${values.beneficiary}`);
               }
-              // Refresh beneficiaries list
               await queryClient.invalidateQueries({ queryKey: ['beneficiaries'] });
           } catch (err) {
               console.error("Failed to auto-create beneficiary", err);
@@ -678,7 +665,6 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         };
       }
 
-      // 1. Insert expense
       const { data: newExpense, error: insertError } = await supabase.from('expenses').insert({
         project_id: values.project_id,
         created_by: values.created_by,
@@ -703,7 +689,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
       if (insertError) throw insertError;
 
-      // 2. Insert tags
+      // Insert tags
       if (values.tags && values.tags.length > 0) {
           const tagInserts = values.tags.map(tagId => ({
               expense_id: newExpense.id,
@@ -728,11 +714,10 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const tagOptions = expenseTags.map(t => ({ value: t.id, label: t.name, color: t.color }));
 
   const handleCreateTag = async (tagName: string) => {
-      // Inserting to DB
       const { data: newTag, error } = await supabase.from('tags').insert({
           name: tagName,
-          groups: ['expense'],
-          color: '#' + Math.floor(Math.random()*16777215).toString(16), // Random color
+          groups: ['expense'], // Explicitly add 'expense' group
+          color: '#' + Math.floor(Math.random()*16777215).toString(16),
           user_id: user?.id
       }).select().single();
 
@@ -741,10 +726,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
           return;
       }
       
-      // Refetch tags
       queryClient.invalidateQueries({ queryKey: ['tags', 'expense'] });
-      
-      // Add to selection
       const currentTags = form.getValues('tags') || [];
       setValue('tags', [...currentTags, newTag.id]);
   };
@@ -964,7 +946,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
                                     value={beneficiarySearch} 
                                     onSelect={() => { 
                                         form.setValue("beneficiary", beneficiarySearch); 
-                                        setBeneficiary({ id: 'new', name: beneficiarySearch, type: 'company' }); // Default to company, can be changed later or detected by AI
+                                        setBeneficiary({ id: 'new', name: beneficiarySearch, type: 'company' }); 
                                         setBeneficiaryPopoverOpen(false); 
                                     }}
                                 >
