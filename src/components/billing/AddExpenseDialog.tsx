@@ -91,6 +91,12 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const [currentProcessingFile, setCurrentProcessingFile] = useState<string | null>(null);
   const [detectedBeneficiaryType, setDetectedBeneficiaryType] = useState<'person' | 'company' | null>(null);
 
+  const canManageBankAccounts = useMemo(() => {
+    if (!user?.role) return false;
+    const role = user.role.toLowerCase();
+    return role === 'master admin' || role === 'finance';
+  }, [user?.role]);
+
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery<ProjectOption[]>({
     queryKey: ['projectsForExpenseForm'],
     queryFn: async () => {
