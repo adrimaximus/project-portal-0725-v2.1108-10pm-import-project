@@ -17,7 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Project, Person, Company, CustomProperty, BankAccount, User as Profile, Expense } from '@/types';
+import { Project, Person, Company, CustomProperty, BankAccount, User as Profile, Expense, Tag } from '@/types';
 import { CurrencyInput } from '../ui/currency-input';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Label } from '../ui/label';
@@ -31,6 +31,7 @@ import FileUploader, { FileMetadata } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
 import { convertPdfToImage } from '@/lib/pdfUtils';
 import { PAYMENT_STATUS_OPTIONS } from '@/data/projectOptions';
+import { MultiSelect } from '@/components/ui/multi-select';
 
 interface EditExpenseDialogProps {
   open: boolean;
@@ -51,7 +52,7 @@ const paymentTermSchema = z.object({
 const expenseSchema = z.object({
   project_id: z.string().uuid("Please select a project."),
   created_by: z.string().uuid().optional(),
-  purpose_payment: z.string().optional(),
+  tags: z.array(z.string()).optional(),
   beneficiary: z.string().min(1, "Beneficiary is required."),
   tf_amount: z.number().min(1, "Amount must be greater than 0."),
   payment_terms: z.array(paymentTermSchema).optional(),
@@ -105,17 +106,26 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
     queryKey: ['expense_edit', propExpense?.id],
     queryFn: async () => {
       if (!propExpense?.id) return null;
+      // We use the RPC or a join query to get tags if not present in propExpense
+      // But get_all_expenses already returns tags, so propExpense might have them.
+      // However, to be safe and get fresh data including many-to-many relations:
       const { data, error } = await supabase
         .from('expenses')
-        .select('*')
+        .select(`
+            *,
+            expense_tags (
+                tag_id
+            )
+        `)
         .eq('id', propExpense.id)
         .single();
       
       if (error) throw error;
+      
+      // Transform expense_tags to array of strings if needed, or handle in useEffect
       return data;
     },
     enabled: !!propExpense?.id && open,
-    initialData: propExpense as any
   });
 
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery<ProjectOption[]>({
@@ -152,6 +162,19 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
     enabled: open,
   });
 
+  const { data: expenseTags = [] } = useQuery<Tag[]>({
+    queryKey: ['tags', 'expense'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tags')
+        .select('*')
+        .contains('groups', ['expense']);
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
   const { data: customProperties = [], isLoading: isLoadingProperties } = useQuery<CustomProperty[]>({
     queryKey: ['custom_properties', 'expense'],
     queryFn: async () => {
@@ -167,7 +190,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
     defaultValues: {
       project_id: '',
       created_by: user?.id,
-      purpose_payment: '',
+      tags: [],
       beneficiary: '',
       tf_amount: 0,
       payment_terms: [{ amount: null, request_type: 'Requested', request_date: new Date(), release_date: undefined, status: 'Requested', status_remarks: null }],
@@ -210,10 +233,13 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
             }
         }
 
+        // Extract tag IDs
+        const tagIds = expense.expense_tags?.map((et: any) => et.tag_id) || [];
+
         reset({
             project_id: expense.project_id,
             created_by: expense.created_by,
-            purpose_payment: (expense as any).purpose_payment || '',
+            tags: tagIds,
             beneficiary: expense.beneficiary,
             tf_amount: Number(expense.tf_amount),
             payment_terms: parsedTerms,
@@ -416,10 +442,8 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
       }
     }
     
-    const description = extractedData.description || extractedData.purpose || extractedData.summary;
-    if (description) {
-      setValue('purpose_payment', description, { shouldValidate: true });
-    }
+    // AI tag matching logic would go here if implemented, for now skipping tag auto-selection from text
+    // as tags are structured data.
 
     let currentBeneficiary = beneficiary;
     
@@ -578,7 +602,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
         let fileToProcess = file;
 
         // Convert PDF to Image if necessary for AI analysis
-        // Using relaxed check for 'pdf' string in type
         if (file.type.includes('pdf')) {
             toast.info("Converting PDF to image for analysis...");
             const imageFile = await convertPdfToImage(file);
@@ -588,7 +611,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
                 toast.success("PDF successfully converted to image for analysis");
             } else {
                 toast.error("Could not convert PDF to image. AI analysis skipped.");
-                // We stop here for analysis, but the file is still uploaded below in onSubmit if saved
                 return;
             }
         }
@@ -659,7 +681,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
     try {
       // Check if beneficiary is new and needs creation
       const existingBeneficiary = beneficiaries.find(b => b.name === values.beneficiary);
-      // Determine type: existing type, detected type from AI, or default to company
       const finalBeneficiaryType = existingBeneficiary?.type || detectedBeneficiaryType || 'company';
 
       if (!existingBeneficiary && values.beneficiary) {
@@ -673,7 +694,6 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
                   if (error) throw error;
                   toast.success(`Created new company: ${values.beneficiary}`);
               }
-              // Refresh beneficiaries list
               await queryClient.invalidateQueries({ queryKey: ['beneficiaries'] });
           } catch (err) {
               console.error("Failed to auto-create beneficiary", err);
@@ -727,10 +747,11 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
         };
       }
 
-      const { data: newExpense, error: insertError } = await supabase.from('expenses').insert({
+      // 1. Update expense
+      const { data: newExpense, error: insertError } = await supabase.from('expenses').update({
         project_id: values.project_id,
         created_by: values.created_by,
-        purpose_payment: values.purpose_payment,
+        purpose_payment: null, // Clear purpose payment as we use tags now
         beneficiary: values.beneficiary,
         tf_amount: values.tf_amount,
         status_expense: statusToSave,
@@ -747,15 +768,33 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
         bank_account_id: (selectedAccount && !isTempAccount) ? selectedAccount.id : null,
         account_bank: bankDetails,
         attachments_jsonb: uploadedFilesMetadata,
-      }).select().single();
+      })
+      .eq('id', propExpense!.id)
+      .select().single();
 
       if (insertError) throw insertError;
 
-      toast.success("Expense added successfully.");
+      // 2. Update tags
+      if (values.tags) {
+          // Delete existing tags
+          await supabase.from('expense_tags').delete().eq('expense_id', propExpense!.id);
+          
+          // Insert new tags
+          if (values.tags.length > 0) {
+              const tagInserts = values.tags.map(tagId => ({
+                  expense_id: propExpense!.id,
+                  tag_id: tagId
+              }));
+              const { error: tagError } = await supabase.from('expense_tags').insert(tagInserts);
+              if (tagError) throw tagError;
+          }
+      }
+
+      toast.success("Expense updated successfully.");
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       onOpenChange(false);
     } catch (error: any) {
-      toast.error("Failed to add expense.", { description: error.message });
+      toast.error("Failed to update expense.", { description: error.message });
     } finally {
       setIsSubmitting(false);
     }
@@ -763,16 +802,41 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
 
   const isFormDisabled = isSubmitting || isExtracting;
 
+  const tagOptions = expenseTags.map(t => ({ value: t.id, label: t.name, color: t.color }));
+
+  const handleCreateTag = async (tagName: string) => {
+      // Optimistically add tag locally? Or insert to DB immediately
+      // Inserting to DB
+      const { data: newTag, error } = await supabase.from('tags').insert({
+          name: tagName,
+          groups: ['expense'],
+          color: '#' + Math.floor(Math.random()*16777215).toString(16), // Random color
+          user_id: user?.id
+      }).select().single();
+
+      if (error) {
+          toast.error("Failed to create tag.");
+          return;
+      }
+      
+      // Refetch tags
+      queryClient.invalidateQueries({ queryKey: ['tags', 'expense'] });
+      
+      // Add to selection
+      const currentTags = form.getValues('tags') || [];
+      setValue('tags', [...currentTags, newTag.id]);
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="w-full h-[100dvh] sm:h-auto sm:max-w-lg md:max-w-xl sm:max-h-[95vh] flex flex-col p-0 sm:p-6 sm:rounded-lg">
           <DialogHeader className="p-4 sm:p-0">
-            <DialogTitle>Add New Expense</DialogTitle>
-            <DialogDescription>Fill in the details for the new expense.</DialogDescription>
+            <DialogTitle>Edit Expense</DialogTitle>
+            <DialogDescription>Update the details of the expense.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form id="add-expense-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex-1 overflow-y-auto p-4 sm:p-0">
+            <form id="edit-expense-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex-1 overflow-y-auto p-4 sm:p-0">
               
               <FormField
                 control={form.control}
@@ -923,14 +987,20 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
 
               <FormField
                 control={form.control}
-                name="purpose_payment"
+                name="tags"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>Purpose Payment</FormLabel>
-                    </div>
+                    <FormLabel>Expense Tags</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter purpose of payment" {...field} value={field.value || ''} disabled={isFormDisabled} />
+                      <MultiSelect
+                        options={tagOptions}
+                        value={field.value || []}
+                        onChange={field.onChange}
+                        placeholder="Select tags..."
+                        creatable
+                        onCreate={handleCreateTag}
+                        disabled={isFormDisabled}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -972,7 +1042,7 @@ const EditExpenseDialog = ({ open, onOpenChange, expense: propExpense }: EditExp
                                     value={beneficiarySearch} 
                                     onSelect={() => { 
                                         form.setValue("beneficiary", beneficiarySearch); 
-                                        setBeneficiary({ id: 'new', name: beneficiarySearch, type: 'company' }); // Default to company, can be changed later or detected by AI
+                                        setBeneficiary({ id: 'new', name: beneficiarySearch, type: 'company' }); 
                                         setBeneficiaryPopoverOpen(false); 
                                     }}
                                 >

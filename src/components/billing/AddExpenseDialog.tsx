@@ -11,13 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon, Loader2, Check, ChevronsUpDown, User, Building, Plus, X, Copy, FileText, Wand2 } from 'lucide-react';
-import { cn, getInitials } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { format, isWithinInterval } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Project, Person, Company, CustomProperty, BankAccount, User as Profile } from '@/types';
+import { Project, Person, Company, CustomProperty, BankAccount, User as Profile, Tag } from '@/types';
 import { CurrencyInput } from '../ui/currency-input';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Label } from '../ui/label';
@@ -31,6 +31,7 @@ import FileUploader, { FileMetadata } from '../ui/FileUploader';
 import { useExpenseExtractor } from '@/hooks/useExpenseExtractor';
 import { convertPdfToImage } from '@/lib/pdfUtils';
 import { PAYMENT_STATUS_OPTIONS } from '@/data/projectOptions';
+import { MultiSelect } from '@/components/ui/multi-select';
 
 interface AddExpenseDialogProps {
   open: boolean;
@@ -40,7 +41,7 @@ interface AddExpenseDialogProps {
 const expenseSchema = z.object({
   project_id: z.string().uuid("Please select a project."),
   created_by: z.string().uuid().optional(),
-  purpose_payment: z.string().optional(),
+  tags: z.array(z.string()).optional(),
   beneficiary: z.string().min(1, "Beneficiary is required."),
   tf_amount: z.number().min(1, "Amount must be greater than 0."),
   payment_terms: z.array(z.object({
@@ -131,6 +132,19 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
     enabled: open,
   });
 
+  const { data: expenseTags = [] } = useQuery<Tag[]>({
+    queryKey: ['tags', 'expense'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tags')
+        .select('*')
+        .contains('groups', ['expense']);
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
   const { data: customProperties = [], isLoading: isLoadingProperties } = useQuery<CustomProperty[]>({
     queryKey: ['custom_properties', 'expense'],
     queryFn: async () => {
@@ -147,6 +161,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       project_id: '',
       created_by: user?.id,
       beneficiary: '',
+      tags: [],
       tf_amount: 0,
       payment_terms: [{ amount: null, request_type: 'Requested', request_date: new Date(), release_date: undefined, status: 'Requested' }],
       bank_account_id: null,
@@ -355,11 +370,8 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       }
     }
     
-    const description = extractedData.description || extractedData.purpose || extractedData.summary;
-    if (description) {
-      setValue('purpose_payment', description, { shouldValidate: true });
-    }
-
+    // Skipping description field as we use tags now
+    
     let currentBeneficiary = beneficiary;
     
     if (extractedData.beneficiary && !watch('beneficiary')) {
@@ -666,10 +678,11 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
         };
       }
 
+      // 1. Insert expense
       const { data: newExpense, error: insertError } = await supabase.from('expenses').insert({
         project_id: values.project_id,
         created_by: values.created_by,
-        purpose_payment: values.purpose_payment,
+        purpose_payment: null, // Clear purpose payment as we use tags now
         beneficiary: values.beneficiary,
         tf_amount: values.tf_amount,
         status_expense: statusToSave,
@@ -690,6 +703,16 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
       if (insertError) throw insertError;
 
+      // 2. Insert tags
+      if (values.tags && values.tags.length > 0) {
+          const tagInserts = values.tags.map(tagId => ({
+              expense_id: newExpense.id,
+              tag_id: tagId
+          }));
+          const { error: tagError } = await supabase.from('expense_tags').insert(tagInserts);
+          if (tagError) throw tagError;
+      }
+
       toast.success("Expense added successfully.");
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       onOpenChange(false);
@@ -701,6 +724,30 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   };
 
   const isFormDisabled = isSubmitting || isExtracting;
+
+  const tagOptions = expenseTags.map(t => ({ value: t.id, label: t.name, color: t.color }));
+
+  const handleCreateTag = async (tagName: string) => {
+      // Inserting to DB
+      const { data: newTag, error } = await supabase.from('tags').insert({
+          name: tagName,
+          groups: ['expense'],
+          color: '#' + Math.floor(Math.random()*16777215).toString(16), // Random color
+          user_id: user?.id
+      }).select().single();
+
+      if (error) {
+          toast.error("Failed to create tag.");
+          return;
+      }
+      
+      // Refetch tags
+      queryClient.invalidateQueries({ queryKey: ['tags', 'expense'] });
+      
+      // Add to selection
+      const currentTags = form.getValues('tags') || [];
+      setValue('tags', [...currentTags, newTag.id]);
+  };
 
   return (
     <>
@@ -862,14 +909,20 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
               <FormField
                 control={form.control}
-                name="purpose_payment"
+                name="tags"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>Purpose Payment</FormLabel>
-                    </div>
+                    <FormLabel>Expense Tags</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter purpose of payment" {...field} value={field.value || ''} disabled={isFormDisabled} />
+                      <MultiSelect
+                        options={tagOptions}
+                        value={field.value || []}
+                        onChange={field.onChange}
+                        placeholder="Select tags..."
+                        creatable
+                        onCreate={handleCreateTag}
+                        disabled={isFormDisabled}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
