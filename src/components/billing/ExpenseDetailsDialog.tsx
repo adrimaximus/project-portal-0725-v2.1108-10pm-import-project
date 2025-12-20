@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
-import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2, Copy, Download, Edit, Paperclip, X, Tag } from "lucide-react";
+import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2, Copy, Download, Edit, Paperclip, X, Tag, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +17,8 @@ import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import ReactMarkdown from 'react-markdown';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import EditExpenseDialog from './EditExpenseDialog';
 
 interface FileMetadata {
   name: string;
@@ -49,6 +51,7 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
   const [feedbackAttachment, setFeedbackAttachment] = useState<File | null>(null); // New state for attachment
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   const { data: userProfile } = useQuery({
     queryKey: ['profile'],
@@ -844,15 +847,28 @@ Account Name: ${bankDetails.name || '-'}
                     {expense.project_name}
                   </Description>
                 </div>
-                <Badge className={cn("text-sm px-3 py-1 self-start sm:self-auto", getStatusBadgeStyle(derivedStatus))}>
-                  {derivedStatus}
-                </Badge>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <Badge className={cn("text-sm px-3 py-1", getStatusBadgeStyle(derivedStatus))}>
+                    {derivedStatus}
+                    </Badge>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
+                                <Edit className="mr-2 h-4 w-4" /> Edit
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                     </DropdownMenu>
+                </div>
               </div>
             </DialogHeader>
             {content}
           </DialogContent>
         </Dialog>
-        {/* Preview Dialog remains as Dialog on Desktop */}
         <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
           <DialogContent className="max-w-4xl w-full h-[80vh] flex flex-col p-0">
             <DialogHeader className="p-4 border-b flex-shrink-0 flex flex-row items-center justify-between space-y-0">
@@ -881,6 +897,11 @@ Account Name: ${bankDetails.name || '-'}
             </div>
           </DialogContent>
         </Dialog>
+        <EditExpenseDialog 
+            open={isEditOpen} 
+            onOpenChange={setIsEditOpen} 
+            expense={expense} 
+        />
       </>
     );
   }
@@ -899,9 +920,23 @@ Account Name: ${bankDetails.name || '-'}
                     {expense.project_name}
                   </DrawerDescription>
                 </div>
-                <Badge className={cn("text-sm px-2 py-1 shrink-0", getStatusBadgeStyle(derivedStatus))}>
-                  {derivedStatus}
-                </Badge>
+                <div className="flex items-center gap-2 shrink-0">
+                    <Badge className={cn("text-sm px-2 py-1", getStatusBadgeStyle(derivedStatus))}>
+                    {derivedStatus}
+                    </Badge>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
+                                <Edit className="mr-2 h-4 w-4" /> Edit
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
               </div>
             </div>
           </DrawerHeader>
@@ -911,7 +946,6 @@ Account Name: ${bankDetails.name || '-'}
         </DrawerContent>
       </Drawer>
 
-      {/* File Preview for Mobile - can also use Drawer or full screen Dialog */}
       <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
         <DialogContent className="w-full h-[100dvh] max-w-full rounded-none border-0 p-0 flex flex-col">
           <DialogHeader className="p-4 border-b flex-shrink-0 flex flex-row items-center justify-between space-y-0 bg-background">
@@ -942,6 +976,11 @@ Account Name: ${bankDetails.name || '-'}
           </div>
         </DialogContent>
       </Dialog>
+      <EditExpenseDialog 
+        open={isEditOpen} 
+        onOpenChange={setIsEditOpen} 
+        expense={expense} 
+      />
     </>
   );
 };
