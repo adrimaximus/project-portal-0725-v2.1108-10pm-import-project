@@ -160,7 +160,7 @@ const ExpensePage = () => {
     const paymentTerms = (expense as any).payment_terms || [];
     if (paymentTerms.length === 0) return expense.status_expense || 'Pending';
     
-    const statuses = paymentTerms.map((t: any) => t.status || 'Pending');
+    const statuses = paymentTerms.map(t => t.status || 'Pending');
     
     // Logic priority: Rejected > On review > Paid (All) > Requested (All) > Pending
     if (statuses.some((s: string) => s === 'Rejected')) return 'Rejected';
