@@ -44,6 +44,17 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: Ta
     },
   });
 
+  // Fetch existing tags to validate uniqueness
+  const { data: existingTags = [] } = useQuery({
+    queryKey: ['tags_validation'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('tags').select('id, name');
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
   const form = useForm<TagFormValues>({
     resolver: zodResolver(tagSchema),
   });
@@ -58,6 +69,21 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: Ta
     }
   }, [tag, open, form]);
 
+  const handleSubmit = (data: TagFormValues) => {
+    const normalizedName = data.name.trim().toLowerCase();
+    const isDuplicate = existingTags.some(t => 
+      t.name.trim().toLowerCase() === normalizedName && 
+      t.id !== tag?.id
+    );
+
+    if (isDuplicate) {
+      form.setError('name', { type: 'manual', message: 'A tag with this name already exists.' });
+      return;
+    }
+
+    onSave(data);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -68,7 +94,7 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: Ta
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSave as any)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
             <FormField control={form.control} name="name" render={({ field }) => (
               <FormItem>
                 <FormLabel>Tag Name</FormLabel>
