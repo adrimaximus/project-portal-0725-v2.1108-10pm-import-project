@@ -141,6 +141,7 @@ export interface Expense {
   project_slug: string;
   project_owner: { id: string; name: string; avatar_url: string; initials: string } | null;
   pic: { id: string; name: string; avatar_url: string; initials: string; email: string } | null;
+  tags: Tag[] | null;
 }
 
 export interface BankAccount {

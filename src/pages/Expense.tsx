@@ -111,7 +111,8 @@ const ExpensePage = () => {
       expense.beneficiary.toLowerCase().includes(searchTerm.toLowerCase()) ||
       expense.status_expense.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ((expense as any).purpose_payment && (expense as any).purpose_payment.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (expense.remarks && expense.remarks.toLowerCase().includes(searchTerm.toLowerCase()))
+      (expense.remarks && expense.remarks.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (expense.tags && expense.tags.some(tag => tag.name.toLowerCase().includes(searchTerm.toLowerCase())))
     );
   }, [expenses, searchTerm]);
 
@@ -195,7 +196,7 @@ const ExpensePage = () => {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search by project, beneficiary, etc..."
+              placeholder="Search by project, beneficiary, tags..."
               className="pl-8"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -235,7 +236,7 @@ const ExpensePage = () => {
                   <TableRow>
                     <TableHead>Beneficiary</TableHead>
                     <TableHead>Project</TableHead>
-                    <TableHead>Purpose</TableHead>
+                    <TableHead>Tags</TableHead>
                     <TableHead>PIC</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Remaining</TableHead>
@@ -300,8 +301,25 @@ const ExpensePage = () => {
                             </Link>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <span>{(expense as any).purpose_payment || '-'}</span>
+                            <div className="flex flex-wrap gap-1">
+                              {expense.tags && expense.tags.length > 0 ? (
+                                expense.tags.map((tag) => (
+                                  <Badge 
+                                    key={tag.id} 
+                                    variant="outline" 
+                                    style={{ 
+                                      backgroundColor: `${tag.color}15`, 
+                                      color: tag.color,
+                                      borderColor: `${tag.color}40` 
+                                    }}
+                                    className="text-[10px] px-1 py-0 h-5"
+                                  >
+                                    {tag.name}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-muted-foreground text-xs">-</span>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
