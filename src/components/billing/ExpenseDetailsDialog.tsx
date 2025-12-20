@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
-import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2, Copy, Download, Edit, Paperclip, X } from "lucide-react";
+import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2, Copy, Download, Edit, Paperclip, X, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
@@ -76,10 +76,15 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
     queryFn: async () => {
       if (!propExpense?.id) return null;
       
-      // 1. Fetch raw expense data (including attachments_jsonb)
+      // 1. Fetch raw expense data (including attachments_jsonb) and tags
       const { data: expenseData, error } = await supabase
         .from('expenses')
-        .select('*')
+        .select(`
+          *,
+          expense_tags (
+            tags (*)
+          )
+        `)
         .eq('id', propExpense.id)
         .single();
       
@@ -119,6 +124,8 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
          if (proj) projectName = proj.name;
       }
 
+      const tags = expenseData.expense_tags?.map((et: any) => et.tags) || [];
+
       return {
         ...expenseData,
         pic: pic, // Use the fetched PIC details
@@ -126,7 +133,8 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
         // Ensure attachments_jsonb is explicitly included in the final object
         attachments_jsonb: expenseData.attachments_jsonb,
         // Keep project_owner fallback if needed
-        project_owner: propExpense.project_owner 
+        project_owner: propExpense.project_owner,
+        tags: tags
       } as unknown as Expense;
     },
     enabled: !!propExpense?.id && open,
@@ -353,11 +361,30 @@ Account Name: ${bankDetails.name || '-'}
 
           <div className="flex items-start gap-3">
             <div className="bg-primary/10 p-2 rounded-full shrink-0">
-              <FileText className="w-4 h-4 text-primary" />
+              <Tag className="w-4 h-4 text-primary" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-muted-foreground">Purpose</p>
-              <p className="text-sm font-medium break-words">{(expense as any).purpose_payment || '-'}</p>
+              <p className="text-sm font-medium text-muted-foreground">Tags</p>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {expense.tags && expense.tags.length > 0 ? (
+                  expense.tags.map((tag) => (
+                    <Badge 
+                      key={tag.id} 
+                      variant="outline" 
+                      style={{ 
+                        backgroundColor: `${tag.color}15`, 
+                        color: tag.color,
+                        borderColor: `${tag.color}40` 
+                      }}
+                      className="text-[10px] px-1 py-0 h-5"
+                    >
+                      {tag.name}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-sm font-medium">-</span>
+                )}
+              </div>
             </div>
           </div>
         </div>

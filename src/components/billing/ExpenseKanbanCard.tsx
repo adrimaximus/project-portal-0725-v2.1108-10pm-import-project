@@ -7,6 +7,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 interface ExpenseKanbanCardProps {
   expense: Expense;
@@ -79,6 +80,24 @@ const ExpenseKanbanCard = ({ expense, onEdit, onDelete, onClick, canDrag }: Expe
           </DropdownMenu>
         </CardHeader>
         <CardContent className="p-3 pt-0 space-y-2">
+          {expense.tags && expense.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {expense.tags.slice(0, 3).map((tag) => (
+                <Badge 
+                  key={tag.id} 
+                  variant="outline" 
+                  style={{ 
+                    backgroundColor: `${tag.color}15`, 
+                    color: tag.color,
+                    borderColor: `${tag.color}40` 
+                  }}
+                  className="text-[10px] px-1 py-0 h-4 leading-none"
+                >
+                  {tag.name}
+                </Badge>
+              ))}
+            </div>
+          )}
           <div className="text-lg font-bold">{formatCurrency(expense.tf_amount)}</div>
           {expense.due_date && (
             <div className="flex items-center text-xs text-muted-foreground">
