@@ -3,7 +3,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Search, LayoutList, KanbanSquare, Plus, MoreHorizontal, Edit, Trash2, Paperclip } from "lucide-react";
+import { Loader2, Search, LayoutList, KanbanSquare, Plus, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -258,7 +258,6 @@ const ExpensePage = () => {
                         .filter((term: any) => term.status === 'Paid')
                         .reduce((sum: number, term: any) => sum + (Number(term.amount) || 0), 0);
                       const remainingAmount = expense.tf_amount - paidAmount;
-                      const hasAttachments = (expense as any).attachments_jsonb?.length > 0;
                       // Use PIC if available, otherwise project owner
                       const pic = expense.pic || expense.project_owner;
                       const derivedStatus = getDerivedStatus(expense);
@@ -303,18 +302,6 @@ const ExpensePage = () => {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <span>{(expense as any).purpose_payment || '-'}</span>
-                              {hasAttachments && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Paperclip className="h-3 w-3 text-muted-foreground" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      {`${(expense as any).attachments_jsonb.length} Attachment(s)`}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
                             </div>
                           </TableCell>
                           <TableCell>
