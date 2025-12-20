@@ -235,6 +235,7 @@ export interface Tag {
   isNew?: boolean;
   custom_properties?: Json | null;
   type?: string | null;
+  groups: string[] | null;
 }
 
 export interface Owner {

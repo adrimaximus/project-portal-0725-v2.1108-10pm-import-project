@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import RenameGroupDialog from '@/components/settings/RenameGroupDialog';
 import { SortableTableHead } from '@/components/ui/SortableTableHead';
 
-type SortableTagColumns = 'name' | 'type' | 'color';
+type SortableTagColumns = 'name' | 'groups' | 'color';
 type SortableGroupColumns = 'name' | 'count';
 type SortDirection = 'asc' | 'desc';
 
@@ -82,12 +82,30 @@ const TagsSettingsPage = () => {
     return { personalTags: personal, globalTags: global };
   }, [tags]);
 
-  const tagGroups = [...new Set(tags.map(tag => tag.type || 'general'))];
-  const groupCounts = tags.reduce((acc, tag) => {
-    const group = tag.type || 'general';
-    acc[group] = (acc[group] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const tagGroups = useMemo(() => {
+    const allGroups = new Set<string>();
+    tags.forEach(tag => {
+      if (tag.groups && tag.groups.length > 0) {
+        tag.groups.forEach(g => allGroups.add(g));
+      } else if (tag.type) {
+        allGroups.add(tag.type);
+      } else {
+        allGroups.add('general');
+      }
+    });
+    return Array.from(allGroups);
+  }, [tags]);
+
+  const groupCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    tags.forEach(tag => {
+      const groups = (tag.groups && tag.groups.length > 0) ? tag.groups : [tag.type || 'general'];
+      groups.forEach(g => {
+        counts[g] = (counts[g] || 0) + 1;
+      });
+    });
+    return counts;
+  }, [tags]);
 
   const handleTagSort = (column: SortableTagColumns) => {
     setTagSort(prev => ({
@@ -109,15 +127,22 @@ const TagsSettingsPage = () => {
       .filter(tag => {
         const query = searchQuery.toLowerCase();
         const nameMatch = tag.name.toLowerCase().includes(query);
-        const groupMatch = (tag.type || 'general').toLowerCase().includes(query);
+        const groupMatch = (tag.groups || [tag.type || 'general']).some(g => g.toLowerCase().includes(query));
         return nameMatch || groupMatch;
       })
       .sort((a, b) => {
         if (!tagSort.column) return 0;
-        const aVal = a[tagSort.column] || (tagSort.column === 'type' ? 'general' : '');
-        const bVal = b[tagSort.column] || (tagSort.column === 'type' ? 'general' : '');
+        let aVal = '', bVal = '';
+
+        if (tagSort.column === 'groups') {
+          aVal = (a.groups || [a.type || 'general']).join(', ');
+          bVal = (b.groups || [b.type || 'general']).join(', ');
+        } else {
+          aVal = String(a[tagSort.column] || '');
+          bVal = String(b[tagSort.column] || '');
+        }
         
-        const compareResult = String(aVal).localeCompare(String(bVal), undefined, { numeric: true, sensitivity: 'base' });
+        const compareResult = aVal.localeCompare(bVal, undefined, { numeric: true, sensitivity: 'base' });
 
         return tagSort.direction === 'asc' ? compareResult : -compareResult;
       });
@@ -158,7 +183,14 @@ const TagsSettingsPage = () => {
       ? tagToEdit.user_id 
       : (activeTagTab === 'global' && isAdmin ? null : user.id);
 
-    const upsertData = { ...tagData, user_id: userIdForTag, id: tagToEdit?.id, type: tagData.type || 'general' };
+    // Make sure we save groups correctly
+    const upsertData = { 
+      ...tagData, 
+      user_id: userIdForTag, 
+      id: tagToEdit?.id, 
+      groups: tagData.groups || [],
+      type: tagData.type || (tagData.groups && tagData.groups.length > 0 ? tagData.groups[0] : 'general')
+    };
 
     const { error } = await supabase.from('tags').upsert(upsertData);
     setIsSaving(false);
@@ -192,11 +224,30 @@ const TagsSettingsPage = () => {
   const handleSaveGroupName = async (newGroupName: string) => {
     if (!user || !groupToRename) return;
 
-    const { error } = await supabase
-      .from('tags')
-      .update({ type: newGroupName })
-      .eq('user_id', user.id)
-      .eq('type', groupToRename);
+    // This operation is trickier with array column.
+    // We need to fetch tags that contain the old group, remove it, add new one.
+    // Doing it client-side for simplicity, then bulk update? Or RPC?
+    // Let's do client-side iteration for now as volume is likely low.
+    
+    const tagsToUpdate = tags.filter(t => 
+      t.user_id === user.id && 
+      (t.groups?.includes(groupToRename) || t.type === groupToRename)
+    );
+
+    const updates = tagsToUpdate.map(t => {
+      const currentGroups = t.groups || (t.type ? [t.type] : []);
+      const newGroups = currentGroups.map(g => g === groupToRename ? newGroupName : g);
+      // Ensure unique
+      const uniqueNewGroups = [...new Set(newGroups)];
+      
+      return {
+        id: t.id,
+        groups: uniqueNewGroups,
+        type: uniqueNewGroups.length > 0 ? uniqueNewGroups[0] : null
+      };
+    });
+
+    const { error } = await supabase.from('tags').upsert(updates);
 
     if (error) {
       toast.error(`Failed to rename group: ${error.message}`);
@@ -210,16 +261,31 @@ const TagsSettingsPage = () => {
   const handleDeleteGroup = async () => {
     if (!groupToDelete || groupToDelete === 'general' || !user) return;
 
-    const { error } = await supabase
-      .from('tags')
-      .update({ type: 'general' })
-      .eq('user_id', user.id)
-      .eq('type', groupToDelete);
+    const tagsToUpdate = tags.filter(t => 
+      t.user_id === user.id && 
+      (t.groups?.includes(groupToDelete) || t.type === groupToDelete)
+    );
+
+    const updates = tagsToUpdate.map(t => {
+      const currentGroups = t.groups || (t.type ? [t.type] : []);
+      const newGroups = currentGroups.filter(g => g !== groupToDelete);
+      
+      // If empty, default to general or empty array?
+      // Usually users expect tags to remain but unassigned from group.
+      
+      return {
+        id: t.id,
+        groups: newGroups,
+        type: newGroups.length > 0 ? newGroups[0] : 'general'
+      };
+    });
+
+    const { error } = await supabase.from('tags').upsert(updates);
 
     if (error) {
       toast.error(`Failed to delete group: ${error.message}`);
     } else {
-      toast.success(`Group "${groupToDelete}" deleted. Tags moved to 'general'.`);
+      toast.success(`Group "${groupToDelete}" removed from tags.`);
       queryClient.invalidateQueries({ queryKey: ['tags', user.id] });
     }
     setGroupToDelete(null);
@@ -230,7 +296,7 @@ const TagsSettingsPage = () => {
       <TableHeader>
         <TableRow>
           <SortableTableHead columnKey="name" onSort={handleTagSort as any} sortConfig={tagSort as any}>Name</SortableTableHead>
-          <SortableTableHead columnKey="type" onSort={handleTagSort as any} sortConfig={tagSort as any}>Group</SortableTableHead>
+          <SortableTableHead columnKey="groups" onSort={handleTagSort as any} sortConfig={tagSort as any}>Groups</SortableTableHead>
           <SortableTableHead columnKey="color" onSort={handleTagSort as any} sortConfig={tagSort as any}>Color</SortableTableHead>
           {properties.map(prop => (
             <TableHead key={prop.id}>{prop.label}</TableHead>
@@ -245,36 +311,45 @@ const TagsSettingsPage = () => {
           <TableRow><TableCell colSpan={4 + properties.length} className="text-center h-24">
             {searchQuery ? `No tags found for "${searchQuery}"` : `No tags in this category.`}
           </TableCell></TableRow>
-        ) : tagsToRender.map(tag => (
-          <TableRow key={tag.id}>
-            <TableCell className="font-medium">{tag.name}</TableCell>
-            <TableCell className="capitalize">{tag.type || 'general'}</TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: tag.color }} />
-                <span className="font-mono text-sm hidden sm:inline">{tag.color}</span>
-              </div>
-            </TableCell>
-            {properties.map(prop => (
-              <TableCell key={prop.id}>
-                {tag.custom_properties?.[prop.name] ? String(tag.custom_properties[prop.name]) : '-'}
-              </TableCell>
-            ))}
-            <TableCell className="text-right">
-              {isEditable && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => handleEdit(tag)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => setTagToDelete(tag)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </TableCell>
-          </TableRow>
-        ))}
+        ) : tagsToRender.map(tag => {
+            const displayGroups = (tag.groups && tag.groups.length > 0) ? tag.groups : (tag.type ? [tag.type] : ['general']);
+            return (
+              <TableRow key={tag.id}>
+                <TableCell className="font-medium">{tag.name}</TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {displayGroups.map((g, i) => (
+                      <Badge key={i} variant="outline" className="capitalize text-xs">{g}</Badge>
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: tag.color }} />
+                    <span className="font-mono text-sm hidden sm:inline">{tag.color}</span>
+                  </div>
+                </TableCell>
+                {properties.map(prop => (
+                  <TableCell key={prop.id}>
+                    {tag.custom_properties?.[prop.name] ? String(tag.custom_properties[prop.name]) : '-'}
+                  </TableCell>
+                ))}
+                <TableCell className="text-right">
+                  {isEditable && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={() => handleEdit(tag)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setTagToDelete(tag)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+        })}
       </TableBody>
     </Table>
   );
@@ -425,7 +500,7 @@ const TagsSettingsPage = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Group "{groupToDelete}"?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will not delete the tags within this group. Instead, all tags will be moved to the "general" group. This action cannot be undone.
+              This will not delete the tags within this group. Instead, the tags will be removed from this group.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

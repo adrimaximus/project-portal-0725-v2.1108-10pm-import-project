@@ -9,10 +9,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Loader2 } from 'lucide-react';
 import { Tag, CustomProperty } from '@/types';
 import ColorPicker from '../goals/ColorPicker';
-import { GroupSelect } from './GroupSelect';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import CustomPropertyInput from './CustomPropertyInput';
+import { MultiSelect } from '@/components/ui/multi-select';
 
 interface TagFormDialogProps {
   open: boolean;
@@ -26,7 +26,7 @@ interface TagFormDialogProps {
 const tagSchema = z.object({
   name: z.string().min(1, "Tag name is required."),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color."),
-  type: z.string().optional(),
+  groups: z.array(z.string()).optional(),
   custom_properties: z.record(z.any()).optional(),
 });
 
@@ -62,9 +62,14 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: Ta
   useEffect(() => {
     if (open) {
       if (tag) {
-        form.reset({ name: tag.name || '', color: tag.color || '#6b7280', type: tag.type || 'general', custom_properties: tag.custom_properties || {} });
+        form.reset({ 
+          name: tag.name || '', 
+          color: tag.color || '#6b7280', 
+          groups: tag.groups || (tag.type ? [tag.type] : []), 
+          custom_properties: tag.custom_properties || {} 
+        });
       } else {
-        form.reset({ name: '', color: '#6b7280', type: 'general', custom_properties: {} });
+        form.reset({ name: '', color: '#6b7280', groups: [], custom_properties: {} });
       }
     }
   }, [tag, open, form]);
@@ -81,8 +86,15 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: Ta
       return;
     }
 
-    onSave(data);
+    onSave({
+      ...data,
+      groups: data.groups || [],
+      // Backward compatibility if needed, take first group
+      type: data.groups && data.groups.length > 0 ? data.groups[0] : null
+    });
   };
+
+  const groupOptions = groups.map(g => ({ value: g, label: g }));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -102,14 +114,16 @@ const TagFormDialog = ({ open, onOpenChange, onSave, tag, isSaving, groups }: Ta
                 <FormMessage />
               </FormItem>
             )} />
-            <FormField control={form.control} name="type" render={({ field }) => (
+            <FormField control={form.control} name="groups" render={({ field }) => (
               <FormItem>
-                <FormLabel>Group</FormLabel>
+                <FormLabel>Groups</FormLabel>
                 <FormControl>
-                  <GroupSelect 
-                    value={field.value || 'general'} 
-                    onChange={field.onChange} 
-                    groups={groups} 
+                  <MultiSelect
+                    options={groupOptions}
+                    value={field.value || []}
+                    onChange={field.onChange}
+                    placeholder="Select groups..."
+                    creatable
                   />
                 </FormControl>
                 <FormMessage />
