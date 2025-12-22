@@ -115,7 +115,7 @@ const PortalHeader = ({ summary }: PortalHeaderProps) => {
 
   return (
     <>
-      <header className="flex h-14 items-center gap-2 border-b bg-background px-2 sm:gap-4 sm:px-4 lg:h-[60px] lg:px-6">
+      <header className="sticky top-0 z-50 w-full flex h-14 items-center gap-2 border-b bg-background px-2 sm:gap-4 sm:px-4 lg:h-[60px] lg:px-6">
         <Sheet>
           <SheetTrigger asChild>
             <Button
