@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarUrl, generatePastelColor, cn } from '@/lib/utils';
-import { Building2, Calendar, CreditCard, Download, Edit, Eye, FileText, User } from 'lucide-react';
+import { Building2, Calendar, CreditCard, Download, Edit, Eye, FileText, User, UserCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -87,35 +87,58 @@ export const InvoicePreviewDialog = ({ open, onOpenChange, invoice, onEdit }: In
                 </div>
             </div>
 
-            {/* Client Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Stakeholders Info */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                     <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                        <User className="h-4 w-4" /> Client Details
+                        <User className="h-4 w-4" /> Client
                     </h4>
                     <div className="flex items-center gap-3 p-3 border rounded-lg bg-card">
                         <Avatar className="h-10 w-10">
                             <AvatarImage src={invoice.clientAvatarUrl || invoice.clientLogo || undefined} />
                             <AvatarFallback>{invoice.clientName?.charAt(0)}</AvatarFallback>
                         </Avatar>
-                        <div>
-                            <p className="font-medium text-sm">{invoice.clientName || 'Unknown'}</p>
-                            <p className="text-xs text-muted-foreground">{invoice.clientCompanyName}</p>
+                        <div className="overflow-hidden">
+                            <p className="font-medium text-sm truncate" title={invoice.clientName || 'Unknown'}>{invoice.clientName || 'Unknown'}</p>
+                            <p className="text-xs text-muted-foreground truncate" title={invoice.clientCompanyName || ''}>{invoice.clientCompanyName}</p>
                         </div>
                     </div>
                 </div>
+
+                <div>
+                    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <UserCheck className="h-4 w-4" /> Project Owner
+                    </h4>
+                    {invoice.projectOwner ? (
+                        <div className="flex items-center gap-3 p-3 border rounded-lg bg-card">
+                            <Avatar className="h-10 w-10">
+                                <AvatarImage src={invoice.projectOwner.avatar_url || undefined} />
+                                <AvatarFallback style={generatePastelColor(invoice.projectOwner.id)}>{invoice.projectOwner.initials}</AvatarFallback>
+                            </Avatar>
+                            <div className="overflow-hidden">
+                                <p className="font-medium text-sm truncate" title={invoice.projectOwner.name}>{invoice.projectOwner.name}</p>
+                                <p className="text-xs text-muted-foreground truncate" title={invoice.projectOwner.email || ''}>{invoice.projectOwner.email}</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="p-3 border rounded-lg bg-muted/20 text-muted-foreground text-sm italic">
+                            No owner assigned
+                        </div>
+                    )}
+                </div>
+
                 <div>
                     <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                         <Building2 className="h-4 w-4" /> Project Admin
                     </h4>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-col gap-2">
                         {invoice.assignedMembers.filter(m => m.role === 'admin').map(admin => (
                             <div key={admin.id} className="flex items-center gap-2 p-2 border rounded-lg bg-card text-sm">
                                 <Avatar className="h-6 w-6">
                                     <AvatarImage src={admin.avatar_url || undefined} />
                                     <AvatarFallback style={generatePastelColor(admin.id)}>{admin.initials}</AvatarFallback>
                                 </Avatar>
-                                <span>{admin.name}</span>
+                                <span className="truncate" title={admin.name}>{admin.name}</span>
                             </div>
                         ))}
                         {invoice.assignedMembers.filter(m => m.role === 'admin').length === 0 && (
