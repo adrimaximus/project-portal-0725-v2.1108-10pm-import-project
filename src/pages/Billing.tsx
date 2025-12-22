@@ -208,7 +208,7 @@ const Billing = () => {
         <BillingStats invoices={filteredInvoices} />
 
         <Card>
-          <CardHeader className="sticky top-0 z-20 bg-background border-b shadow-sm">
+          <CardHeader>
             <CardTitle>Pending Invoices</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
