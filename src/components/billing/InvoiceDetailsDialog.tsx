@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Invoice } from "@/types";
@@ -5,12 +6,20 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Building2, CalendarIcon, CreditCard, FileText, User, Download, Eye, X } from "lucide-react";
+import { Building2, CalendarIcon, CreditCard, FileText, User, Download, Eye, X, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import PaymentStatusBadge from "./PaymentStatusBadge";
-import { useState } from "react";
+import EditExpenseDialog from './EditExpenseDialog';
+
+interface FileMetadata {
+  name: string;
+  url: string;
+  size: number;
+  type: string;
+  storagePath: string;
+}
 
 interface InvoiceDetailsDialogProps {
   invoice: Invoice | null;
@@ -39,6 +48,7 @@ const getInitials = (name?: string | null) => {
 const InvoiceDetailsDialog = ({ invoice, open, onOpenChange, onStatusChange }: InvoiceDetailsDialogProps) => {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type?: string } | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   if (!invoice) return null;
 
@@ -68,6 +78,8 @@ const InvoiceDetailsDialog = ({ invoice, open, onOpenChange, onStatusChange }: I
         window.open(file.file_url, '_blank');
     }
   };
+
+  const projectAdmins = invoice.assignedMembers?.filter(m => m.role === 'admin') || [];
 
   const content = (
     <div className="grid gap-6 py-4 w-full">
@@ -145,7 +157,7 @@ const InvoiceDetailsDialog = ({ invoice, open, onOpenChange, onStatusChange }: I
               {invoice.projectOwner ? (
                   <div className="flex items-center gap-2 mt-1">
                   <Avatar className="h-6 w-6 shrink-0">
-                      <AvatarImage src={invoice.projectOwner.avatar_url} />
+                      <AvatarImage src={invoice.projectOwner.avatar_url || undefined} />
                       <AvatarFallback className="text-[10px]">
                       {invoice.projectOwner.initials}
                       </AvatarFallback>
@@ -154,6 +166,30 @@ const InvoiceDetailsDialog = ({ invoice, open, onOpenChange, onStatusChange }: I
                   </div>
               ) : (
                   <p className="text-sm font-medium">-</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="bg-primary/10 p-2 rounded-full shrink-0">
+              <Users className="w-4 h-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-muted-foreground">Project Admin</p>
+              {projectAdmins.length > 0 ? (
+                <div className="flex flex-col gap-2 mt-1">
+                  {projectAdmins.map((admin) => (
+                    <div key={admin.id} className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6 shrink-0">
+                        <AvatarImage src={admin.avatar_url || undefined} alt={admin.name} />
+                        <AvatarFallback className="text-[10px]">{admin.initials}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium truncate">{admin.name}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm font-medium">-</p>
               )}
             </div>
           </div>
