@@ -12,12 +12,11 @@ interface BillingKanbanColumnProps {
     status: { value: PaymentStatus; label: string };
     invoices: Invoice[];
     onEditInvoice: (invoice: Invoice) => void;
-    onPreviewInvoice: (invoice: Invoice) => void;
     isCollapsed: boolean;
     onToggleCollapse: (statusValue: PaymentStatus) => void;
 }
 
-const BillingKanbanColumn = ({ status, invoices, onEditInvoice, onPreviewInvoice, isCollapsed, onToggleCollapse }: BillingKanbanColumnProps) => {
+const BillingKanbanColumn = ({ status, invoices, onEditInvoice, isCollapsed, onToggleCollapse }: BillingKanbanColumnProps) => {
     const { setNodeRef } = useDroppable({ id: status.value });
     const invoiceIds = useMemo(() => invoices.map(i => i.rawProjectId), [invoices]);
 
@@ -52,12 +51,7 @@ const BillingKanbanColumn = ({ status, invoices, onEditInvoice, onPreviewInvoice
                 <div className="flex-grow min-h-0 overflow-y-auto p-2 pt-0">
                     <SortableContext id={status.value} items={invoiceIds} strategy={verticalListSortingStrategy}>
                         {invoices.map(invoice => (
-                            <BillingKanbanCard 
-                                key={invoice.id} 
-                                invoice={invoice} 
-                                onEdit={onEditInvoice} 
-                                onClick={() => onPreviewInvoice(invoice)}
-                            />
+                            <BillingKanbanCard key={invoice.id} invoice={invoice} onEdit={onEditInvoice} />
                         ))}
                     </SortableContext>
                     {invoices.length === 0 && (

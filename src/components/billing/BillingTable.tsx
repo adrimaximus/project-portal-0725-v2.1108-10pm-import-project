@@ -1,7 +1,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { MoreVertical, Edit, Download, Paperclip, BellRing, Eye } from "lucide-react";
+import { MoreVertical, Edit, Download, Paperclip, BellRing } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -15,11 +15,9 @@ import { SortableTableHead } from "../ui/SortableTableHead";
 interface BillingTableProps {
   invoices: Invoice[];
   onEdit: (invoice: Invoice) => void;
-  onPreview: (invoice: Invoice) => void;
   sortConfig: { key: keyof Invoice | null; direction: 'asc' | 'desc' };
   handleSort: (column: keyof Invoice) => void;
   onStatusChange?: (invoiceId: string, newStatus: PaymentStatus) => void;
-  stickyHeaderOffset?: string | number;
 }
 
 const getInitials = (name?: string | null) => {
@@ -31,7 +29,7 @@ const getInitials = (name?: string | null) => {
   return names[0]?.charAt(0).toUpperCase() || '';
 };
 
-const BillingTable = ({ invoices, onEdit, onPreview, sortConfig, handleSort, onStatusChange, stickyHeaderOffset = 0 }: BillingTableProps) => {
+const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange }: BillingTableProps) => {
   const sortedInvoices = useMemo(() => {
     if (!sortConfig.key) return invoices;
     return [...invoices].sort((a, b) => {
@@ -63,11 +61,8 @@ const BillingTable = ({ invoices, onEdit, onPreview, sortConfig, handleSort, onS
 
   return (
     <Table>
-      <TableHeader 
-        className="sticky z-40 bg-background shadow-sm"
-        style={{ top: stickyHeaderOffset }}
-      >
-        <TableRow className="hover:bg-transparent border-none">
+      <TableHeader>
+        <TableRow>
           <SortableTableHead columnKey="id" onSort={handleSort} sortConfig={sortConfig}>Invoice #</SortableTableHead>
           <SortableTableHead columnKey="projectName" onSort={handleSort} sortConfig={sortConfig}>Project</SortableTableHead>
           <SortableTableHead columnKey="clientName" onSort={handleSort} sortConfig={sortConfig}>Client</SortableTableHead>
@@ -92,16 +87,7 @@ const BillingTable = ({ invoices, onEdit, onPreview, sortConfig, handleSort, onS
         ) : (
           sortedInvoices.map((invoice) => (
             <TableRow key={invoice.id}>
-              <TableCell 
-                className={cn(
-                    "font-medium cursor-pointer hover:text-primary transition-colors", 
-                    invoice.status === 'Overdue' && 'text-destructive font-semibold border-l-4 border-destructive pl-2', 
-                    invoice.status === 'Paid' && 'text-green-600 font-semibold border-l-4 border-green-600 pl-2'
-                )}
-                onClick={() => onPreview(invoice)}
-              >
-                {invoice.id}
-              </TableCell>
+              <TableCell className={cn("font-medium", invoice.status === 'Overdue' && 'text-destructive font-semibold border-l-4 border-destructive', invoice.status === 'Paid' && 'text-green-600 font-semibold border-l-4 border-green-600')}>{invoice.id}</TableCell>
               <TableCell>
                 <Link to={`/projects/${invoice.projectId}`} className="font-medium text-primary hover:underline">
                   {invoice.projectName}
@@ -223,10 +209,6 @@ const BillingTable = ({ invoices, onEdit, onPreview, sortConfig, handleSort, onS
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => onPreview(invoice)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        View
-                    </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => onEdit(invoice)}>
                       <Edit className="mr-2 h-4 w-4" />
                       Edit

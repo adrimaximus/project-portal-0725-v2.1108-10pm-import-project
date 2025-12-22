@@ -21,13 +21,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSortConfig } from "@/hooks/useSortConfig";
-import { InvoicePreviewDialog } from "@/components/billing/InvoicePreviewDialog";
 
 const Billing = () => {
   const { data: projectsData, isLoading } = useProjects({ fetchAll: true });
   const projects = useMemo(() => projectsData?.pages.flatMap(page => page.projects) ?? [], [projectsData]);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const { sortConfig, requestSort: handleSort } = useSortConfig<keyof Invoice>({ key: 'dueDate', direction: 'desc' });
   const [searchTerm, setSearchTerm] = useState("");
@@ -178,11 +176,6 @@ const Billing = () => {
     setIsFormOpen(true);
   };
 
-  const handlePreview = (invoice: Invoice) => {
-    setSelectedInvoice(invoice);
-    setIsPreviewOpen(true);
-  };
-
   if (isLoading) {
     return (
       <PortalLayout>
@@ -215,7 +208,7 @@ const Billing = () => {
         <BillingStats invoices={filteredInvoices} />
 
         <Card>
-          <CardHeader className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+          <CardHeader>
             <CardTitle>Pending Invoices</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -223,18 +216,12 @@ const Billing = () => {
               <BillingTable
                 invoices={activeInvoices}
                 onEdit={handleEdit}
-                onPreview={handlePreview}
                 sortConfig={sortConfig}
                 handleSort={handleSort}
                 onStatusChange={canEditStatus ? handleStatusChange : undefined}
-                stickyHeaderOffset="73px"
               />
             ) : (
-              <BillingKanbanView 
-                invoices={activeInvoices} 
-                onEditInvoice={handleEdit} 
-                onPreviewInvoice={handlePreview}
-              />
+              <BillingKanbanView invoices={activeInvoices} onEditInvoice={handleEdit} />
             )}
           </CardContent>
         </Card>
@@ -251,17 +238,12 @@ const Billing = () => {
                     <BillingTable
                       invoices={archivedInvoices}
                       onEdit={handleEdit}
-                      onPreview={handlePreview}
                       sortConfig={sortConfig}
                       handleSort={handleSort}
                       onStatusChange={canEditStatus ? handleStatusChange : undefined}
                     />
                   ) : (
-                    <BillingKanbanView 
-                        invoices={archivedInvoices} 
-                        onEditInvoice={handleEdit} 
-                        onPreviewInvoice={handlePreview}
-                    />
+                    <BillingKanbanView invoices={archivedInvoices} onEditInvoice={handleEdit} />
                   )}
                 </CardContent>
               </Card>
@@ -274,12 +256,6 @@ const Billing = () => {
         onClose={() => setIsFormOpen(false)}
         invoice={selectedInvoice}
         project={projects.find(p => p.id === selectedInvoice?.rawProjectId) || null}
-      />
-      <InvoicePreviewDialog 
-        open={isPreviewOpen}
-        onOpenChange={setIsPreviewOpen}
-        invoice={selectedInvoice}
-        onEdit={handleEdit}
       />
     </PortalLayout>
   );
