@@ -15,6 +15,7 @@ import { SortableTableHead } from "../ui/SortableTableHead";
 interface BillingTableProps {
   invoices: Invoice[];
   onEdit: (invoice: Invoice) => void;
+  onPreview: (invoice: Invoice) => void;
   sortConfig: { key: keyof Invoice | null; direction: 'asc' | 'desc' };
   handleSort: (column: keyof Invoice) => void;
   onStatusChange?: (invoiceId: string, newStatus: PaymentStatus) => void;
@@ -29,7 +30,7 @@ const getInitials = (name?: string | null) => {
   return names[0]?.charAt(0).toUpperCase() || '';
 };
 
-const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange }: BillingTableProps) => {
+const BillingTable = ({ invoices, onEdit, onPreview, sortConfig, handleSort, onStatusChange }: BillingTableProps) => {
   const sortedInvoices = useMemo(() => {
     if (!sortConfig.key) return invoices;
     return [...invoices].sort((a, b) => {
@@ -61,8 +62,8 @@ const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange
 
   return (
     <Table>
-      <TableHeader>
-        <TableRow>
+      <TableHeader className="sticky top-14 lg:top-[60px] z-40 bg-background shadow-sm">
+        <TableRow className="hover:bg-transparent border-none">
           <SortableTableHead columnKey="id" onSort={handleSort} sortConfig={sortConfig}>Invoice #</SortableTableHead>
           <SortableTableHead columnKey="projectName" onSort={handleSort} sortConfig={sortConfig}>Project</SortableTableHead>
           <SortableTableHead columnKey="clientName" onSort={handleSort} sortConfig={sortConfig}>Client</SortableTableHead>
@@ -87,7 +88,16 @@ const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange
         ) : (
           sortedInvoices.map((invoice) => (
             <TableRow key={invoice.id}>
-              <TableCell className={cn("font-medium", invoice.status === 'Overdue' && 'text-destructive font-semibold border-l-4 border-destructive', invoice.status === 'Paid' && 'text-green-600 font-semibold border-l-4 border-green-600')}>{invoice.id}</TableCell>
+              <TableCell 
+                className={cn(
+                    "font-medium cursor-pointer hover:text-primary transition-colors", 
+                    invoice.status === 'Overdue' && 'text-destructive font-semibold border-l-4 border-destructive pl-2', 
+                    invoice.status === 'Paid' && 'text-green-600 font-semibold border-l-4 border-green-600 pl-2'
+                )}
+                onClick={() => onPreview(invoice)}
+              >
+                {invoice.id}
+              </TableCell>
               <TableCell>
                 <Link to={`/projects/${invoice.projectId}`} className="font-medium text-primary hover:underline">
                   {invoice.projectName}
@@ -209,6 +219,10 @@ const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => onPreview(invoice)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View
+                    </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => onEdit(invoice)}>
                       <Edit className="mr-2 h-4 w-4" />
                       Edit

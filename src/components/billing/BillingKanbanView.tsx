@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 interface BillingKanbanViewProps {
     invoices: Invoice[];
     onEditInvoice: (invoice: Invoice) => void;
+    onPreviewInvoice: (invoice: Invoice) => void;
 }
 
 const dropAnimation: DropAnimation = {
@@ -23,7 +24,7 @@ const dropAnimation: DropAnimation = {
   }),
 };
 
-const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) => {
+const BillingKanbanView = ({ invoices, onEditInvoice, onPreviewInvoice }: BillingKanbanViewProps) => {
     const [activeInvoice, setActiveInvoice] = useState<Invoice | null>(null);
     const { updateProjectOrder } = useProjectKanbanMutations();
     const [groupedInvoices, setGroupedInvoices] = useState<Record<string, Invoice[]>>({});
@@ -185,6 +186,7 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
                         status={statusOption}
                         invoices={groupedInvoices[statusOption.value] || []}
                         onEditInvoice={onEditInvoice}
+                        onPreviewInvoice={onPreviewInvoice}
                         isCollapsed={collapsedColumns.includes(statusOption.value)}
                         onToggleCollapse={toggleColumnCollapse}
                     />
@@ -211,7 +213,7 @@ const BillingKanbanView = ({ invoices, onEditInvoice }: BillingKanbanViewProps) 
                             <div className="flex justify-between items-end mt-3">
                                 <div className="text-sm">
                                     <p className="text-xs text-muted-foreground">Amount</p>
-                                    <p className="font-semibold">{'Rp ' + activeInvoice.amount.toLocaleString('id-ID')}</p>
+                                    <p className="font-semibold">{'Rp ' + (activeInvoice.amount || 0).toLocaleString('id-ID')}</p>
                                 </div>
                                 <div className="text-right text-sm">
                                     <p className="text-xs text-muted-foreground">Due</p>

@@ -13,9 +13,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 interface BillingKanbanCardProps {
     invoice: Invoice;
     onEdit: (invoice: Invoice) => void;
+    onClick?: () => void;
 }
 
-const BillingKanbanCard = ({ invoice, onEdit }: BillingKanbanCardProps) => {
+const BillingKanbanCard = ({ invoice, onEdit, onClick }: BillingKanbanCardProps) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
       id: invoice.rawProjectId,
       data: {
@@ -44,6 +45,7 @@ const BillingKanbanCard = ({ invoice, onEdit }: BillingKanbanCardProps) => {
             <Card 
                 className="mb-3 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing border-l-4"
                 style={{ borderLeftColor: borderColor }}
+                onClick={onClick}
             >
                 <CardContent className="p-3">
                     <div className="flex justify-between items-start">
