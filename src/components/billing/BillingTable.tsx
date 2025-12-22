@@ -61,8 +61,8 @@ const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange
 
   return (
     <Table>
-      <TableHeader>
-        <TableRow>
+      <TableHeader className="sticky top-14 lg:top-[60px] z-40 bg-background shadow-sm">
+        <TableRow className="hover:bg-transparent border-none">
           <SortableTableHead columnKey="id" onSort={handleSort} sortConfig={sortConfig}>Invoice #</SortableTableHead>
           <SortableTableHead columnKey="projectName" onSort={handleSort} sortConfig={sortConfig}>Project</SortableTableHead>
           <SortableTableHead columnKey="clientName" onSort={handleSort} sortConfig={sortConfig}>Client</SortableTableHead>
