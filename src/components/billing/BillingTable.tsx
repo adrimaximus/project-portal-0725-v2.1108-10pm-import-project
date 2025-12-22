@@ -19,6 +19,7 @@ interface BillingTableProps {
   sortConfig: { key: keyof Invoice | null; direction: 'asc' | 'desc' };
   handleSort: (column: keyof Invoice) => void;
   onStatusChange?: (invoiceId: string, newStatus: PaymentStatus) => void;
+  stickyHeaderOffset?: string | number;
 }
 
 const getInitials = (name?: string | null) => {
@@ -30,7 +31,7 @@ const getInitials = (name?: string | null) => {
   return names[0]?.charAt(0).toUpperCase() || '';
 };
 
-const BillingTable = ({ invoices, onEdit, onPreview, sortConfig, handleSort, onStatusChange }: BillingTableProps) => {
+const BillingTable = ({ invoices, onEdit, onPreview, sortConfig, handleSort, onStatusChange, stickyHeaderOffset = 0 }: BillingTableProps) => {
   const sortedInvoices = useMemo(() => {
     if (!sortConfig.key) return invoices;
     return [...invoices].sort((a, b) => {
@@ -62,7 +63,10 @@ const BillingTable = ({ invoices, onEdit, onPreview, sortConfig, handleSort, onS
 
   return (
     <Table>
-      <TableHeader className="sticky top-14 lg:top-[60px] z-40 bg-background shadow-sm">
+      <TableHeader 
+        className="sticky z-40 bg-background shadow-sm"
+        style={{ top: stickyHeaderOffset }}
+      >
         <TableRow className="hover:bg-transparent border-none">
           <SortableTableHead columnKey="id" onSort={handleSort} sortConfig={sortConfig}>Invoice #</SortableTableHead>
           <SortableTableHead columnKey="projectName" onSort={handleSort} sortConfig={sortConfig}>Project</SortableTableHead>
