@@ -8,9 +8,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow } from "date-fns";
 import { Invoice, PaymentStatus } from "@/types";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import PaymentStatusBadge from "./PaymentStatusBadge";
 import { SortableTableHead } from "../ui/SortableTableHead";
+import InvoiceDetailsDialog from "./InvoiceDetailsDialog";
 
 interface BillingTableProps {
   invoices: Invoice[];
@@ -30,6 +31,8 @@ const getInitials = (name?: string | null) => {
 };
 
 const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange }: BillingTableProps) => {
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+
   const sortedInvoices = useMemo(() => {
     if (!sortConfig.key) return invoices;
     return [...invoices].sort((a, b) => {
@@ -59,168 +62,196 @@ const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange
     });
   }, [invoices, sortConfig]);
 
+  const handleRowClick = (e: React.MouseEvent, invoice: Invoice) => {
+    // Prevent opening modal if clicking on specific interactive elements
+    if ((e.target as HTMLElement).closest('a, button, .no-modal-trigger')) {
+      return;
+    }
+    setSelectedInvoice(invoice);
+  };
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <SortableTableHead columnKey="id" onSort={handleSort} sortConfig={sortConfig}>Invoice #</SortableTableHead>
-          <SortableTableHead columnKey="projectName" onSort={handleSort} sortConfig={sortConfig}>Project</SortableTableHead>
-          <SortableTableHead columnKey="clientName" onSort={handleSort} sortConfig={sortConfig}>Client</SortableTableHead>
-          <SortableTableHead columnKey="projectOwner" onSort={handleSort} sortConfig={sortConfig}>Owner</SortableTableHead>
-          <SortableTableHead columnKey="assignedMembers" onSort={handleSort} sortConfig={sortConfig}>Project Admin</SortableTableHead>
-          <SortableTableHead columnKey="status" onSort={handleSort} sortConfig={sortConfig}>Status</SortableTableHead>
-          <SortableTableHead columnKey="poNumber" onSort={handleSort} sortConfig={sortConfig}>PO #</SortableTableHead>
-          <SortableTableHead columnKey="amount" onSort={handleSort} sortConfig={sortConfig}>Amount</SortableTableHead>
-          <SortableTableHead columnKey="dueDate" onSort={handleSort} sortConfig={sortConfig}>Due Date</SortableTableHead>
-          <SortableTableHead columnKey="last_billing_reminder_sent_at" onSort={handleSort} sortConfig={sortConfig}>Last Reminder</SortableTableHead>
-          <TableHead>Attachment</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {sortedInvoices.length === 0 ? (
+    <>
+      <Table>
+        <TableHeader>
           <TableRow>
-            <TableCell colSpan={12} className="h-24 text-center">
-              No invoices found.
-            </TableCell>
+            <SortableTableHead columnKey="id" onSort={handleSort} sortConfig={sortConfig}>Invoice #</SortableTableHead>
+            <SortableTableHead columnKey="projectName" onSort={handleSort} sortConfig={sortConfig}>Project</SortableTableHead>
+            <SortableTableHead columnKey="clientName" onSort={handleSort} sortConfig={sortConfig}>Client</SortableTableHead>
+            <SortableTableHead columnKey="projectOwner" onSort={handleSort} sortConfig={sortConfig}>Owner</SortableTableHead>
+            <SortableTableHead columnKey="assignedMembers" onSort={handleSort} sortConfig={sortConfig}>Project Admin</SortableTableHead>
+            <SortableTableHead columnKey="status" onSort={handleSort} sortConfig={sortConfig}>Status</SortableTableHead>
+            <SortableTableHead columnKey="poNumber" onSort={handleSort} sortConfig={sortConfig}>PO #</SortableTableHead>
+            <SortableTableHead columnKey="amount" onSort={handleSort} sortConfig={sortConfig}>Amount</SortableTableHead>
+            <SortableTableHead columnKey="dueDate" onSort={handleSort} sortConfig={sortConfig}>Due Date</SortableTableHead>
+            <SortableTableHead columnKey="last_billing_reminder_sent_at" onSort={handleSort} sortConfig={sortConfig}>Last Reminder</SortableTableHead>
+            <TableHead>Attachment</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
-        ) : (
-          sortedInvoices.map((invoice) => (
-            <TableRow key={invoice.id}>
-              <TableCell className={cn("font-medium", invoice.status === 'Overdue' && 'text-destructive font-semibold border-l-4 border-destructive', invoice.status === 'Paid' && 'text-green-600 font-semibold border-l-4 border-green-600')}>{invoice.id}</TableCell>
-              <TableCell>
-                <Link to={`/projects/${invoice.projectId}`} className="font-medium text-primary hover:underline">
-                  {invoice.projectName}
-                </Link>
+        </TableHeader>
+        <TableBody>
+          {sortedInvoices.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={12} className="h-24 text-center">
+                No invoices found.
               </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={invoice.clientAvatarUrl || invoice.clientLogo || undefined} alt={invoice.clientName || ''} />
-                    <AvatarFallback>{getInitials(invoice.clientName)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="font-medium">{invoice.clientName || 'N/A'}</div>
-                    <div className="text-sm text-muted-foreground">{invoice.clientCompanyName || ''}</div>
+            </TableRow>
+          ) : (
+            sortedInvoices.map((invoice) => (
+              <TableRow 
+                key={invoice.id}
+                onClick={(e) => handleRowClick(e, invoice)}
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+              >
+                <TableCell className={cn("font-medium", invoice.status === 'Overdue' && 'text-destructive font-semibold border-l-4 border-destructive', invoice.status === 'Paid' && 'text-green-600 font-semibold border-l-4 border-green-600')}>{invoice.id}</TableCell>
+                <TableCell>
+                  <Link 
+                    to={`/projects/${invoice.projectId}`} 
+                    className="font-medium text-primary hover:underline relative z-10"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {invoice.projectName}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={invoice.clientAvatarUrl || invoice.clientLogo || undefined} alt={invoice.clientName || ''} />
+                      <AvatarFallback>{getInitials(invoice.clientName)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium">{invoice.clientName || 'N/A'}</div>
+                      <div className="text-sm text-muted-foreground">{invoice.clientCompanyName || ''}</div>
+                    </div>
                   </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                {invoice.projectOwner && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={invoice.projectOwner.avatar_url} alt={invoice.projectOwner.name} />
-                          <AvatarFallback>{invoice.projectOwner.initials}</AvatarFallback>
-                        </Avatar>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{invoice.projectOwner.name}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </TableCell>
-              <TableCell>
-                <div className="flex -space-x-2 overflow-hidden">
-                  {invoice.assignedMembers
-                    .filter(member => member.role === 'admin')
-                    .map(admin => (
-                      <TooltipProvider key={admin.id}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Avatar className="h-8 w-8 border-2 border-background">
-                              <AvatarImage src={admin.avatar_url} alt={admin.name} />
-                              <AvatarFallback>{admin.initials}</AvatarFallback>
-                            </Avatar>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{admin.name}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ))}
-                </div>
-              </TableCell>
-              <TableCell>
-                <PaymentStatusBadge 
-                  status={invoice.status} 
-                  onStatusChange={onStatusChange ? (newStatus) => onStatusChange(invoice.rawProjectId, newStatus) : undefined} 
-                />
-              </TableCell>
-              <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
-              <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
-              <TableCell className={cn(invoice.status === 'Overdue' && 'text-destructive font-semibold')}>
-                {format(new Date(invoice.dueDate), 'MMM dd, yyyy')}
-              </TableCell>
-              <TableCell>
-                {invoice.last_billing_reminder_sent_at ? (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(invoice.last_billing_reminder_sent_at), { addSuffix: true })}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{format(new Date(invoice.last_billing_reminder_sent_at), 'PPP p')}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                ) : (
-                  <span className="text-xs text-muted-foreground">-</span>
-                )}
-              </TableCell>
-              <TableCell>
-                {invoice.invoiceAttachments && invoice.invoiceAttachments.length > 0 ? (
+                </TableCell>
+                <TableCell>
+                  {invoice.projectOwner && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={invoice.projectOwner.avatar_url} alt={invoice.projectOwner.name} />
+                            <AvatarFallback>{invoice.projectOwner.initials}</AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{invoice.projectOwner.name}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex -space-x-2 overflow-hidden">
+                    {invoice.assignedMembers
+                      .filter(member => member.role === 'admin')
+                      .map(admin => (
+                        <TooltipProvider key={admin.id}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Avatar className="h-8 w-8 border-2 border-background">
+                                <AvatarImage src={admin.avatar_url} alt={admin.name} />
+                                <AvatarFallback>{admin.initials}</AvatarFallback>
+                              </Avatar>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{admin.name}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ))}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div onClick={(e) => e.stopPropagation()} className="no-modal-trigger inline-block">
+                    <PaymentStatusBadge 
+                      status={invoice.status} 
+                      onStatusChange={onStatusChange ? (newStatus) => onStatusChange(invoice.rawProjectId, newStatus) : undefined} 
+                    />
+                  </div>
+                </TableCell>
+                <TableCell>{invoice.poNumber || 'N/A'}</TableCell>
+                <TableCell>{'Rp ' + invoice.amount.toLocaleString('id-ID')}</TableCell>
+                <TableCell className={cn(invoice.status === 'Overdue' && 'text-destructive font-semibold')}>
+                  {format(new Date(invoice.dueDate), 'MMM dd, yyyy')}
+                </TableCell>
+                <TableCell>
+                  {invoice.last_billing_reminder_sent_at ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(invoice.last_billing_reminder_sent_at), { addSuffix: true })}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{format(new Date(invoice.last_billing_reminder_sent_at), 'PPP p')}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">-</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {invoice.invoiceAttachments && invoice.invoiceAttachments.length > 0 ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="flex items-center gap-1 text-muted-foreground">
+                          <Paperclip className="h-4 w-4" />
+                          {invoice.invoiceAttachments.length}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {invoice.invoiceAttachments.map(att => (
+                          <DropdownMenuItem key={att.id} asChild>
+                            <a
+                              href={att.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 cursor-pointer"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Download className="h-4 w-4" />
+                              <span className="truncate" title={att.file_name}>{att.file_name}</span>
+                            </a>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    'N/A'
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="flex items-center gap-1 text-muted-foreground">
-                        <Paperclip className="h-4 w-4" />
-                        {invoice.invoiceAttachments.length}
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {invoice.invoiceAttachments.map(att => (
-                        <DropdownMenuItem key={att.id} asChild>
-                          <a
-                            href={att.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 cursor-pointer"
-                          >
-                            <Download className="h-4 w-4" />
-                            <span className="truncate" title={att.file_name}>{att.file_name}</span>
-                          </a>
-                        </DropdownMenuItem>
-                      ))}
+                      <DropdownMenuItem onSelect={() => onEdit(invoice)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                ) : (
-                  'N/A'
-                )}
-              </TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => onEdit(invoice)}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+      
+      <InvoiceDetailsDialog 
+        open={!!selectedInvoice} 
+        onOpenChange={(open) => !open && setSelectedInvoice(null)}
+        invoice={selectedInvoice}
+        onStatusChange={onStatusChange}
+      />
+    </>
   );
 };
 
