@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Building2, CalendarIcon, CreditCard, FileText, User, Download, Eye, X, Users, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { Building2, CalendarIcon, CreditCard, FileText, User, Download, Eye, X, Users, MoreVertical, Edit, Trash2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -153,6 +153,16 @@ const InvoiceDetailsDialog = ({ invoice, open, onOpenChange, onStatusChange, onE
             <div className="min-w-0">
               <p className="text-sm font-medium text-muted-foreground">PO Number</p>
               <p className="font-medium font-mono">{invoice.poNumber || '-'}</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="bg-primary/10 p-2 rounded-full shrink-0">
+              <Send className="w-4 h-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-muted-foreground">Channel</p>
+              <p className="font-medium">{invoice.channel || '-'}</p>
             </div>
           </div>
         </div>
