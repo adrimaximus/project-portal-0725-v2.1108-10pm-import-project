@@ -19,7 +19,7 @@ interface GoalLogTableProps {
 
 const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
   const [userMap, setUserMap] = useState<Map<string, User>>(new Map());
-  const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type?: string } | null>(null);
+  const [selectedLog, setSelectedLog] = useState<GoalCompletion | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -47,14 +47,17 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
     fetchUsers();
   }, [logs]);
 
-  const handlePreview = (url: string, name: string) => {
-    // Determine type based on extension if not provided
+  // Determine type based on extension if not provided
+  const getFileType = (name: string) => {
     const extension = name.split('.').pop()?.toLowerCase();
-    const type = extension === 'pdf' ? 'application/pdf' : 
-                 ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '') ? 'image/' + extension : 'unknown';
-    
-    setPreviewFile({ url, name, type });
+    return extension === 'pdf' ? 'application/pdf' : 
+           ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '') ? 'image/' + extension : 'unknown';
   };
+
+  const selectedAchiever = selectedLog?.userId ? userMap.get(selectedLog.userId) : null;
+  const selectedAttachmentUrl = (selectedLog as any)?.attachment_url;
+  const selectedAttachmentName = (selectedLog as any)?.attachment_name || 'Attachment';
+  const selectedAttachmentType = (selectedLog as any)?.attachment_type || getFileType(selectedAttachmentName);
 
   if (logs.length === 0) {
     return <p className="text-sm text-muted-foreground text-center py-4">No logs yet.</p>;
@@ -79,23 +82,16 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
           <TableBody>
             {sortedLogs.map((log, index) => {
               const achiever = log.userId ? userMap.get(log.userId) : null;
-              // Assuming log has attachment properties, casting to any if type definition isn't updated yet
               const attachmentUrl = (log as any).attachment_url;
-              const attachmentName = (log as any).attachment_name || 'Attachment';
 
               return (
-                <TableRow key={index}>
+                <TableRow 
+                  key={index} 
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => setSelectedLog(log)}
+                >
                   <TableCell className="text-muted-foreground text-xs">
-                    {attachmentUrl ? (
-                      <button 
-                        onClick={() => handlePreview(attachmentUrl, attachmentName)}
-                        className="hover:underline hover:text-foreground transition-colors text-left"
-                      >
-                        {format(new Date(log.date), 'MMM dd, yyyy, hh:mm a')}
-                      </button>
-                    ) : (
-                      format(new Date(log.date), 'MMM dd, yyyy, hh:mm a')
-                    )}
+                    {format(new Date(log.date), 'MMM dd, yyyy, hh:mm a')}
                   </TableCell>
                   <TableCell>
                     {achiever ? (
@@ -112,15 +108,10 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
                   </TableCell>
                   <TableCell>
                     {attachmentUrl ? (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 gap-2 text-primary"
-                        onClick={() => handlePreview(attachmentUrl, attachmentName)}
-                      >
+                      <div className="flex items-center gap-2 text-primary">
                         <FileText className="h-4 w-4" />
                         <span className="text-xs">View</span>
-                      </Button>
+                      </div>
                     ) : (
                       <span className="text-xs text-muted-foreground">-</span>
                     )}
@@ -135,31 +126,79 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
         </Table>
       </div>
 
-      <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
-        <DialogContent className="w-full h-[60dvh] max-w-full rounded-none border-0 p-0 flex flex-col sm:h-[50vh] sm:max-w-xl sm:rounded-lg sm:border">
-          <DialogHeader className="p-3 border-b flex-shrink-0 flex flex-row items-center justify-between space-y-0 bg-background">
-            <DialogTitle className="truncate pr-8 text-base">{previewFile?.name}</DialogTitle>
+      <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
+        <DialogContent className="w-full h-[80dvh] max-w-full rounded-none border-0 p-0 flex flex-col sm:h-[70vh] sm:max-w-xl sm:rounded-lg sm:border">
+          <DialogHeader className="p-4 border-b flex-shrink-0 bg-background">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-base">Goal Log Details</DialogTitle>
+              <div className="text-xs text-muted-foreground">
+                {selectedLog && format(new Date(selectedLog.date), 'MMM dd, yyyy, hh:mm a')}
+              </div>
+            </div>
           </DialogHeader>
-          <div className="flex-1 bg-muted/20 relative overflow-hidden flex items-center justify-center p-2">
-             {previewFile?.type === 'application/pdf' ? (
-                 <iframe 
-                    src={`${previewFile.url}#view=FitH`} 
-                    title={previewFile.name}
-                    className="w-full h-full border-none rounded-md" 
-                 />
-             ) : (
-                 <img 
-                    src={previewFile?.url} 
-                    alt={previewFile?.name} 
-                    className="max-w-full max-h-full object-contain rounded-md shadow-sm" 
-                 />
-             )}
+          
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="p-4 grid gap-4 flex-shrink-0 bg-background border-b">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Achiever:</span>
+                  {selectedAchiever ? (
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={getAvatarUrl(selectedAchiever.avatar_url, selectedAchiever.id)} />
+                        <AvatarFallback style={generatePastelColor(selectedAchiever.id)}>{selectedAchiever.initials}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium">{selectedAchiever.name}</span>
+                    </div>
+                  ) : (
+                    <span className="text-sm">-</span>
+                  )}
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-bold text-lg">{selectedLog && formatValue(selectedLog.value, unit)}</span>
+                  <span className="text-xs text-muted-foreground capitalize">{goalType}</span>
+                </div>
+              </div>
+              
+              {selectedLog?.notes && (
+                <div className="text-sm bg-muted/30 p-2 rounded-md">
+                  <span className="font-semibold text-xs text-muted-foreground block mb-1">Notes</span>
+                  {selectedLog.notes}
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 bg-muted/20 relative overflow-hidden flex items-center justify-center p-2 min-h-0">
+               {selectedAttachmentUrl ? (
+                 selectedAttachmentType === 'application/pdf' ? (
+                     <iframe 
+                        src={`${selectedAttachmentUrl}#view=FitH`} 
+                        title={selectedAttachmentName}
+                        className="w-full h-full border-none rounded-md" 
+                     />
+                 ) : (
+                     <img 
+                        src={selectedAttachmentUrl} 
+                        alt={selectedAttachmentName} 
+                        className="max-w-full max-h-full object-contain rounded-md shadow-sm" 
+                     />
+                 )
+               ) : (
+                 <div className="text-sm text-muted-foreground flex flex-col items-center gap-2">
+                   <FileText className="h-8 w-8 opacity-20" />
+                   <span>No attachment available</span>
+                 </div>
+               )}
+            </div>
           </div>
+
           <div className="p-3 border-t flex justify-end gap-2 flex-shrink-0 bg-background">
-            <Button variant="outline" size="sm" onClick={() => window.open(previewFile?.url, '_blank')}>
-                Open Original
-            </Button>
-            <Button size="sm" onClick={() => setPreviewFile(null)}>Close</Button>
+            {selectedAttachmentUrl && (
+              <Button variant="outline" size="sm" onClick={() => window.open(selectedAttachmentUrl, '_blank')}>
+                  Open Attachment
+              </Button>
+            )}
+            <Button size="sm" onClick={() => setSelectedLog(null)}>Close</Button>
           </div>
         </DialogContent>
       </Dialog>
