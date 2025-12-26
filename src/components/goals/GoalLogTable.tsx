@@ -127,14 +127,11 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
       </div>
 
       <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
-        <DialogContent className="w-full h-[100dvh] max-w-full rounded-none border-0 p-0 flex flex-col sm:h-[80vh] sm:max-w-4xl sm:rounded-lg sm:border">
-          <DialogHeader className="p-4 border-b flex-shrink-0 flex flex-row items-center justify-between space-y-0 bg-background">
-            <DialogTitle className="truncate pr-4 text-base">{previewFile?.name}</DialogTitle>
-            <Button variant="ghost" size="icon" onClick={() => setPreviewFile(null)}>
-              <X className="h-5 w-5" />
-            </Button>
+        <DialogContent className="w-full h-[90dvh] max-w-full rounded-none border-0 p-0 flex flex-col sm:h-[70vh] sm:max-w-3xl sm:rounded-lg sm:border">
+          <DialogHeader className="p-3 border-b flex-shrink-0 flex flex-row items-center justify-between space-y-0 bg-background">
+            <DialogTitle className="truncate pr-8 text-base">{previewFile?.name}</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 bg-muted/20 relative overflow-hidden flex items-center justify-center p-4">
+          <div className="flex-1 bg-muted/20 relative overflow-hidden flex items-center justify-center p-2">
              {previewFile?.type === 'application/pdf' ? (
                  <iframe 
                     src={`${previewFile.url}#view=FitH`} 
@@ -149,11 +146,11 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
                  />
              )}
           </div>
-          <div className="p-4 border-t flex justify-end gap-2 flex-shrink-0 bg-background">
-            <Button variant="outline" onClick={() => window.open(previewFile?.url, '_blank')}>
+          <div className="p-3 border-t flex justify-end gap-2 flex-shrink-0 bg-background">
+            <Button variant="outline" size="sm" onClick={() => window.open(previewFile?.url, '_blank')}>
                 Open Original
             </Button>
-            <Button onClick={() => setPreviewFile(null)}>Close</Button>
+            <Button size="sm" onClick={() => setPreviewFile(null)}>Close</Button>
           </div>
         </DialogContent>
       </Dialog>
