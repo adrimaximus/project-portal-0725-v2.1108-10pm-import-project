@@ -127,75 +127,85 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
       </div>
 
       <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
-        <DialogContent className="w-full h-[80dvh] max-w-full rounded-none border-0 p-0 flex flex-col sm:h-[70vh] sm:max-w-xl sm:rounded-lg sm:border">
-          <DialogHeader className="p-4 border-b flex-shrink-0 bg-background">
+        <DialogContent className="w-full h-[80dvh] max-w-full rounded-none border-0 p-0 flex flex-col sm:h-[70vh] sm:max-w-lg sm:rounded-lg sm:border shadow-xl">
+          <DialogHeader className="px-6 py-4 border-b flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex items-center justify-between">
-              <DialogTitle className="text-base">Goal Log Details</DialogTitle>
-              <div className="text-xs text-muted-foreground">
-                {selectedLog && format(new Date(selectedLog.date), 'MMM dd, yyyy, hh:mm a')}
+              <DialogTitle className="text-lg font-semibold tracking-tight">Goal Log Details</DialogTitle>
+              <div className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                {selectedLog && format(new Date(selectedLog.date), 'MMM dd, yyyy • hh:mm a')}
               </div>
             </div>
           </DialogHeader>
           
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="p-4 grid gap-4 flex-shrink-0 bg-background border-b">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Achiever:</span>
+            <div className="px-6 py-5 grid gap-5 flex-shrink-0 bg-background">
+              <div className="flex items-center justify-between p-4 bg-muted/40 rounded-xl border border-border/50">
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Achiever</span>
                   {selectedAchiever ? (
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9 border-2 border-background ring-1 ring-border/50">
                         <AvatarImage src={getAvatarUrl(selectedAchiever.avatar_url, selectedAchiever.id)} />
-                        <AvatarFallback style={generatePastelColor(selectedAchiever.id)}>{selectedAchiever.initials}</AvatarFallback>
+                        <AvatarFallback className="text-xs font-medium" style={generatePastelColor(selectedAchiever.id)}>{selectedAchiever.initials}</AvatarFallback>
                       </Avatar>
-                      <span className="text-sm font-medium">{selectedAchiever.name}</span>
+                      <span className="text-sm font-semibold">{selectedAchiever.name}</span>
                     </div>
                   ) : (
-                    <span className="text-sm">-</span>
+                    <span className="text-sm text-muted-foreground italic">Unknown User</span>
                   )}
                 </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-sm font-bold text-lg">{selectedLog && formatValue(selectedLog.value, unit)}</span>
-                  <span className="text-xs text-muted-foreground capitalize">{goalType}</span>
+                <div className="flex flex-col items-end gap-1.5">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider text-right">{goalType === 'quantity' ? 'Quantity' : 'Value'}</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-bold tracking-tight text-primary">{selectedLog && formatValue(selectedLog.value, '')}</span>
+                    {unit && <span className="text-sm font-medium text-muted-foreground">{unit}</span>}
+                  </div>
                 </div>
               </div>
               
               {selectedLog?.notes && (
-                <div className="text-sm bg-muted/30 p-2 rounded-md">
-                  <span className="font-semibold text-xs text-muted-foreground block mb-1">Notes</span>
-                  {selectedLog.notes}
+                <div className="space-y-2">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Notes</span>
+                  <div className="text-sm text-foreground/90 bg-muted/30 p-3 rounded-lg border border-border/50 leading-relaxed">
+                    {selectedLog.notes}
+                  </div>
                 </div>
               )}
             </div>
 
-            <div className="flex-1 bg-muted/20 relative overflow-hidden flex items-center justify-center p-2 min-h-0">
+            <div className="flex-1 bg-muted/20 relative overflow-hidden flex flex-col border-t border-border/50">
                {selectedAttachmentUrl ? (
-                 selectedAttachmentType === 'application/pdf' ? (
-                     <iframe 
-                        src={`${selectedAttachmentUrl}#view=FitH`} 
-                        title={selectedAttachmentName}
-                        className="w-full h-full border-none rounded-md" 
-                     />
-                 ) : (
-                     <img 
-                        src={selectedAttachmentUrl} 
-                        alt={selectedAttachmentName} 
-                        className="max-w-full max-h-full object-contain rounded-md shadow-sm" 
-                     />
-                 )
+                 <div className="flex-1 w-full h-full p-4 flex items-center justify-center bg-muted/10">
+                   {selectedAttachmentType === 'application/pdf' ? (
+                       <iframe 
+                          src={`${selectedAttachmentUrl}#view=FitH`} 
+                          title={selectedAttachmentName}
+                          className="w-full h-full border rounded-md shadow-sm bg-white" 
+                       />
+                   ) : (
+                       <img 
+                          src={selectedAttachmentUrl} 
+                          alt={selectedAttachmentName} 
+                          className="max-w-full max-h-full object-contain rounded-md shadow-sm" 
+                       />
+                   )}
+                 </div>
                ) : (
-                 <div className="text-sm text-muted-foreground flex flex-col items-center gap-2">
-                   <FileText className="h-8 w-8 opacity-20" />
-                   <span>No attachment available</span>
+                 <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground p-8">
+                   <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                     <FileText className="h-8 w-8 opacity-40" />
+                   </div>
+                   <span className="text-sm font-medium">No attachment available</span>
                  </div>
                )}
             </div>
           </div>
 
-          <div className="p-3 border-t flex justify-end gap-2 flex-shrink-0 bg-background">
+          <div className="p-4 border-t flex justify-end gap-3 flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             {selectedAttachmentUrl && (
-              <Button variant="outline" size="sm" onClick={() => window.open(selectedAttachmentUrl, '_blank')}>
-                  Open Attachment
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => window.open(selectedAttachmentUrl, '_blank')}>
+                  <Eye className="h-4 w-4" />
+                  Open Original
               </Button>
             )}
             <Button size="sm" onClick={() => setSelectedLog(null)}>Close</Button>
