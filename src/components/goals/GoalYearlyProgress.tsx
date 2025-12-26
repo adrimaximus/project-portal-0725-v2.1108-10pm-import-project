@@ -271,28 +271,28 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
       </Card>
       
       <Dialog open={!!selectedDay} onOpenChange={(open) => !open && setSelectedDay(null)}>
-          <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-none shadow-xl">
+          <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-none shadow-xl flex flex-col max-h-[90vh]">
               {/* Header Section */}
-              <div className="px-6 py-6 bg-muted/20 border-b">
+              <div className="px-6 py-6 bg-muted/20 border-b shrink-0">
                   <DialogHeader className="p-0 space-y-1 text-left">
-                      <DialogTitle className="text-2xl font-bold text-foreground">
+                      <DialogTitle className="text-2xl font-bold text-foreground break-words">
                           {selectedDay && format(selectedDay, "MMMM do")}
                       </DialogTitle>
-                      <DialogDescription className="text-base text-muted-foreground">
+                      <DialogDescription className="text-base text-muted-foreground break-words">
                           {selectedDay && format(selectedDay, "EEEE, yyyy")}
                       </DialogDescription>
                   </DialogHeader>
               </div>
 
               {/* Body Section */}
-              <div className="p-6 space-y-6">
+              <div className="p-6 space-y-6 overflow-y-auto">
                   {/* Status Card */}
-                  <div className="flex items-center justify-between p-4 rounded-xl border bg-card/50 hover:bg-card hover:border-primary/20 transition-all duration-200">
-                      <div className="space-y-1">
+                  <div className="flex flex-row items-center justify-between p-4 rounded-xl border bg-card/50 hover:bg-card hover:border-primary/20 transition-all duration-200">
+                      <div className="space-y-1 flex-1 mr-4">
                           <Label htmlFor="completed-toggle" className="text-base font-semibold cursor-pointer">
                               Completion Status
                           </Label>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-muted-foreground break-words">
                               {isCompleted ? 'Marked as done' : 'Marked as missed'}
                           </p>
                       </div>
@@ -300,7 +300,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                           id="completed-toggle" 
                           checked={isCompleted} 
                           onCheckedChange={setIsCompleted}
-                          className="scale-110 data-[state=checked]:bg-primary"
+                          className="scale-110 data-[state=checked]:bg-primary shrink-0"
                       />
                   </div>
 
@@ -313,10 +313,10 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                               <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
                                   <FileText className="h-5 w-5" />
                               </div>
-                              <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                  <p className="text-sm font-medium truncate text-foreground">{existingAttachment.name}</p>
+                              <div className="flex-1 min-w-0 grid gap-0.5">
+                                  <p className="text-sm font-medium text-foreground break-all">{existingAttachment.name}</p>
                               </div>
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 shrink-0">
                                   <Button
                                       variant="ghost"
                                       size="icon"
@@ -341,17 +341,19 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                   <Paperclip className="h-5 w-5" />
                               </div>
                               <div className="flex-1 min-w-0 grid gap-0.5">
-                                  <p className="text-sm font-medium truncate text-foreground">{file.name}</p>
+                                  <p className="text-sm font-medium text-foreground break-all">{file.name}</p>
                                   <p className="text-xs text-emerald-600 font-medium">Ready to upload</p>
                               </div>
-                              <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
-                                  onClick={() => { setFile(null); if(fileInputRef.current) fileInputRef.current.value=''; }}
-                              >
-                                  <X className="h-4 w-4" />
-                              </Button>
+                              <div className="shrink-0">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+                                    onClick={() => { setFile(null); if(fileInputRef.current) fileInputRef.current.value=''; }}
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
+                              </div>
                           </div>
                       ) : (
                           <div 
@@ -372,7 +374,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
               </div>
 
               {/* Footer Section */}
-              <DialogFooter className="p-6 pt-0">
+              <DialogFooter className="p-6 pt-0 shrink-0">
                   <div className="grid grid-cols-2 gap-3 w-full">
                       <Button variant="outline" onClick={() => setSelectedDay(null)} className="h-11 rounded-lg">
                           Cancel
