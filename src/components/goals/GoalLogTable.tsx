@@ -127,7 +127,7 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
       </div>
 
       <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
-        <DialogContent className="w-full h-[90dvh] max-w-full rounded-none border-0 p-0 flex flex-col sm:h-[70vh] sm:max-w-3xl sm:rounded-lg sm:border">
+        <DialogContent className="w-full h-[60dvh] max-w-full rounded-none border-0 p-0 flex flex-col sm:h-[50vh] sm:max-w-xl sm:rounded-lg sm:border">
           <DialogHeader className="p-3 border-b flex-shrink-0 flex flex-row items-center justify-between space-y-0 bg-background">
             <DialogTitle className="truncate pr-8 text-base">{previewFile?.name}</DialogTitle>
           </DialogHeader>
