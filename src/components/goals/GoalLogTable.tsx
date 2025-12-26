@@ -8,8 +8,14 @@ import { formatValue } from '@/lib/formatting';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Eye, FileText, X } from 'lucide-react';
+import { Eye, FileText, MoreHorizontal, Pencil, Trash2, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface GoalLogTableProps {
   logs: GoalCompletion[];
@@ -52,6 +58,27 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
     const extension = name.split('.').pop()?.toLowerCase();
     return extension === 'pdf' ? 'application/pdf' : 
            ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '') ? 'image/' + extension : 'unknown';
+  };
+
+  const handleDeleteLog = async () => {
+    if (!selectedLog) return;
+    if (!window.confirm('Are you sure you want to delete this log?')) return;
+
+    try {
+      const { error } = await supabase.from('goal_completions').delete().eq('id', selectedLog.id);
+      if (error) throw error;
+      setSelectedLog(null);
+      // Note: The parent component needs to refresh logs to reflect deletion
+      window.location.reload(); // Temporary fallback until parent refresh is implemented
+    } catch (error) {
+      console.error('Error deleting log:', error);
+      alert('Failed to delete log');
+    }
+  };
+
+  const handleEditUpload = () => {
+    // Placeholder for file upload logic
+    alert("Edit file functionality to be implemented");
   };
 
   const selectedAchiever = selectedLog?.userId ? userMap.get(selectedLog.userId) : null;
@@ -127,12 +154,32 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
       </div>
 
       <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
-        <DialogContent className="w-full h-[80dvh] max-w-full rounded-none border-0 p-0 flex flex-col sm:h-[70vh] sm:max-w-lg sm:rounded-lg sm:border shadow-xl">
+        <DialogContent className="w-full h-[80dvh] max-w-full rounded-none border-0 p-0 flex flex-col sm:h-[70vh] sm:max-w-lg sm:rounded-lg sm:border shadow-xl [&>button]:hidden">
           <DialogHeader className="px-6 py-4 border-b flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-lg font-semibold tracking-tight">Goal Log Details</DialogTitle>
-              <div className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                {selectedLog && format(new Date(selectedLog.date), 'MMM dd, yyyy • hh:mm a')}
+              <div className="flex items-center gap-2">
+                <div className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                  {selectedLog && format(new Date(selectedLog.date), 'MMM dd, yyyy • hh:mm a')}
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                      <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                      <span className="sr-only">More options</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleEditUpload}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Edit upload file
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleDeleteLog} className="text-destructive focus:text-destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete goal log
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </DialogHeader>
