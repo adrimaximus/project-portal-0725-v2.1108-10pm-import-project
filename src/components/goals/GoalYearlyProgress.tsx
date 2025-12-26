@@ -21,14 +21,11 @@ interface GoalYearlyProgressProps {
 
 const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: GoalYearlyProgressProps) => {
   const { completions: rawCompletions, color, specific_days: specificDays } = goal;
-  
-  // Explicitly map snake_case from DB to our internal camelCase usage if needed, 
-  // or just use the properties directly if the type is correct.
   const completions = rawCompletions.map(c => ({ 
     date: c.date, 
     completed: c.value === 1,
-    attachmentUrl: c.attachment_url || (c as any).attachmentUrl, // Fallback for safety
-    attachmentName: c.attachment_name || (c as any).attachmentName
+    attachmentUrl: (c as any).attachment_url,
+    attachmentName: (c as any).attachment_name
   }));
 
   const today = new Date();
@@ -142,10 +139,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
 
   const handleSaveDay = () => {
     if (selectedDay) {
-        // If file is present, it will replace existing. 
-        // If existingAttachment is null but was present initially, and no file, it means delete.
-        // However, here we have explicit delete button.
-        // If we just save, we pass the file if new. 
         onUpdateCompletion(selectedDay, isCompleted ? 1 : 0, file);
     }
     setSelectedDay(null);
@@ -278,56 +271,114 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
       </Card>
       
       <Dialog open={!!selectedDay} onOpenChange={(open) => !open && setSelectedDay(null)}>
-          <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                  <DialogTitle>Update Progress</DialogTitle>
-                  <DialogDescription>
-                      {selectedDay && format(selectedDay, "EEEE, MMMM do, yyyy")}
-                  </DialogDescription>
-              </DialogHeader>
-              <div className="py-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                      <Label htmlFor="completed-toggle">Completed</Label>
-                      <Switch id="completed-toggle" checked={isCompleted} onCheckedChange={setIsCompleted} />
+          <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-none shadow-xl">
+              {/* Header Section */}
+              <div className="px-6 py-6 bg-muted/20 border-b">
+                  <DialogHeader className="p-0 space-y-1 text-left">
+                      <DialogTitle className="text-2xl font-bold text-foreground">
+                          {selectedDay && format(selectedDay, "MMMM do")}
+                      </DialogTitle>
+                      <DialogDescription className="text-base text-muted-foreground">
+                          {selectedDay && format(selectedDay, "EEEE, yyyy")}
+                      </DialogDescription>
+                  </DialogHeader>
+              </div>
+
+              {/* Body Section */}
+              <div className="p-6 space-y-6">
+                  {/* Status Card */}
+                  <div className="flex items-center justify-between p-4 rounded-xl border bg-card/50 hover:bg-card hover:border-primary/20 transition-all duration-200">
+                      <div className="space-y-1">
+                          <Label htmlFor="completed-toggle" className="text-base font-semibold cursor-pointer">
+                              Completion Status
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                              {isCompleted ? 'Marked as done' : 'Marked as missed'}
+                          </p>
+                      </div>
+                      <Switch 
+                          id="completed-toggle" 
+                          checked={isCompleted} 
+                          onCheckedChange={setIsCompleted}
+                          className="scale-110 data-[state=checked]:bg-primary"
+                      />
                   </div>
-                  <div className="space-y-2">
-                      <Label>Attachment</Label>
+
+                  {/* Attachment Section */}
+                  <div className="space-y-3">
+                      <Label className="text-sm font-medium text-muted-foreground ml-1">Evidence / Report</Label>
+                      
                       {existingAttachment && !file ? (
-                          <div className="flex items-center justify-between p-2 border rounded-md bg-muted/50">
-                              <div className="flex items-center gap-2 overflow-hidden">
-                                  <FileText className="h-4 w-4 text-primary shrink-0" />
-                                  <a href={existingAttachment.url} target="_blank" rel="noopener noreferrer" className="text-sm truncate hover:underline">
-                                      {existingAttachment.name}
-                                  </a>
+                          <div className="group relative flex items-center gap-3 p-3 rounded-xl border bg-card hover:bg-accent/5 hover:border-primary/20 transition-all duration-200">
+                              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                                  <FileText className="h-5 w-5" />
                               </div>
-                              <div className="flex gap-1 shrink-0">
-                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(existingAttachment.url, '_blank')}>
-                                      <Eye className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={handleRemoveExistingAttachment}>
+                              <div className="flex-1 min-w-0 grid gap-0.5">
+                                  <p className="text-sm font-medium truncate text-foreground">{existingAttachment.name}</p>
+                                  <button 
+                                      onClick={() => window.open(existingAttachment.url, '_blank')}
+                                      className="text-xs text-muted-foreground hover:text-primary hover:underline text-left w-fit"
+                                  >
+                                      View document
+                                  </button>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                  <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+                                      onClick={handleRemoveExistingAttachment}
+                                  >
                                       <Trash2 className="h-4 w-4" />
                                   </Button>
                               </div>
                           </div>
+                      ) : file ? (
+                          <div className="group relative flex items-center gap-3 p-3 rounded-xl border bg-card hover:bg-accent/5 transition-all duration-200">
+                              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                                  <Paperclip className="h-5 w-5" />
+                              </div>
+                              <div className="flex-1 min-w-0 grid gap-0.5">
+                                  <p className="text-sm font-medium truncate text-foreground">{file.name}</p>
+                                  <p className="text-xs text-emerald-600 font-medium">Ready to upload</p>
+                              </div>
+                              <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+                                  onClick={() => { setFile(null); if(fileInputRef.current) fileInputRef.current.value=''; }}
+                              >
+                                  <X className="h-4 w-4" />
+                              </Button>
+                          </div>
                       ) : (
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                                <Paperclip className="h-4 w-4 mr-2" /> {file ? 'Change File' : 'Upload Report'}
-                            </Button>
-                            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
-                            {file && (
-                                <div className="flex items-center gap-2 text-sm bg-muted px-2 py-1 rounded">
-                                    <span className="truncate max-w-[150px]">{file.name}</span>
-                                    <X className="h-3 w-3 cursor-pointer" onClick={() => { setFile(null); if(fileInputRef.current) fileInputRef.current.value=''; }} />
-                                </div>
-                            )}
-                        </div>
+                          <div 
+                              onClick={() => fileInputRef.current?.click()}
+                              className="flex flex-col items-center justify-center gap-3 p-6 border-2 border-dashed rounded-xl border-muted-foreground/20 hover:border-primary/50 hover:bg-muted/30 transition-all cursor-pointer group"
+                          >
+                              <div className="h-12 w-12 rounded-full bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors duration-200">
+                                  <Paperclip className="h-6 w-6 text-muted-foreground group-hover:text-primary" />
+                              </div>
+                              <div className="text-center space-y-1">
+                                  <p className="text-sm font-medium group-hover:text-primary transition-colors">Click to upload</p>
+                                  <p className="text-xs text-muted-foreground">PDF, IMG, DOC up to 5MB</p>
+                              </div>
+                          </div>
                       )}
+                      <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
                   </div>
               </div>
-              <DialogFooter>
-                  <Button variant="ghost" onClick={() => setSelectedDay(null)}>Cancel</Button>
-                  <Button onClick={handleSaveDay}>Save</Button>
+
+              {/* Footer Section */}
+              <DialogFooter className="p-6 pt-0">
+                  <div className="grid grid-cols-2 gap-3 w-full">
+                      <Button variant="outline" onClick={() => setSelectedDay(null)} className="h-11 rounded-lg">
+                          Cancel
+                      </Button>
+                      <Button onClick={handleSaveDay} className="h-11 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
+                          Save Changes
+                      </Button>
+                  </div>
               </DialogFooter>
           </DialogContent>
       </Dialog>
