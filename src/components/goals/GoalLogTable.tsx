@@ -86,7 +86,16 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
               return (
                 <TableRow key={index}>
                   <TableCell className="text-muted-foreground text-xs">
-                    {format(new Date(log.date), 'MMM dd, yyyy, hh:mm a')}
+                    {attachmentUrl ? (
+                      <button 
+                        onClick={() => handlePreview(attachmentUrl, attachmentName)}
+                        className="hover:underline hover:text-foreground transition-colors text-left"
+                      >
+                        {format(new Date(log.date), 'MMM dd, yyyy, hh:mm a')}
+                      </button>
+                    ) : (
+                      format(new Date(log.date), 'MMM dd, yyyy, hh:mm a')
+                    )}
                   </TableCell>
                   <TableCell>
                     {achiever ? (
