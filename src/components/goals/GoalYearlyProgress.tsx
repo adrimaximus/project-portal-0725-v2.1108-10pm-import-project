@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, X, FileText } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import AiCoachInsight from './AiCoachInsight';
 
@@ -18,7 +18,11 @@ interface GoalYearlyProgressProps {
 
 const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProps) => {
   const { completions: rawCompletions, color, frequency, specific_days: specificDays } = goal;
-  const completions = rawCompletions.map(c => ({ date: c.date, completed: c.value === 1 }));
+  const completions = rawCompletions.map(c => ({ 
+    date: c.date, 
+    completed: c.value === 1,
+    hasAttachment: !!(c as any).attachment_url // Check for attachment
+  }));
 
   const today = new Date();
   const currentYear = getYear(today);
@@ -57,17 +61,32 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProp
     const monthStart = startOfMonth(monthDate);
     const monthEnd = endOfMonth(monthDate);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-    const completionMap = new Map<string, boolean>(relevantCompletions.map(c => [format(parseISO(c.date), 'yyyy-MM-dd'), c.completed]));
+    
+    // Create a map that stores the full completion object (or just relevant details)
+    const completionMap = new Map<string, { completed: boolean; hasAttachment: boolean }>(
+      relevantCompletions.map(c => [
+        format(parseISO(c.date), 'yyyy-MM-dd'), 
+        { completed: c.completed, hasAttachment: c.hasAttachment }
+      ])
+    );
 
     const daysWithStatus = daysInMonth.map(day => {
         const dayStr = format(day, 'yyyy-MM-dd');
         const isValid = isDayValidForGoal(day);
-        let isCompleted: boolean | undefined = completionMap.get(dayStr);
+        const completionData = completionMap.get(dayStr);
+        
+        let isCompleted: boolean | undefined;
+        let hasAttachment = false;
+
+        if (completionData) {
+            isCompleted = completionData.completed;
+            hasAttachment = completionData.hasAttachment;
+        }
         
         if (isCompleted === undefined && isValid && isBefore(day, todayStart)) {
             isCompleted = false;
         }
-        return { date: day, isCompleted, isValid };
+        return { date: day, isCompleted, isValid, hasAttachment };
     });
 
     const possibleDaysInPast = daysWithStatus.filter(d => d.isValid && isBefore(d.date, todayStart));
@@ -81,7 +100,11 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProp
         percentage,
         completedCount,
         possibleCount,
-        days: daysWithStatus.map(d => ({ date: d.date, isCompleted: d.isCompleted }))
+        days: daysWithStatus.map(d => ({ 
+            date: d.date, 
+            isCompleted: d.isCompleted, 
+            hasAttachment: d.hasAttachment 
+        }))
     };
   });
 
@@ -182,7 +205,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProp
                     const isMissed = isValidDay && day.isCompleted === false;
 
                     const buttonStyle: React.CSSProperties = {};
-                    let buttonClasses = "w-full h-3 rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed";
+                    let buttonClasses = "w-full h-3 rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed relative";
 
                     if (isMissed) {
                       buttonStyle.backgroundColor = 'transparent';
@@ -209,13 +232,24 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProp
                               disabled={isDisabled}
                               className={buttonClasses}
                               style={buttonStyle}
-                            />
+                            >
+                              {day.hasAttachment && (
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                  <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_2px_rgba(0,0,0,0.5)]" />
+                                </div>
+                              )}
+                            </button>
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>{format(day.date, 'PPP', { locale: enUS })}</p>
                             {isFutureDay ? <p>Future date</p> : 
                              !isValidDay ? <p>Not a scheduled day</p> :
-                             day.isCompleted !== undefined ? <p>{day.isCompleted ? 'Completed' : 'Not completed'}</p> : <p>Track now</p>}
+                             day.isCompleted !== undefined ? (
+                                <>
+                                  <p>{day.isCompleted ? 'Completed' : 'Not completed'}</p>
+                                  {day.hasAttachment && <div className="flex items-center gap-1 mt-1 text-xs text-primary"><FileText className="h-3 w-3" /> Report attached</div>}
+                                </>
+                             ) : <p>Track now</p>}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
