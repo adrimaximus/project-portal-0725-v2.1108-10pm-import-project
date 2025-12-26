@@ -6,26 +6,20 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Building2, CalendarIcon, CreditCard, FileText, User, Download, Eye, X, Users } from "lucide-react";
+import { Building2, CalendarIcon, CreditCard, FileText, User, Download, Eye, X, Users, MoreVertical, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import PaymentStatusBadge from "./PaymentStatusBadge";
-import EditExpenseDialog from './EditExpenseDialog';
-
-interface FileMetadata {
-  name: string;
-  url: string;
-  size: number;
-  type: string;
-  storagePath: string;
-}
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 interface InvoiceDetailsDialogProps {
   invoice: Invoice | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStatusChange?: (invoiceId: string, newStatus: any) => void;
+  onEdit?: (invoice: Invoice) => void;
+  onDelete?: (invoice: Invoice) => void;
 }
 
 const formatFileSize = (bytes: number) => {
@@ -45,10 +39,9 @@ const getInitials = (name?: string | null) => {
   return names[0]?.charAt(0).toUpperCase() || '';
 };
 
-const InvoiceDetailsDialog = ({ invoice, open, onOpenChange, onStatusChange }: InvoiceDetailsDialogProps) => {
+const InvoiceDetailsDialog = ({ invoice, open, onOpenChange, onStatusChange, onEdit, onDelete }: InvoiceDetailsDialogProps) => {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type?: string } | null>(null);
-  const [isEditOpen, setIsEditOpen] = useState(false);
 
   if (!invoice) return null;
 
@@ -80,6 +73,43 @@ const InvoiceDetailsDialog = ({ invoice, open, onOpenChange, onStatusChange }: I
   };
 
   const projectAdmins = invoice.assignedMembers?.filter(m => m.role === 'admin') || [];
+
+  const CustomHeaderControls = () => (
+    <div className="absolute right-4 top-4 flex items-center gap-1">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+            <MoreVertical className="h-4 w-4" />
+            <span className="sr-only">Actions</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => onEdit?.(invoice)}>
+            <Edit className="mr-2 h-4 w-4" />
+            Edit
+          </DropdownMenuItem>
+          {onDelete && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onDelete(invoice)} className="text-destructive focus:text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+        onClick={() => onOpenChange(false)}
+      >
+        <X className="h-4 w-4" />
+        <span className="sr-only">Close</span>
+      </Button>
+    </div>
+  );
 
   const content = (
     <div className="grid gap-6 py-4 w-full">
@@ -253,9 +283,11 @@ const InvoiceDetailsDialog = ({ invoice, open, onOpenChange, onStatusChange }: I
     <>
       {isDesktop ? (
         <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto">
+          {/* Hide default close button with [&>button]:hidden and add custom header controls */}
+          <DialogContent className="sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto [&>button]:hidden">
+            <CustomHeaderControls />
             <DialogHeader>
-              <div className="pr-8">
+              <div className="pr-12">
                 <Title className="text-xl break-all">{invoice.id}</Title>
                 <Description className="mt-1 font-medium text-primary">
                   {invoice.projectName}
@@ -268,8 +300,33 @@ const InvoiceDetailsDialog = ({ invoice, open, onOpenChange, onStatusChange }: I
       ) : (
         <Drawer open={open} onOpenChange={onOpenChange}>
           <DrawerContent className="max-h-[95vh] flex flex-col">
-            <DrawerHeader className="text-left border-b pb-4">
-              <div className="pr-4">
+            <DrawerHeader className="text-left border-b pb-4 relative">
+              <div className="absolute right-4 top-4">
+                 {/* For drawer, we can put the menu here as well */}
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => onEdit?.(invoice)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      {onDelete && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => onDelete(invoice)} className="text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+              </div>
+              <div className="pr-10">
                 <Title className="text-xl break-all">{invoice.id}</Title>
                 <Description className="mt-1 font-medium text-primary">
                   {invoice.projectName}

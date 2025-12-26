@@ -250,6 +250,7 @@ const BillingTable = ({ invoices, onEdit, sortConfig, handleSort, onStatusChange
         onOpenChange={(open) => !open && setSelectedInvoice(null)}
         invoice={selectedInvoice}
         onStatusChange={onStatusChange}
+        onEdit={onEdit}
       />
     </>
   );
