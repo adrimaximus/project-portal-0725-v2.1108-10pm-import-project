@@ -21,11 +21,21 @@ interface GoalLogTableProps {
   logs: GoalCompletion[];
   unit?: string;
   goalType: Goal['type'];
+  goalOwnerId?: string;
 }
 
-const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
+const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) => {
   const [userMap, setUserMap] = useState<Map<string, User>>(new Map());
   const [selectedLog, setSelectedLog] = useState<GoalCompletion | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id || null);
+    };
+    fetchCurrentUser();
+  }, []);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -85,6 +95,15 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
   const selectedAttachmentUrl = (selectedLog as any)?.attachment_url;
   const selectedAttachmentName = (selectedLog as any)?.attachment_name || 'Attachment';
   const selectedAttachmentType = (selectedLog as any)?.attachment_type || getFileType(selectedAttachmentName);
+
+  const isLogOwner = currentUserId && selectedLog?.userId === currentUserId;
+  const isGoalOwner = currentUserId && goalOwnerId === currentUserId;
+  
+  // Permissions logic:
+  // - Edit: Only the log owner can edit their upload file.
+  // - Delete: Goal owner can delete any log. Log owner can delete their own log.
+  const canEdit = isLogOwner;
+  const canDelete = isGoalOwner || isLogOwner;
 
   if (logs.length === 0) {
     return <p className="text-sm text-muted-foreground text-center py-4">No logs yet.</p>;
@@ -162,24 +181,30 @@ const GoalLogTable = ({ logs, unit, goalType }: GoalLogTableProps) => {
                 <div className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
                   {selectedLog && format(new Date(selectedLog.date), 'MMM dd, yyyy • hh:mm a')}
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                      <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                      <span className="sr-only">More options</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleEditUpload}>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Edit upload file
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleDeleteLog} className="text-destructive focus:text-destructive">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete goal log
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {(canEdit || canDelete) && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                        <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                        <span className="sr-only">More options</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {canEdit && (
+                        <DropdownMenuItem onClick={handleEditUpload}>
+                          <Upload className="mr-2 h-4 w-4" />
+                          Edit upload file
+                        </DropdownMenuItem>
+                      )}
+                      {canDelete && (
+                        <DropdownMenuItem onClick={handleDeleteLog} className="text-destructive focus:text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete goal log
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             </div>
           </DialogHeader>
