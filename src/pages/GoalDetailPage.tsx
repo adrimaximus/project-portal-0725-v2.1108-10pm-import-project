@@ -79,7 +79,7 @@ const GoalDetailPage = () => {
     };
   };
 
-  const handleUpdateCompletion = async (date: Date, value: number, file?: File | null) => {
+  const handleUpdateCompletion = async (date: Date, value: number, file?: File | null, removeAttachment: boolean = false) => {
     if (!goal || !currentUser) return;
     
     let attachmentData = null;
@@ -92,22 +92,14 @@ const GoalDetailPage = () => {
         }
     }
 
-    // For frequency, we check if it exists to toggle or update
-    // For quantity/value, we typically add (insert) new logs, but here we can handle upsert/insert logic if needed
-    // However, existing logs are usually immutable or edited via separate UI.
-    // This function handles "New Log" or "Toggle Day" actions.
-
     if (goal.type === 'frequency') {
         const dateString = format(date, 'yyyy-MM-dd');
         const existing = goal.completions.find(c => format(new Date(c.date), 'yyyy-MM-dd') === dateString);
 
-        // If file provided, we are definitely setting/updating. If no file and value is toggled, it might be removal.
-        // Logic: 
-        // 1. If existing and value=1 and we are toggling to 0 (uncheck), delete or set to 0.
-        // 2. If existing and we add file, update.
-        // 3. If new, insert.
-
-        const newValue = (existing?.value === 1 && !file) ? 0 : 1; // If only toggling without file, switch. If file present, ensure it is 1 (completed).
+        // Determine new value:
+        // If explicitly passed value is different (e.g. from dialog checkbox), use it.
+        // If no file/remove request and just toggling, switch 0/1.
+        let newValue = value;
         
         // Prepare update data
         const upsertData: any = {
@@ -118,10 +110,15 @@ const GoalDetailPage = () => {
         };
 
         if (existing) upsertData.id = existing.id;
+        
         if (attachmentData) {
             upsertData.attachment_url = attachmentData.url;
             upsertData.attachment_name = attachmentData.name;
             upsertData.attachment_type = attachmentData.type;
+        } else if (removeAttachment) {
+            upsertData.attachment_url = null;
+            upsertData.attachment_name = null;
+            upsertData.attachment_type = null;
         }
 
         const { error } = await supabase.from('goal_completions').upsert(upsertData, { onConflict: 'id' });

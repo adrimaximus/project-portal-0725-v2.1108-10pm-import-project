@@ -6,16 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Check, X, FileText, Paperclip } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, X, FileText, Paperclip, Eye, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import AiCoachInsight from './AiCoachInsight';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface GoalYearlyProgressProps {
   goal: Goal;
   onToggleCompletion: (date: Date) => void;
-  onUpdateCompletion: (date: Date, value: number, file?: File | null) => void;
+  onUpdateCompletion: (date: Date, value: number, file?: File | null, removeAttachment?: boolean) => void;
 }
 
 const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: GoalYearlyProgressProps) => {
@@ -23,7 +24,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const completions = rawCompletions.map(c => ({ 
     date: c.date, 
     completed: c.value === 1,
-    hasAttachment: !!(c as any).attachment_url
+    attachmentUrl: (c as any).attachment_url,
+    attachmentName: (c as any).attachment_name
   }));
 
   const today = new Date();
@@ -32,7 +34,9 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [existingAttachment, setExistingAttachment] = useState<{ url: string, name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dayToConfirm, setDayToConfirm] = useState<Date | null>(null);
 
   const todayStart = startOfDay(today);
 
@@ -67,10 +71,10 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     const monthEnd = endOfMonth(monthDate);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
     
-    const completionMap = new Map<string, { completed: boolean; hasAttachment: boolean }>(
+    const completionMap = new Map<string, { completed: boolean; attachmentUrl?: string; attachmentName?: string }>(
       relevantCompletions.map(c => [
         format(parseISO(c.date), 'yyyy-MM-dd'), 
-        { completed: c.completed, hasAttachment: c.hasAttachment }
+        { completed: c.completed, attachmentUrl: c.attachmentUrl, attachmentName: c.attachmentName }
       ])
     );
 
@@ -80,17 +84,19 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
         const completionData = completionMap.get(dayStr);
         
         let isCompleted: boolean | undefined;
-        let hasAttachment = false;
+        let attachmentUrl: string | undefined;
+        let attachmentName: string | undefined;
 
         if (completionData) {
             isCompleted = completionData.completed;
-            hasAttachment = completionData.hasAttachment;
+            attachmentUrl = completionData.attachmentUrl;
+            attachmentName = completionData.attachmentName;
         }
         
         if (isCompleted === undefined && isValid && isBefore(day, todayStart)) {
             isCompleted = false;
         }
-        return { date: day, isCompleted, isValid, hasAttachment };
+        return { date: day, isCompleted, isValid, attachmentUrl, attachmentName };
     });
 
     const possibleDaysInPast = daysWithStatus.filter(d => d.isValid && isBefore(d.date, todayStart));
@@ -107,7 +113,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
         days: daysWithStatus.map(d => ({ 
             date: d.date, 
             isCompleted: d.isCompleted, 
-            hasAttachment: d.hasAttachment 
+            attachmentUrl: d.attachmentUrl,
+            attachmentName: d.attachmentName
         }))
     };
   });
@@ -117,26 +124,48 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     month?: { name: string; percentage: number; completedCount: number; possibleCount: number; };
   }>({ yearly: { percentage: overallPercentage } });
 
-  const handleDayClick = (day: { date: Date; isCompleted?: boolean }) => {
+  const handleDayClick = (day: { date: Date; isCompleted?: boolean; attachmentUrl?: string; attachmentName?: string }) => {
     if (isAfter(day.date, todayStart)) return;
     
-    // Instead of immediate toggle, open dialog
     setSelectedDay(day.date);
     setIsCompleted(!!day.isCompleted);
     setFile(null);
+    if (day.attachmentUrl) {
+      setExistingAttachment({ url: day.attachmentUrl, name: day.attachmentName || 'Attachment' });
+    } else {
+      setExistingAttachment(null);
+    }
   };
 
   const handleSaveDay = () => {
     if (selectedDay) {
+        // If file is present, it will replace existing. 
+        // If existingAttachment is null but was present initially, and no file, it means delete.
+        // However, here we have explicit delete button.
+        // If we just save, we pass the file if new. 
         onUpdateCompletion(selectedDay, isCompleted ? 1 : 0, file);
     }
     setSelectedDay(null);
+  };
+
+  const handleRemoveExistingAttachment = () => {
+    if (selectedDay) {
+        onUpdateCompletion(selectedDay, isCompleted ? 1 : 0, null, true);
+        setExistingAttachment(null);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
         setFile(e.target.files[0]);
     }
+  };
+
+  const handleConfirmToggle = () => {
+      if (dayToConfirm) {
+          onToggleCompletion(dayToConfirm);
+          setDayToConfirm(null);
+      }
   };
 
   return (
@@ -165,6 +194,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
           <AiCoachInsight 
             goal={goal} 
             yearlyProgress={aiContext.yearly}
+            monthlyProgress={aiContext.month}
           />
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -215,7 +245,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                               className={buttonClasses}
                               style={buttonStyle}
                             >
-                              {day.hasAttachment && (
+                              {day.attachmentUrl && (
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                   <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_2px_rgba(0,0,0,0.5)]" />
                                 </div>
@@ -229,7 +259,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                              day.isCompleted !== undefined ? (
                                 <>
                                   <p>{day.isCompleted ? 'Completed' : 'Not completed'}</p>
-                                  {day.hasAttachment && <div className="flex items-center gap-1 mt-1 text-xs text-primary"><FileText className="h-3 w-3" /> Report attached</div>}
+                                  {day.attachmentUrl && <div className="flex items-center gap-1 mt-1 text-xs text-primary"><FileText className="h-3 w-3" /> Report attached</div>}
                                 </>
                              ) : <p>Click to update</p>}
                           </TooltipContent>
@@ -258,19 +288,38 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                       <Switch id="completed-toggle" checked={isCompleted} onCheckedChange={setIsCompleted} />
                   </div>
                   <div className="space-y-2">
-                      <Label>Attachment (Optional)</Label>
-                      <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                              <Paperclip className="h-4 w-4 mr-2" /> Upload Report
-                          </Button>
-                          <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
-                          {file && (
-                              <div className="flex items-center gap-2 text-sm bg-muted px-2 py-1 rounded">
-                                  <span className="truncate max-w-[150px]">{file.name}</span>
-                                  <X className="h-3 w-3 cursor-pointer" onClick={() => { setFile(null); if(fileInputRef.current) fileInputRef.current.value=''; }} />
+                      <Label>Attachment</Label>
+                      {existingAttachment && !file ? (
+                          <div className="flex items-center justify-between p-2 border rounded-md bg-muted/50">
+                              <div className="flex items-center gap-2 overflow-hidden">
+                                  <FileText className="h-4 w-4 text-primary shrink-0" />
+                                  <a href={existingAttachment.url} target="_blank" rel="noopener noreferrer" className="text-sm truncate hover:underline">
+                                      {existingAttachment.name}
+                                  </a>
                               </div>
-                          )}
-                      </div>
+                              <div className="flex gap-1 shrink-0">
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(existingAttachment.url, '_blank')}>
+                                      <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={handleRemoveExistingAttachment}>
+                                      <Trash2 className="h-4 w-4" />
+                                  </Button>
+                              </div>
+                          </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                                <Paperclip className="h-4 w-4 mr-2" /> {file ? 'Change File' : 'Upload Report'}
+                            </Button>
+                            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
+                            {file && (
+                                <div className="flex items-center gap-2 text-sm bg-muted px-2 py-1 rounded">
+                                    <span className="truncate max-w-[150px]">{file.name}</span>
+                                    <X className="h-3 w-3 cursor-pointer" onClick={() => { setFile(null); if(fileInputRef.current) fileInputRef.current.value=''; }} />
+                                </div>
+                            )}
+                        </div>
+                      )}
                   </div>
               </div>
               <DialogFooter>
@@ -279,6 +328,29 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
               </DialogFooter>
           </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!dayToConfirm} onOpenChange={() => setDayToConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to change this?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will change the completion status for a past date.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button variant="outline" onClick={() => setDayToConfirm(null)}>
+                Cancel
+              </Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button onClick={handleConfirmToggle}>
+                Confirm
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
