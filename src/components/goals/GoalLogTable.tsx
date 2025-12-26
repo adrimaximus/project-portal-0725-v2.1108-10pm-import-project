@@ -16,6 +16,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 interface GoalLogTableProps {
   logs: GoalCompletion[];
@@ -29,6 +31,7 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
   const [selectedLog, setSelectedLog] = useState<GoalCompletion | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -78,12 +81,13 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
     try {
       const { error } = await supabase.from('goal_completions').delete().eq('id', selectedLog.id);
       if (error) throw error;
+      
+      toast.success("Log deleted successfully");
       setSelectedLog(null);
-      // Note: The parent component needs to refresh logs to reflect deletion
-      window.location.reload(); // Temporary fallback until parent refresh is implemented
+      queryClient.invalidateQueries({ queryKey: ['goal'] });
     } catch (error) {
       console.error('Error deleting log:', error);
-      alert('Failed to delete log');
+      toast.error('Failed to delete log');
     }
   };
 
@@ -94,6 +98,8 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !selectedLog) return;
+
+    const toastId = toast.loading("Uploading file...");
 
     try {
       const fileExt = file.name.split('.').pop();
@@ -121,10 +127,20 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
 
       if (updateError) throw updateError;
 
-      window.location.reload();
+      // Update local state to reflect change immediately in the modal
+      setSelectedLog(prev => prev ? {
+        ...prev,
+        attachment_url: publicUrl,
+        attachment_name: file.name,
+        attachment_type: file.type
+      } : null);
+
+      queryClient.invalidateQueries({ queryKey: ['goal'] });
+      toast.success("File uploaded successfully", { id: toastId });
+
     } catch (error) {
       console.error('Error updating file:', error);
-      alert('Failed to update file');
+      toast.error('Failed to update file', { id: toastId });
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -313,6 +329,11 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
                      <FileText className="h-8 w-8 opacity-40" />
                    </div>
                    <span className="text-sm font-medium">No attachment available</span>
+                   {canEdit && (
+                     <Button variant="outline" size="sm" onClick={handleEditUpload}>
+                       <Upload className="mr-2 h-4 w-4" /> Upload File
+                     </Button>
+                   )}
                  </div>
                )}
             </div>
