@@ -313,16 +313,18 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                               <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
                                   <FileText className="h-5 w-5" />
                               </div>
-                              <div className="flex-1 min-w-0 grid gap-0.5">
+                              <div className="flex-1 min-w-0 flex flex-col justify-center">
                                   <p className="text-sm font-medium truncate text-foreground">{existingAttachment.name}</p>
-                                  <button 
-                                      onClick={() => window.open(existingAttachment.url, '_blank')}
-                                      className="text-xs text-muted-foreground hover:text-primary hover:underline text-left w-fit"
-                                  >
-                                      View document
-                                  </button>
                               </div>
                               <div className="flex items-center gap-1">
+                                  <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors"
+                                      onClick={() => window.open(existingAttachment.url, '_blank')}
+                                  >
+                                      <Eye className="h-4 w-4" />
+                                  </Button>
                                   <Button
                                       variant="ghost"
                                       size="icon"
