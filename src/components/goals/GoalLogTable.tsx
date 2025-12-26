@@ -1,5 +1,5 @@
 import { Goal, GoalCompletion } from '@/types';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -28,6 +28,7 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
   const [userMap, setUserMap] = useState<Map<string, User>>(new Map());
   const [selectedLog, setSelectedLog] = useState<GoalCompletion | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -87,8 +88,46 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
   };
 
   const handleEditUpload = () => {
-    // Placeholder for file upload logic
-    alert("Edit file functionality to be implemented");
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedLog) return;
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('goal_attachments')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('goal_attachments')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('goal_completions')
+        .update({
+          attachment_url: publicUrl,
+          attachment_name: file.name,
+          attachment_type: file.type
+        })
+        .eq('id', selectedLog.id);
+
+      if (updateError) throw updateError;
+
+      window.location.reload();
+    } catch (error) {
+      console.error('Error updating file:', error);
+      alert('Failed to update file');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const selectedAchiever = selectedLog?.userId ? userMap.get(selectedLog.userId) : null;
@@ -113,6 +152,12 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
 
   return (
     <>
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        className="hidden" 
+        onChange={handleFileChange}
+      />
       <div className="border rounded-md mt-4">
         <Table>
           <TableHeader>
