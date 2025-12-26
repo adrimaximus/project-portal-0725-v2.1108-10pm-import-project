@@ -1,33 +1,38 @@
-import { useState, useEffect } from 'react';
-import { Goal, GoalCompletion } from '@/types';
-import { User } from '@/types';
-import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, isSameMonth, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay, getDay } from 'date-fns';
+import { useState, useEffect, useRef } from 'react';
+import { Goal } from '@/types';
+import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Check, X, FileText } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { ChevronLeft, ChevronRight, Check, X, FileText, Paperclip } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import AiCoachInsight from './AiCoachInsight';
 
 interface GoalYearlyProgressProps {
   goal: Goal;
   onToggleCompletion: (date: Date) => void;
+  onUpdateCompletion: (date: Date, value: number, file?: File | null) => void;
 }
 
-const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProps) => {
-  const { completions: rawCompletions, color, frequency, specific_days: specificDays } = goal;
+const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: GoalYearlyProgressProps) => {
+  const { completions: rawCompletions, color, specific_days: specificDays } = goal;
   const completions = rawCompletions.map(c => ({ 
     date: c.date, 
     completed: c.value === 1,
-    hasAttachment: !!(c as any).attachment_url // Check for attachment
+    hasAttachment: !!(c as any).attachment_url
   }));
 
   const today = new Date();
   const currentYear = getYear(today);
   const [displayYear, setDisplayYear] = useState(currentYear);
-  const [dayToConfirm, setDayToConfirm] = useState<Date | null>(null);
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const todayStart = startOfDay(today);
 
@@ -62,7 +67,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProp
     const monthEnd = endOfMonth(monthDate);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
     
-    // Create a map that stores the full completion object (or just relevant details)
     const completionMap = new Map<string, { completed: boolean; hasAttachment: boolean }>(
       relevantCompletions.map(c => [
         format(parseISO(c.date), 'yyyy-MM-dd'), 
@@ -108,49 +112,31 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProp
     };
   });
 
-  const [selectedMonth, setSelectedMonth] = useState<(typeof monthlyData)[0] | null>(null);
   const [aiContext, setAiContext] = useState<{
     yearly?: { percentage: number };
     month?: { name: string; percentage: number; completedCount: number; possibleCount: number; };
   }>({ yearly: { percentage: overallPercentage } });
 
-  useEffect(() => {
-    if (!selectedMonth) {
-      setAiContext({ yearly: { percentage: overallPercentage } });
-    }
-  }, [overallPercentage, selectedMonth]);
-
-  const handleMonthClick = (month: (typeof monthlyData)[0]) => {
-    if (selectedMonth?.name === month.name) {
-      setSelectedMonth(null);
-      setAiContext({ yearly: { percentage: overallPercentage } });
-    } else {
-      setSelectedMonth(month);
-      setAiContext({
-        month: {
-          name: month.name,
-          percentage: month.percentage,
-          completedCount: month.completedCount,
-          possibleCount: month.possibleCount,
-        },
-      });
-    }
+  const handleDayClick = (day: { date: Date; isCompleted?: boolean }) => {
+    if (isAfter(day.date, todayStart)) return;
+    
+    // Instead of immediate toggle, open dialog
+    setSelectedDay(day.date);
+    setIsCompleted(!!day.isCompleted);
+    setFile(null);
   };
 
-  const handleDayClick = (day: Date) => {
-    if (isAfter(day, todayStart)) return;
-    if (isToday(day)) {
-      onToggleCompletion(day);
-    } else {
-      setDayToConfirm(day);
+  const handleSaveDay = () => {
+    if (selectedDay) {
+        onUpdateCompletion(selectedDay, isCompleted ? 1 : 0, file);
     }
+    setSelectedDay(null);
   };
 
-  const handleConfirm = () => {
-    if (dayToConfirm) {
-      onToggleCompletion(dayToConfirm);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+        setFile(e.target.files[0]);
     }
-    setDayToConfirm(null);
   };
 
   return (
@@ -179,18 +165,14 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProp
           <AiCoachInsight 
             goal={goal} 
             yearlyProgress={aiContext.yearly}
-            monthlyProgress={aiContext.month}
           />
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {monthlyData.map(month => {
-            const isSelected = selectedMonth?.name === month.name;
             return (
               <div 
                 key={month.name} 
-                onClick={() => handleMonthClick(month)}
-                className="p-3 border rounded-lg cursor-pointer transition-all"
-                style={isSelected ? { boxShadow: `0 0 0 2px ${color}` } : {}}
+                className="p-3 border rounded-lg transition-all hover:bg-muted/20"
               >
                 <div className="flex justify-between items-center mb-2">
                   <p className="font-semibold text-sm">{month.name}</p>
@@ -228,7 +210,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProp
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleDayClick(day.date); }}
+                              onClick={(e) => { e.stopPropagation(); handleDayClick(day); }}
                               disabled={isDisabled}
                               className={buttonClasses}
                               style={buttonStyle}
@@ -249,7 +231,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProp
                                   <p>{day.isCompleted ? 'Completed' : 'Not completed'}</p>
                                   {day.hasAttachment && <div className="flex items-center gap-1 mt-1 text-xs text-primary"><FileText className="h-3 w-3" /> Report attached</div>}
                                 </>
-                             ) : <p>Track now</p>}
+                             ) : <p>Click to update</p>}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -261,28 +243,42 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion }: GoalYearlyProgressProp
           })}
         </CardContent>
       </Card>
-      <AlertDialog open={!!dayToConfirm} onOpenChange={() => setDayToConfirm(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to change this?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action will change the completion status for a past date.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel asChild>
-              <Button variant="outline" size="icon" onClick={() => setDayToConfirm(null)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </AlertDialogCancel>
-            <AlertDialogAction asChild>
-              <Button size="icon" onClick={handleConfirm}>
-                <Check className="h-4 w-4" />
-              </Button>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      
+      <Dialog open={!!selectedDay} onOpenChange={(open) => !open && setSelectedDay(null)}>
+          <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                  <DialogTitle>Update Progress</DialogTitle>
+                  <DialogDescription>
+                      {selectedDay && format(selectedDay, "EEEE, MMMM do, yyyy")}
+                  </DialogDescription>
+              </DialogHeader>
+              <div className="py-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                      <Label htmlFor="completed-toggle">Completed</Label>
+                      <Switch id="completed-toggle" checked={isCompleted} onCheckedChange={setIsCompleted} />
+                  </div>
+                  <div className="space-y-2">
+                      <Label>Attachment (Optional)</Label>
+                      <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                              <Paperclip className="h-4 w-4 mr-2" /> Upload Report
+                          </Button>
+                          <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
+                          {file && (
+                              <div className="flex items-center gap-2 text-sm bg-muted px-2 py-1 rounded">
+                                  <span className="truncate max-w-[150px]">{file.name}</span>
+                                  <X className="h-3 w-3 cursor-pointer" onClick={() => { setFile(null); if(fileInputRef.current) fileInputRef.current.value=''; }} />
+                              </div>
+                          )}
+                      </div>
+                  </div>
+              </div>
+              <DialogFooter>
+                  <Button variant="ghost" onClick={() => setSelectedDay(null)}>Cancel</Button>
+                  <Button onClick={handleSaveDay}>Save</Button>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
     </>
   );
 };

@@ -352,6 +352,9 @@ export interface GoalCompletion {
   date: string;
   value: number;
   userId: string;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachment_type?: string | null;
 }
 
 export interface Goal {
@@ -372,6 +375,7 @@ export interface Goal {
   tags: Tag[];
   collaborators: Collaborator[];
   reactions: Reaction[] | null;
+  completions: GoalCompletion[];
 }
 
 export interface KbFolder {

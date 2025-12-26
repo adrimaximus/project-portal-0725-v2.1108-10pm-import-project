@@ -63,47 +63,99 @@ const GoalDetailPage = () => {
     }
   }, [isLoading, goal, navigate]);
 
-  const handleToggleCompletion = async (date: Date) => {
-    if (!goal || goal.type !== 'frequency' || !currentUser) return;
-    const dateString = format(date, 'yyyy-MM-dd');
-    const existing = goal.completions.find(c => format(new Date(c.date), 'yyyy-MM-dd') === dateString);
+  const uploadGoalAttachment = async (file: File) => {
+    if (!currentUser || !goal) return null;
+    const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+    const filePath = `goal-attachments/${goal.id}/${Date.now()}-${sanitizedFileName}`;
+    
+    const { error: uploadError } = await supabase.storage.from('goal-attachments').upload(filePath, file);
+    if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
+    
+    const { data: urlData } = supabase.storage.from('goal-attachments').getPublicUrl(filePath);
+    return {
+        url: urlData.publicUrl,
+        name: file.name,
+        type: file.type
+    };
+  };
 
-    const { error } = await supabase.from('goal_completions').upsert({
-        id: existing?.id,
-        goal_id: goal.id,
-        user_id: currentUser.id,
-        date: date.toISOString(),
-        value: existing?.value === 1 ? 0 : 1,
-    }, { onConflict: 'id' });
-
-    if (error) {
-        toast.error("Failed to update progress.");
-    } else {
-        toast.success(`Progress for ${format(date, 'PPP')} has been updated.`);
-        queryClient.invalidateQueries({ queryKey: ['goal', slug] });
+  const handleUpdateCompletion = async (date: Date, value: number, file?: File | null) => {
+    if (!goal || !currentUser) return;
+    
+    let attachmentData = null;
+    if (file) {
+        try {
+            attachmentData = await uploadGoalAttachment(file);
+        } catch (e: any) {
+            toast.error("Failed to upload file. " + e.message);
+            return;
+        }
     }
-  };
 
-  const handleLogQuantity = async (date: Date, value: number) => {
-    if (!goal || goal.type !== 'quantity' || !currentUser) return;
-    const { error } = await supabase.from('goal_completions').insert({
-        goal_id: goal.id,
-        user_id: currentUser.id,
-        date: date.toISOString(),
-        value: value,
-    });
-    if (error) { toast.error("Failed to log progress."); } else { queryClient.invalidateQueries({ queryKey: ['goal', slug] }); }
-  };
+    // For frequency, we check if it exists to toggle or update
+    // For quantity/value, we typically add (insert) new logs, but here we can handle upsert/insert logic if needed
+    // However, existing logs are usually immutable or edited via separate UI.
+    // This function handles "New Log" or "Toggle Day" actions.
 
-  const handleLogValue = async (date: Date, value: number) => {
-    if (!goal || goal.type !== 'value' || !currentUser) return;
-    const { error } = await supabase.from('goal_completions').insert({
-        goal_id: goal.id,
-        user_id: currentUser.id,
-        date: date.toISOString(),
-        value: value,
-    });
-    if (error) { toast.error("Failed to log value."); } else { queryClient.invalidateQueries({ queryKey: ['goal', slug] }); }
+    if (goal.type === 'frequency') {
+        const dateString = format(date, 'yyyy-MM-dd');
+        const existing = goal.completions.find(c => format(new Date(c.date), 'yyyy-MM-dd') === dateString);
+
+        // If file provided, we are definitely setting/updating. If no file and value is toggled, it might be removal.
+        // Logic: 
+        // 1. If existing and value=1 and we are toggling to 0 (uncheck), delete or set to 0.
+        // 2. If existing and we add file, update.
+        // 3. If new, insert.
+
+        const newValue = (existing?.value === 1 && !file) ? 0 : 1; // If only toggling without file, switch. If file present, ensure it is 1 (completed).
+        
+        // Prepare update data
+        const upsertData: any = {
+            goal_id: goal.id,
+            user_id: currentUser.id,
+            date: date.toISOString(),
+            value: newValue,
+        };
+
+        if (existing) upsertData.id = existing.id;
+        if (attachmentData) {
+            upsertData.attachment_url = attachmentData.url;
+            upsertData.attachment_name = attachmentData.name;
+            upsertData.attachment_type = attachmentData.type;
+        }
+
+        const { error } = await supabase.from('goal_completions').upsert(upsertData, { onConflict: 'id' });
+
+        if (error) {
+            toast.error("Failed to update progress.");
+        } else {
+            toast.success(`Progress for ${format(date, 'PPP')} has been updated.`);
+            queryClient.invalidateQueries({ queryKey: ['goal', slug] });
+        }
+    } else {
+        // For Quantity/Value, we always insert a new log entry
+        const insertData: any = {
+            goal_id: goal.id,
+            user_id: currentUser.id,
+            date: date.toISOString(),
+            value: value,
+        };
+        
+        if (attachmentData) {
+            insertData.attachment_url = attachmentData.url;
+            insertData.attachment_name = attachmentData.name;
+            insertData.attachment_type = attachmentData.type;
+        }
+
+        const { error } = await supabase.from('goal_completions').insert(insertData);
+        
+        if (error) { 
+            toast.error("Failed to log progress."); 
+        } else { 
+            toast.success("Progress logged successfully.");
+            queryClient.invalidateQueries({ queryKey: ['goal', slug] }); 
+        }
+    }
   };
 
   const handleDeleteGoal = async () => {
@@ -214,7 +266,8 @@ const GoalDetailPage = () => {
         {goal.type === 'frequency' && (
           <GoalYearlyProgress
             goal={goal}
-            onToggleCompletion={handleToggleCompletion}
+            onToggleCompletion={(date) => handleUpdateCompletion(date, 1)}
+            onUpdateCompletion={handleUpdateCompletion}
           />
         )}
 
@@ -222,9 +275,9 @@ const GoalDetailPage = () => {
           <div className="space-y-6">
             <GoalProgressChart goal={goal} />
             {goal.type === 'quantity' ? (
-              <GoalQuantityTracker goal={goal} onLogProgress={handleLogQuantity} />
+              <GoalQuantityTracker goal={goal} onLogProgress={(date, val, file) => handleUpdateCompletion(date, val, file)} />
             ) : (
-              <GoalValueTracker goal={goal} onLogValue={handleLogValue} />
+              <GoalValueTracker goal={goal} onLogValue={(date, val, file) => handleUpdateCompletion(date, val, file)} />
             )}
           </div>
         )}

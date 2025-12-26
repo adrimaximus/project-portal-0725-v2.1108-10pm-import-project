@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Goal } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -10,14 +10,17 @@ import GoalLogTable from './GoalLogTable';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, differenceInDays } from 'date-fns';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { generatePastelColor } from '@/lib/utils';
+import { Paperclip, X } from 'lucide-react';
 
 interface GoalValueTrackerProps {
   goal: Goal;
-  onLogValue: (date: Date, value: number) => void;
+  onLogValue: (date: Date, value: number, file?: File | null) => void;
 }
 
 const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
   const [logValue, setLogValue] = useState<number | ''>('');
+  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { currentPeriodTotal, periodProgress, periodName, logsInPeriod, daysRemaining, valueToGo, achieverSummary } = useMemo(() => {
     const today = new Date();
@@ -60,9 +63,11 @@ const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
   const handleLog = () => {
     const value = Number(logValue);
     if (value > 0) {
-      onLogValue(new Date(), value);
+      onLogValue(new Date(), value, file);
       toast.success(`Mencatat ${formatValue(value, goal.unit)} untuk "${goal.title}"`);
       setLogValue('');
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     } else {
       toast.error("Silakan masukkan angka yang valid.");
     }
@@ -80,6 +85,12 @@ const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
     const numValue = parseInt(sanitizedValue, 10);
     if (!isNaN(numValue)) {
       setLogValue(numValue);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+        setFile(e.target.files[0]);
     }
   };
 
@@ -108,16 +119,37 @@ const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
           <Progress value={periodProgress} style={{ '--primary-color': goal.color } as React.CSSProperties} className="h-3 [&>*]:bg-[var(--primary-color)]" />
           <span className="font-bold text-lg">{periodProgress}%</span>
         </div>
-        <div className="flex gap-2 mt-4">
-          <Input
-            type="text"
-            inputMode="numeric"
-            placeholder={`Catat ${goal.unit || 'nilai'}...`}
-            value={logValue !== '' ? formatNumber(logValue) : ''}
-            onChange={handleNumericInputChange}
-            onKeyPress={(e) => e.key === 'Enter' && handleLog()}
-          />
-          <Button onClick={handleLog}>Catat</Button>
+        <div className="flex flex-col gap-2 mt-4">
+            <div className="flex gap-2">
+                <Input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder={`Catat ${goal.unit || 'nilai'}...`}
+                    value={logValue !== '' ? formatNumber(logValue) : ''}
+                    onChange={handleNumericInputChange}
+                    onKeyPress={(e) => e.key === 'Enter' && handleLog()}
+                    className="flex-1"
+                />
+                <Button variant="outline" size="icon" onClick={() => fileInputRef.current?.click()}>
+                    <Paperclip className="h-4 w-4" />
+                </Button>
+                <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    onChange={handleFileChange} 
+                />
+                <Button onClick={handleLog}>Catat</Button>
+            </div>
+            {file && (
+                <div className="flex items-center gap-2 text-sm bg-muted p-2 rounded-md">
+                    <Paperclip className="h-3 w-3" />
+                    <span className="truncate flex-1">{file.name}</span>
+                    <button onClick={() => { setFile(null); if(fileInputRef.current) fileInputRef.current.value = ''; }}>
+                        <X className="h-3 w-3" />
+                    </button>
+                </div>
+            )}
         </div>
 
         {achieverSummary.length > 1 && (
