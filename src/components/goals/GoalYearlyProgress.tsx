@@ -21,11 +21,14 @@ interface GoalYearlyProgressProps {
 
 const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: GoalYearlyProgressProps) => {
   const { completions: rawCompletions, color, specific_days: specificDays } = goal;
+  
+  // Explicitly map snake_case from DB to our internal camelCase usage if needed, 
+  // or just use the properties directly if the type is correct.
   const completions = rawCompletions.map(c => ({ 
     date: c.date, 
     completed: c.value === 1,
-    attachmentUrl: (c as any).attachment_url,
-    attachmentName: (c as any).attachment_name
+    attachmentUrl: c.attachment_url || (c as any).attachmentUrl, // Fallback for safety
+    attachmentName: c.attachment_name || (c as any).attachmentName
   }));
 
   const today = new Date();
