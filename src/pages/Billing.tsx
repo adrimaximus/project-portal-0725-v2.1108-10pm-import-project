@@ -180,7 +180,8 @@ const Billing = () => {
   // Analytics Logic
   const analytics = useMemo(() => {
     const now = new Date();
-    const start = subMonths(now, 5);
+    // Show last 12 months instead of 6
+    const start = subMonths(now, 11);
     const months = eachMonthOfInterval({ start: startOfMonth(start), end: now });
     
     const chartData = months.map(month => {
@@ -248,7 +249,7 @@ const Billing = () => {
         <Card>
           <CardHeader>
             <CardTitle>Billing Analytics</CardTitle>
-            <CardDescription>Monthly Billed (Due) vs Collected (Paid) amounts.</CardDescription>
+            <CardDescription>Monthly Billed (Due) vs Collected (Paid) amounts (Last 12 Months).</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <div className="h-[300px] w-full">
