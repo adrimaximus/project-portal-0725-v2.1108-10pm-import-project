@@ -922,8 +922,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.30':
     resolution: {integrity: sha512-GQ7Nw5G2lTu/BtHTKfXhKHok2WGetd4XYcVKGx00SjAk8GMwgJM3zr6zORiPGuOE+/vkc90KtTosSSvaCjKb2Q==}
 
-  '@maxim_mazurok/gapi.client.calendar-v3@0.1.20251202':
-    resolution: {integrity: sha512-s4MpmRE37hCGu/CfcsvsFky1X9AHAHtUwoewKFG8XRyalenhCnUeZHFPBe4Pu5fTqgBpNkhj09eBAoPe6cojrQ==}
+  '@maxim_mazurok/gapi.client.calendar-v3@0.1.20251216':
+    resolution: {integrity: sha512-Z8RL0s8mXVL11wWbCfdcfkmoGgthi8013KBUJdLyID1/UjPh9Su6uTP/HmS1E/t3RRwvHGXtGNNd/LBKQMniqA==}
 
   '@maxim_mazurok/gapi.client.discovery-v1@0.4.20200806':
     resolution: {integrity: sha512-Jeo/KZqK39DI6ExXHcJ4lqnn1O/wEqboQ6eQ8WnNpu5eJ7wUnX/C5KazOgs1aRhnIB/dVzDe8wm62nmtkMIoaw==}
@@ -5537,7 +5537,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@maxim_mazurok/gapi.client.calendar-v3@0.1.20251202':
+  '@maxim_mazurok/gapi.client.calendar-v3@0.1.20251216':
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -6782,7 +6782,7 @@ snapshots:
 
   '@types/gapi.client.calendar@3.0.12':
     dependencies:
-      '@maxim_mazurok/gapi.client.calendar-v3': 0.1.20251202
+      '@maxim_mazurok/gapi.client.calendar-v3': 0.1.20251216
 
   '@types/gapi.client.discovery-v1@0.0.4':
     dependencies:

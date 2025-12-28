@@ -3,7 +3,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Search, LayoutList, KanbanSquare, Plus, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { Loader2, Search, LayoutList, KanbanSquare, Plus, MoreHorizontal, Edit, Trash2, TrendingUp, AlertCircle, CheckCircle2, Wallet } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { format } from "date-fns";
+import { format, subMonths, isSameMonth, startOfMonth, endOfMonth, eachMonthOfInterval } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/tooltip";
 import ExpenseDetailsDialog from "@/components/billing/ExpenseDetailsDialog";
 import ReactMarkdown from 'react-markdown';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const ExpensePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -134,11 +135,60 @@ const ExpensePage = () => {
     return { expensesByStatus: grouped, orderedStatuses: [...ordered, ...otherStatuses] };
   }, [filteredExpenses]);
 
+  // Analytics Calculations
+  const analytics = useMemo(() => {
+    const totalExpenses = expenses.length;
+    const totalAmount = expenses.reduce((sum, e) => sum + e.tf_amount, 0);
+    
+    const paidExpenses = expenses.filter(e => e.status_expense === 'Paid');
+    const totalPaid = paidExpenses.reduce((sum, e) => sum + e.tf_amount, 0);
+    
+    const outstandingExpenses = expenses.filter(e => e.status_expense !== 'Paid' && e.status_expense !== 'Rejected');
+    const totalOutstanding = outstandingExpenses.reduce((sum, e) => sum + e.tf_amount, 0);
+
+    const now = new Date();
+    const startOfCurrentMonth = startOfMonth(now);
+    const thisMonthExpenses = expenses.filter(e => new Date(e.created_at) >= startOfCurrentMonth);
+    const totalThisMonth = thisMonthExpenses.reduce((sum, e) => sum + e.tf_amount, 0);
+
+    // Chart Data - Last 6 Months
+    const start = subMonths(now, 5);
+    const months = eachMonthOfInterval({ start: startOfMonth(start), end: now });
+    
+    const chartData = months.map(month => {
+      const monthExpenses = expenses.filter(e => isSameMonth(new Date(e.created_at), month));
+      return {
+        name: format(month, 'MMM yyyy'),
+        total: monthExpenses.reduce((sum, e) => sum + e.tf_amount, 0),
+        count: monthExpenses.length
+      };
+    });
+
+    return {
+      totalAmount,
+      totalPaid,
+      totalOutstanding,
+      totalThisMonth,
+      chartData
+    };
+  }, [expenses]);
+
   const formatCurrency = (amount: number) => new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(amount);
+
+  const formatCompactCurrency = (amount: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      notation: "compact",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1,
+    }).format(amount);
+  };
 
   const getStatusBadgeStyle = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -162,7 +212,6 @@ const ExpensePage = () => {
     
     const statuses = paymentTerms.map(t => t.status || 'Pending');
     
-    // Logic priority: Rejected > On review > Paid (All) > Requested (All) > Pending
     if (statuses.some((s: string) => s === 'Rejected')) return 'Rejected';
     if (statuses.some((s: string) => s === 'On review')) return 'On review';
     if (statuses.every((s: string) => s === 'Paid')) return 'Paid';
@@ -183,13 +232,133 @@ const ExpensePage = () => {
 
   return (
     <PortalLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-20">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Expense</h1>
           <p className="text-muted-foreground">
             Track and manage all project-related expenses.
           </p>
         </div>
+
+        {/* Insight Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+              <Wallet className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCompactCurrency(analytics.totalAmount)}</div>
+              <p className="text-xs text-muted-foreground">
+                Lifetime recorded expenses
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Outstanding</CardTitle>
+              <AlertCircle className="h-4 w-4 text-yellow-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600">{formatCompactCurrency(analytics.totalOutstanding)}</div>
+              <p className="text-xs text-muted-foreground">
+                Pending or processing payment
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{formatCompactCurrency(analytics.totalPaid)}</div>
+              <p className="text-xs text-muted-foreground">
+                Successfully disbursed
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">This Month</CardTitle>
+              <TrendingUp className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCompactCurrency(analytics.totalThisMonth)}</div>
+              <p className="text-xs text-muted-foreground">
+                Expenses recorded in {format(new Date(), 'MMMM')}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Analytics Chart */}
+        <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle>Monthly Expense Trends</CardTitle>
+            <CardDescription>Total expenses recorded over the last 6 months.</CardDescription>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analytics.chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="#888888" 
+                    fontSize={12} 
+                    tickLine={false} 
+                    axisLine={false} 
+                  />
+                  <YAxis 
+                    stroke="#888888" 
+                    fontSize={12} 
+                    tickLine={false} 
+                    axisLine={false} 
+                    tickFormatter={(value) => `${new Intl.NumberFormat("id-ID", { notation: "compact" }).format(value)}`} 
+                  />
+                  <RechartsTooltip
+                    cursor={{ fill: 'transparent' }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="rounded-lg border bg-background p-2 shadow-sm">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="flex flex-col">
+                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                  Month
+                                </span>
+                                <span className="font-bold text-muted-foreground">
+                                  {payload[0].payload.name}
+                                </span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                  Total
+                                </span>
+                                <span className="font-bold">
+                                  {formatCurrency(payload[0].value as number)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar 
+                    dataKey="total" 
+                    fill="currentColor" 
+                    radius={[4, 4, 0, 0]} 
+                    className="fill-primary"
+                    maxBarSize={60}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="flex items-center justify-between gap-2">
           <div className="relative w-full max-w-sm">
