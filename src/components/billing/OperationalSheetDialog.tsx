@@ -154,9 +154,9 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
         }
     ];
 
-    setItems(prev => [...prev, ...mockItems]);
+    setItems(mockItems);
     setIsAiLoading(false);
-    toast.success("AI successfully extracted items (including Dana Taktis)!");
+    toast.success("AI successfully synced items!");
   };
 
   const handleAddItem = (data: ExpenseFormData) => {
