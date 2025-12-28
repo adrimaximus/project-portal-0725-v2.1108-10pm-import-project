@@ -921,6 +921,60 @@ async function aiMergeContacts(payload: any, context: any) {
   return { message: "Contacts merged successfully by AI." };
 }
 
+async function mapSheetColumns(payload: any, context: any) {
+  const { openai, anthropic } = context;
+  const { headers, previewRows } = payload;
+  
+  if (!headers || !Array.isArray(headers)) throw new Error("Headers array is required.");
+
+  const systemPrompt = `You are an expert data analyst. Map the provided spreadsheet columns to the target schema for an Expense Management system.
+
+Target Schema:
+- category (string): Grouping/Type (e.g., "Items", "Category", "Pos")
+- sub_item (string): Item Name/Description (e.g., "Sub Items", "Description", "Nama Barang")
+- qty (number): Quantity (e.g., "Qty", "Vol", "Jumlah")
+- frequency (number): Frequency/Duration (e.g., "Freq", "Days", "Hari")
+- unit_cost (number): Price per unit (e.g., "Unit Cost", "Harga Satuan", "Price")
+- amount (number): Total Cost (e.g., "Sub-Total", "Total", "Amount")
+- remarks (string): Notes/Beneficiary (e.g., "Remarks", "Keterangan", "Note")
+
+Input:
+Headers: ${JSON.stringify(headers)}
+Rows (First 3): ${JSON.stringify(previewRows)}
+
+Output:
+Provide a JSON object where keys are the target schema fields and values are the 0-based integer index of the matching column.
+If a field cannot be mapped with confidence, set it to null.
+Example: { "category": 0, "sub_item": 1, "qty": 2, "frequency": null, "unit_cost": 4, "amount": 5, "remarks": 6 }`;
+
+  let result;
+  if (anthropic) {
+    const response = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307",
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: [{ role: "user", content: "Map these columns." }],
+    });
+    result = response.content[0].text;
+  } else if (openai) {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: "Map these columns." }
+      ],
+      response_format: { type: "json_object" }
+    });
+    result = response.choices[0].message.content;
+  } else {
+    throw new Error("No AI provider configured.");
+  }
+
+  const jsonMatch = result.match(/{[\s\S]*}/);
+  if (!jsonMatch) throw new Error("AI did not return valid JSON.");
+  return JSON.parse(jsonMatch[0]);
+}
+
 async function articleWriter(payload: any, context: any) {
   const { openai, anthropic, feature } = context;
   
@@ -1102,6 +1156,7 @@ const featureMap: { [key: string]: (payload: any, context: any) => Promise<any> 
   'suggest-icon': suggestIcon,
   'ai-select-calendar-events': aiSelectCalendarEvents,
   'generate-icon': generateIcon,
+  'map-sheet-columns': mapSheetColumns,
 };
 
 const createSupabaseAdmin = () => {

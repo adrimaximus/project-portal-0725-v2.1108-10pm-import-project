@@ -153,7 +153,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
         Papa.parse(csvText, {
             header: false,
             skipEmptyLines: true,
-            complete: (results) => {
+            complete: async (results) => {
                 const rawData = results.data as string[][];
                 
                 if (rawData.length === 0) {
@@ -188,87 +188,100 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                 console.log("Detected Header Row Index:", headerRowIndex);
                 console.log("Headers:", headers);
 
-                // Helper to get column index by header name match
+                // Helper to get column index by header name match (Fallback)
                 const getColIndex = (keywords: string[]) => {
                     return headers.findIndex(h => keywords.some(k => h.toLowerCase().includes(k)));
                 };
 
-                // Detect indices dynamically or fallback to screenshot structure
-                // Screenshot: A=ITEMS, B=SUB ITEMS, C=QTY, D=FREQ, E=COST, F=TOTAL
-                // 0-based: 0, 1, 2, 3, 4, 5
-                
-                let idxCategory = getColIndex(['items']); // A
-                let idxSubItem = getColIndex(['sub items', 'sub item', 'description', 'uraian', 'nama barang']); // B
-                let idxQty = getColIndex(['qty', 'quantity', 'jumlah', 'vol']); // C
-                let idxFreq = getColIndex(['freq', 'frequency', 'days', 'hari']); // D
-                let idxCost = getColIndex(['unit cost', 'cost', 'price', 'harga', 'satuan']); // E
-                let idxTotal = getColIndex(['sub-total', 'sub total', 'amount', 'total']); // F
-                let idxRemarks = getColIndex(['remarks', 'keterangan', 'notes']); // G
+                let idxCategory = -1;
+                let idxSubItem = -1;
+                let idxQty = -1;
+                let idxFreq = -1;
+                let idxCost = -1;
+                let idxTotal = -1;
+                let idxRemarks = -1;
 
-                // Fallbacks if detection fails or headers are ambiguous
-                if (idxCategory === -1) idxCategory = 0;
-                if (idxSubItem === -1) idxSubItem = 1;
-                
-                // If SUB ITEMS is not found but Item is, use Item. 
-                // In screenshot, "ITEMS" is category (Col A), "SUB ITEMS" is item name (Col B)
-                
-                // Check if indices seem shifted (e.g. empty first column)
-                // If headers[0] is empty and headers[1] is "ITEMS", shift everything by 1
-                const shift = (headers[0] === '' && headers[1]?.toLowerCase().includes('items')) ? 1 : 0;
-                
-                if (shift > 0) {
-                    idxCategory += shift;
-                    idxSubItem += shift;
-                    idxQty += shift;
-                    idxFreq += shift;
-                    idxCost += shift;
-                    idxTotal += shift;
-                    idxRemarks += shift;
+                // --- AI Column Mapping ---
+                try {
+                    const previewRows = dataRows.slice(0, 5); // Send first 5 data rows for context
+                    const { data: aiMapping, error: aiError } = await supabase.functions.invoke('ai-handler', {
+                        body: {
+                            feature: 'map-sheet-columns',
+                            payload: { headers, previewRows }
+                        }
+                    });
+
+                    if (aiError) throw aiError;
+
+                    if (aiMapping) {
+                        console.log("AI Column Mapping:", aiMapping);
+                        idxCategory = aiMapping.category ?? -1;
+                        idxSubItem = aiMapping.sub_item ?? -1;
+                        idxQty = aiMapping.qty ?? -1;
+                        idxFreq = aiMapping.frequency ?? -1;
+                        idxCost = aiMapping.unit_cost ?? -1;
+                        idxTotal = aiMapping.amount ?? -1;
+                        idxRemarks = aiMapping.remarks ?? -1;
+                    }
+                } catch (e) {
+                    console.warn("AI mapping failed, falling back to manual keyword detection.", e);
+                    // Fallback to manual detection
+                    idxCategory = getColIndex(['items']); 
+                    idxSubItem = getColIndex(['sub items', 'sub item', 'description', 'uraian', 'nama barang']);
+                    idxQty = getColIndex(['qty', 'quantity', 'jumlah', 'vol']);
+                    idxFreq = getColIndex(['freq', 'frequency', 'days', 'hari']);
+                    idxCost = getColIndex(['unit cost', 'cost', 'price', 'harga', 'satuan']);
+                    idxTotal = getColIndex(['sub-total', 'sub total', 'amount', 'total']);
+                    idxRemarks = getColIndex(['remarks', 'keterangan', 'notes']);
+
+                    // Heuristics for shifted columns if headers are empty
+                    if (headers[0] === '' && headers[1]?.toLowerCase().includes('items')) {
+                        const shift = 1;
+                        if (idxCategory === -1) idxCategory = 0 + shift;
+                        if (idxSubItem === -1) idxSubItem = 1 + shift;
+                        // ... adjust others if needed
+                    }
                 }
 
-                // If idxSubItem points to same as idxCategory, try next column
-                if (idxSubItem === idxCategory) idxSubItem = idxCategory + 1;
-                if (idxQty === -1) idxQty = idxSubItem + 1;
-                if (idxFreq === -1) idxFreq = idxQty + 1;
-                if (idxCost === -1) idxCost = idxFreq + 1;
-                if (idxTotal === -1) idxTotal = idxCost + 1;
+                // If critical columns are still missing after AI and basic keyword search, try positional heuristics
+                if (idxSubItem === -1) idxSubItem = idxCategory !== -1 ? idxCategory + 1 : 1; 
+                if (idxCategory === -1) idxCategory = Math.max(0, idxSubItem - 1);
 
-                console.log("Column Mapping Indices:", { idxCategory, idxSubItem, idxQty, idxFreq, idxCost, idxTotal });
+                console.log("Final Column Indices:", { idxCategory, idxSubItem, idxQty, idxFreq, idxCost, idxTotal });
 
                 const defaultProjectId = projects[0]?.id;
                 const defaultProjectName = projects[0]?.name;
                 
-                let lastCategory = 'General Support'; // Default category from screenshot
+                let lastCategory = 'General Support'; 
 
                 const mappedItems: BatchExpenseItem[] = dataRows.map((row) => {
-                    // Safe access
                     const val = (idx: number) => (row[idx] !== undefined ? row[idx] : '');
 
-                    // 1. CATEGORY (Column A) - Fill down logic
-                    let category = val(idxCategory).trim();
+                    // 1. CATEGORY (Fill down logic)
+                    let category = idxCategory !== -1 ? val(idxCategory).trim() : '';
                     if (category && category !== '') {
                         lastCategory = category;
                     } else {
                         category = lastCategory;
                     }
 
-                    // 2. SUB ITEM (Column B)
-                    const subItem = val(idxSubItem).trim();
-                    if (!subItem) return null; // Skip empty rows
+                    // 2. SUB ITEM
+                    const subItem = idxSubItem !== -1 ? val(idxSubItem).trim() : '';
+                    if (!subItem) return null; 
 
                     // Skip rows that look like headers or subtotals
                     if (subItem.toLowerCase() === 'sub-total' || subItem.toLowerCase() === 'total') return null;
 
-                    const beneficiary = val(idxRemarks) || subItem;
+                    const beneficiary = (idxRemarks !== -1 ? val(idxRemarks) : '') || subItem;
                     
-                    let qty = parseNumber(val(idxQty) || '1');
+                    let qty = idxQty !== -1 ? parseNumber(val(idxQty) || '1') : 1;
                     if (qty === 0) qty = 1; 
                     
-                    let freq = parseNumber(val(idxFreq) || '1');
+                    let freq = idxFreq !== -1 ? parseNumber(val(idxFreq) || '1') : 1;
                     if (isNaN(freq)) freq = 1;
 
-                    let cost = parseNumber(val(idxCost));
-                    let amount = parseNumber(val(idxTotal));
+                    let cost = idxCost !== -1 ? parseNumber(val(idxCost)) : 0;
+                    let amount = idxTotal !== -1 ? parseNumber(val(idxTotal)) : 0;
                     
                     if ((amount === 0 || isNaN(amount)) && cost > 0) {
                         amount = qty * freq * cost;
@@ -277,21 +290,12 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                         cost = amount / (qty * freq);
                     }
 
-                    // If cost is 0, it might be a header row like "Transport & Accomodation" in the items column?
-                    // But in screenshot, Category is in A, and B has empty for category headers? 
-                    // No, Row 5 "General Support" is in A.
-                    // Row 19 "Transport & Accomodation" is in A.
-                    // Sub Items like "Bensin" are in B.
-                    // So rows with empty B should be skipped or treated as category changes?
-                    // We already handled category fill-down. If B is empty, it's likely just a category header row.
-                    if (!subItem) return null;
-
-                    const remarks = val(idxRemarks);
+                    const remarks = idxRemarks !== -1 ? val(idxRemarks) : '';
                     
                     return {
                         id: crypto.randomUUID(),
                         project_id: defaultProjectId,
-                        project_name: defaultProjectName, // Use default project, not category
+                        project_name: defaultProjectName,
                         category: category,
                         sub_item: subItem,
                         beneficiary,
@@ -307,7 +311,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                 if (mappedItems.length === 0) {
                     toast.error("No valid items found", { 
                         id: toastId, 
-                        description: `Checked columns: Cat:${idxCategory}, Item:${idxSubItem}, Qty:${idxQty}. Verify sheet structure.` 
+                        description: `Checked columns: Cat:${idxCategory}, Item:${idxSubItem}. Verify sheet structure.` 
                     });
                 } else {
                     setItems(prevItems => {
@@ -317,7 +321,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     
                     toast.success("Synced!", { 
                         id: toastId, 
-                        description: `${mappedItems.length} items loaded.` 
+                        description: `${mappedItems.length} items loaded via AI mapping.` 
                     });
                 }
             },
