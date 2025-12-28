@@ -468,7 +468,7 @@ const ExpensePage = () => {
             </Button>
             <Button onClick={() => setIsAddDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Add New Expense
+              New Expense
             </Button>
           </div>
         </div>
