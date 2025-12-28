@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProjects } from "@/hooks/useProjects";
 import { PaymentStatus, Project, Invoice, Member, Owner } from "@/types";
-import { isPast, subMonths, isSameMonth, startOfMonth, endOfMonth, eachMonthOfInterval, format, addMonths, isFuture } from "date-fns";
+import { isPast, isSameMonth } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { EditInvoiceDialog } from "@/components/billing/EditInvoiceDialog";
 import BillingStats from "@/components/billing/BillingStats";
@@ -21,7 +21,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSortConfig } from "@/hooks/useSortConfig";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, Line } from 'recharts';
+import { BillingAnalytics } from "@/components/billing/BillingAnalytics";
 
 const Billing = () => {
   const { data: projectsData, isLoading } = useProjects({ fetchAll: true });
@@ -177,66 +177,6 @@ const Billing = () => {
     setIsFormOpen(true);
   };
 
-  // Analytics Logic
-  const analytics = useMemo(() => {
-    const now = new Date();
-    // Range: 9 months back, 3 months forward
-    const start = subMonths(now, 9);
-    const end = addMonths(now, 3);
-    const months = eachMonthOfInterval({ start: startOfMonth(start), end: endOfMonth(end) });
-    
-    const chartData = months.map(month => {
-      // Filter invoices due in this specific month
-      const dueInMonth = invoices.filter(inv => 
-        inv.dueDate && isSameMonth(inv.dueDate, month)
-      );
-
-      // Partition by status
-      let paid = 0;
-      let overdue = 0;
-      let pending = 0;
-
-      dueInMonth.forEach(inv => {
-        const amount = inv.amount || 0;
-        // Check exact status or derive if overdue
-        if (inv.status === 'Paid') {
-          paid += amount;
-        } else if (inv.status === 'Overdue') {
-          overdue += amount;
-        } else {
-          // Generally Pending/Proposed/etc
-          // Double check if it's actually overdue based on date relative to NOW (handled in invoices memo, but good to be safe)
-          if (isPast(inv.dueDate) && !isSameMonth(inv.dueDate, now)) {
-             // If due date is past and not current month, treat as overdue visually if not paid
-             overdue += amount;
-          } else {
-             pending += amount;
-          }
-        }
-      });
-
-      const totalScheduled = paid + overdue + pending;
-
-      return {
-        name: format(month, 'MMM yyyy'),
-        paid,
-        overdue,
-        pending,
-        totalScheduled,
-        isFuture: isFuture(month) && !isSameMonth(month, now)
-      };
-    });
-
-    return { chartData };
-  }, [invoices]);
-
-  const formatCurrency = (amount: number) => new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-
   if (isLoading) {
     return (
       <PortalLayout>
@@ -268,100 +208,7 @@ const Billing = () => {
 
         <BillingStats invoices={filteredInvoices} />
 
-        {/* Analytics Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Invoicing Schedule & Status</CardTitle>
-            <CardDescription>
-              Monthly invoiced amounts partitioned by status (Paid, Overdue, Pending). 
-              Total bar height represents the total value scheduled to cash out for that month.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <div className="h-[350px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={analytics.chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
-                  <XAxis 
-                    dataKey="name" 
-                    stroke="#888888" 
-                    fontSize={12} 
-                    tickLine={false} 
-                    axisLine={false} 
-                  />
-                  <YAxis 
-                    stroke="#888888" 
-                    fontSize={12} 
-                    tickLine={false} 
-                    axisLine={false} 
-                    tickFormatter={(value) => new Intl.NumberFormat("id-ID", { notation: "compact", compactDisplay: "short" }).format(value)}
-                  />
-                  <RechartsTooltip
-                    cursor={{ fill: 'transparent' }}
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="rounded-lg border bg-background p-3 shadow-lg text-sm z-50 min-w-[200px]">
-                            <div className="mb-2 border-b pb-1">
-                              <span className="font-bold text-base">
-                                {data.name}
-                              </span>
-                              {data.isFuture && <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-1 rounded">Future</span>}
-                            </div>
-                            <div className="space-y-1.5">
-                              <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-green-500" />
-                                  <span className="text-muted-foreground">Paid</span>
-                                </div>
-                                <span className="font-bold text-green-600">
-                                  {formatCurrency(data.paid)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-red-500" />
-                                  <span className="text-muted-foreground">Overdue</span>
-                                </div>
-                                <span className="font-bold text-red-500">
-                                  {formatCurrency(data.overdue)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-slate-400" />
-                                  <span className="text-muted-foreground">Pending</span>
-                                </div>
-                                <span className="font-bold text-slate-600">
-                                  {formatCurrency(data.pending)}
-                                </span>
-                              </div>
-                              <div className="border-t pt-1 mt-1 flex justify-between items-center">
-                                <span className="font-medium">Total Scheduled</span>
-                                <span className="font-bold">
-                                  {formatCurrency(data.totalScheduled)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Legend />
-                  
-                  {/* Stacked Bars */}
-                  <Bar dataKey="paid" name="Paid" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} maxBarSize={50} />
-                  <Bar dataKey="overdue" name="Overdue" stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} maxBarSize={50} />
-                  <Bar dataKey="pending" name="Pending" stackId="a" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={50} />
-                  
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+        <BillingAnalytics invoices={invoices} />
 
         <Card>
           <CardHeader>
