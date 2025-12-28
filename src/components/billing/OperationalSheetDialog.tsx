@@ -181,8 +181,8 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
             beneficiary: "Dana Taktis (PIC)",
             qty: 1,
             frequency: 1,
-            unit_cost: 1500000,
-            amount: 1500000,
+            unit_cost: 3500000,
+            amount: 3500000,
             remarks: "Cash pegangan/modal PIC (buffer)",
             due_date: new Date().toISOString().split('T')[0]
         }
@@ -457,17 +457,16 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                 </div>
 
                 <div className="flex-1 flex flex-col overflow-hidden bg-muted/5">
-                    <div className="p-3 border-b flex justify-between items-center bg-white shadow-sm sticky top-0 z-10">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">List ({items.length})</span>
-                        <Badge variant="outline" className="font-mono bg-green-50 text-green-700 border-green-200">
+                    <div className="p-3 border-b flex justify-between items-center bg-muted/20">
+                        <span className="text-sm font-medium">Items to Add ({items.length})</span>
+                        <Badge variant="outline" className="font-mono">
                             Total: {new Intl.NumberFormat('id-ID').format(totalAmount)}
                         </Badge>
                     </div>
                     
-                    <ScrollArea className="flex-1 p-2 bg-muted/10">
+                    <ScrollArea className="flex-1 p-3">
                         {items.length === 0 ? (
-                            <div className="text-center py-10 text-muted-foreground text-xs italic flex flex-col items-center">
-                                <FileSpreadsheet className="h-8 w-8 mb-2 opacity-20" />
+                            <div className="text-center py-8 text-muted-foreground text-sm italic">
                                 Added items will appear here.
                             </div>
                         ) : (
