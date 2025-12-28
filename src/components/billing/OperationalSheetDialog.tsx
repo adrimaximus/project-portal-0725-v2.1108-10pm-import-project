@@ -165,6 +165,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                 const headerKeywords = [
                     'item', 'uraian', 'deskripsi', 'description', 'keterangan', 'nama barang', 'keperluan', 
                     'qty', 'jumlah', 'vol', 'volume', 
+                    'freq', 'frequency', 'days', 'hari', // Added frequency keywords
                     'harga', 'price', 'cost', 'satuan', 
                     'total', 'amount', 'jumlah harga', 'sub-total', 'sub total'
                 ];
@@ -214,12 +215,12 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     let qty = parseNumber(row['qty'] || row['quantity'] || row['jumlah'] || row['vol'] || row['volume'] || '1');
                     if (qty === 0) qty = 1; 
                     
-                    let freq = parseNumber(row['freq'] || row['frequency'] || '1');
+                    // Added days/hari to frequency mapping
+                    let freq = parseNumber(row['freq'] || row['frequency'] || row['days'] || row['hari'] || row['durasi'] || '1');
                     if (isNaN(freq)) freq = 1;
 
                     let cost = parseNumber(row['cost'] || row['price'] || row['harga'] || row['satuan'] || row['unit cost'] || row['harga satuan'] || '0');
 
-                    // Added support for 'sub-total' and 'sub total'
                     let amount = parseNumber(row['sub-total'] || row['sub total'] || row['amount'] || row['total'] || row['jumlah harga'] || row['total harga'] || '0');
                     
                     if ((amount === 0 || isNaN(amount)) && cost > 0) {

@@ -105,23 +105,19 @@ export function ExpenseItemsList({ items, onRemoveItem, onUpdateItem }: ExpenseI
                     <span className="text-xs text-muted-foreground">x</span>
                     <Input 
                       type="number"
+                      value={editValues.frequency || 1} 
+                      onChange={e => setEditValues(prev => ({ ...prev, frequency: parseFloat(e.target.value) || 1 }))}
+                      className="h-7 text-xs w-14"
+                      placeholder="Freq"
+                    />
+                    <span className="text-xs text-muted-foreground">x</span>
+                    <Input 
+                      type="number"
                       value={editValues.unit_cost || 0} 
                       onChange={e => setEditValues(prev => ({ ...prev, unit_cost: parseFloat(e.target.value) || 0 }))}
                       className="h-7 text-xs flex-1"
                       placeholder="Cost"
                     />
-                    {item.frequency > 1 && (
-                      <>
-                        <span className="text-xs text-muted-foreground">x</span>
-                        <Input 
-                          type="number"
-                          value={editValues.frequency || 1} 
-                          onChange={e => setEditValues(prev => ({ ...prev, frequency: parseFloat(e.target.value) || 1 }))}
-                          className="h-7 text-xs w-14"
-                          placeholder="Freq"
-                        />
-                      </>
-                    )}
                   </div>
                   <Input 
                     value={editValues.remarks || ""} 
@@ -140,14 +136,16 @@ export function ExpenseItemsList({ items, onRemoveItem, onUpdateItem }: ExpenseI
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <span className="font-mono text-foreground">{item.qty}</span>
-                      <span>x</span>
-                      <span className="font-mono text-foreground">{new Intl.NumberFormat('id-ID').format(item.unit_cost)}</span>
-                      {item.frequency > 1 && (
+                      {item.frequency > 1 ? (
                         <>
-                          <span>x</span>
-                          <span className="font-mono text-foreground">{item.frequency}</span>
+                          <span className="text-muted-foreground">x</span>
+                          <span className="font-mono text-foreground" title="Frequency/Days">{item.frequency}</span>
+                          <span className="text-muted-foreground">x</span>
                         </>
+                      ) : (
+                         <span className="text-muted-foreground">x</span>
                       )}
+                      <span className="font-mono text-foreground">{new Intl.NumberFormat('id-ID').format(item.unit_cost)}</span>
                     </div>
                     <div className="truncate" title={item.remarks || "No remarks"}>
                       {item.remarks || "-"}
