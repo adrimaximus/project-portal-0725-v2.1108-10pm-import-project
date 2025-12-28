@@ -43,58 +43,61 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
     if (!value) return 0;
     const str = String(value).trim();
     
-    if (str.toLowerCase().includes('rp')) {
-        return parseFloat(str.replace(/\D/g, '')) || 0;
-    }
+    // Remove "Rp" or "IDR" symbols
+    const cleanStr = str.replace(/^(rp|idr)\.?\s*/i, '');
+    
+    // IDR format often uses dot as thousands separator and comma as decimal (1.000.000,00)
+    // US format uses comma as thousands and dot as decimal (1,000,000.00)
+    
+    // Check if it looks like IDR format (contains dots but no commas, or dots appearing before commas)
+    const lastDotIndex = cleanStr.lastIndexOf('.');
+    const lastCommaIndex = cleanStr.lastIndexOf(',');
+    
+    let normalized = cleanStr;
 
-    const clean = str.replace(/[^0-9.,-]/g, '');
-    if (/^-?\d+$/.test(clean)) return parseFloat(clean);
-
-    // IDR format detection: 1.000.000 (dots as thousands)
-    if (clean.includes('.') && !clean.includes(',')) {
-        if (/\.\d{3}$/.test(clean) || /\.\d{3}\./.test(clean)) {
-             return parseFloat(clean.replace(/\./g, ''));
+    if (lastDotIndex > lastCommaIndex && lastCommaIndex === -1) {
+        // Like "1.000.000" (no comma) -> remove dots
+        // CAUTION: Could be "10.5" (US decimal). Heuristic: multiple dots usually mean thousands.
+        if ((cleanStr.match(/\./g) || []).length > 1) {
+             normalized = cleanStr.replace(/\./g, '');
+        } else {
+             // Single dot. "1000" vs "1.5". If it has 3 digits after dot, assume thousand separator? 
+             // risky. Let's assume Indonesia locale priority if ambiguous.
+             // Actually, safer to strip non-digits if we assume integer amounts for expenses usually
         }
-        return parseFloat(clean);
+    } else if (lastCommaIndex > -1) {
+        // Like "1.000,00" or "1000,50" -> remove dots, replace comma with dot
+        normalized = cleanStr.replace(/\./g, '').replace(',', '.');
     }
 
-    // US/Decimal comma detection
-    if (!clean.includes('.') && clean.includes(',')) {
-        if (clean.split(',').length === 2 && clean.split(',')[1].length <= 2) {
-             return parseFloat(clean.replace(',', '.'));
-        }
-        return parseFloat(clean.replace(/,/g, ''));
-    }
-
-    // Mixed: 1.000,00 (IDR standard)
-    if (clean.indexOf('.') < clean.indexOf(',')) {
-        return parseFloat(clean.replace(/\./g, '').replace(',', '.'));
-    }
-
-    return parseFloat(clean.replace(/,/g, ''));
+    // Final fallback cleanup: keep only numbers, dot, minus
+    const finalClean = normalized.replace(/[^0-9.-]/g, '');
+    const floatVal = parseFloat(finalClean);
+    
+    return isNaN(floatVal) ? 0 : floatVal;
   };
 
   const processSheetUrl = async (url: string) => {
     if (!url) return;
     
     setIsAiLoading(true);
-    const toastId = toast.loading("Syncing with sheet...", { description: "Reading latest data from 'Ajuan' tab..." });
+    const toastId = toast.loading("Syncing...", { description: "Connecting to Google Sheet..." });
 
     try {
         const timestamp = new Date().getTime();
         let exportUrl = "";
         let gid = "";
 
-        // Extract GID to ensure we target the specific tab user is looking at
+        // Extract GID
         try {
             const urlObj = new URL(url);
             gid = urlObj.searchParams.get("gid") || "";
-            // Google sheets often put gid in hash: #gid=12345
+            // Handle #gid=12345
             if (!gid && urlObj.hash.includes("gid=")) {
                 gid = urlObj.hash.split("gid=")[1].split("&")[0];
             }
         } catch (e) {
-            console.log("Could not parse GID from URL");
+            // ignore invalid URL structure initially
         }
 
         if (url.includes("/d/e/")) {
@@ -117,6 +120,11 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                 exportUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv&t=${timestamp}`;
                 if (gid) {
                     exportUrl += `&gid=${gid}`;
+                } else {
+                    toast.info("No specific tab selected (GID missing).", { 
+                        description: "Exporting the first tab. Navigate to the 'Ajuan' tab and copy the URL if this is incorrect.",
+                        duration: 5000 
+                    });
                 }
             }
         }
@@ -134,16 +142,12 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
             body: { url: exportUrl } 
         });
 
-        if (error) {
-            console.error("Edge function error:", error);
-            throw new Error("Failed to connect to sheet proxy.");
-        }
+        if (error) throw error;
         
         if (!csvText || typeof csvText !== 'string') {
             throw new Error("Received empty data from sheet.");
         }
 
-        // Check if response is HTML (login page or error page)
         if (csvText.trim().startsWith("<!DOCTYPE html") || csvText.includes("<html")) {
             throw new Error("Sheet is likely private. Please set access to 'Anyone with the link' can View.");
         }
@@ -159,33 +163,51 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     return;
                 }
 
+                // Check available headers for debugging
+                const headers = Object.keys(parsedData[0]).map(h => h.toLowerCase().trim());
+                console.log("Found CSV Headers:", headers);
+
                 const defaultProjectId = projects[0]?.id;
                 const defaultProjectName = projects[0]?.name;
 
-                const mappedItems: BatchExpenseItem[] = parsedData.map((row) => {
-                    // Flexible column matching
-                    const category = row['Category'] || row['Kategori'] || row['Cat'] || row['Pos'] || 'General';
-                    const subItem = row['Item'] || row['Sub Item'] || row['Name'] || row['Description'] || row['Uraian'] || row['Keterangan'] || row['Beneficiary'] || 'Unknown Item';
-                    const beneficiary = row['Beneficiary'] || row['Penerima'] || row['Vendor'] || subItem;
-                    
-                    let qty = parseNumber(row['Qty'] || row['Quantity'] || row['Jumlah'] || row['Vol'] || '1');
-                    if (isNaN(qty)) qty = 1;
-                    
-                    let freq = parseNumber(row['Freq'] || row['Frequency'] || '1');
-                    if (isNaN(freq)) freq = 1;
+                const mappedItems: BatchExpenseItem[] = parsedData.map((rawRow) => {
+                    // Create a normalized row object where keys are lowercase and trimmed
+                    const row: Record<string, any> = {};
+                    Object.keys(rawRow).forEach(key => {
+                        row[key.toLowerCase().trim()] = rawRow[key];
+                    });
 
-                    let cost = parseNumber(row['Cost'] || row['Price'] || row['Harga'] || row['Satuan'] || row['Unit Cost'] || '0');
-                    if (isNaN(cost)) cost = 0;
+                    // Flexible column matching with Indonesian support
+                    const category = row['category'] || row['kategori'] || row['cat'] || row['pos'] || row['divisi'] || 'General';
+                    
+                    const subItem = row['item'] || row['sub item'] || row['name'] || row['description'] || row['deskripsi'] || row['uraian'] || row['keterangan'] || row['nama barang'] || row['beneficiary'] || row['keperluan'] || 'Unknown Item';
+                    
+                    const beneficiary = row['beneficiary'] || row['penerima'] || row['vendor'] || row['suplier'] || row['toko'] || subItem;
+                    
+                    let qty = parseNumber(row['qty'] || row['quantity'] || row['jumlah'] || row['vol'] || row['volume'] || '1');
+                    if (qty === 0) qty = 1; // Default to 1 if missing/0
+                    
+                    let freq = parseNumber(row['freq'] || row['frequency'] || '1');
+                    if (freq === 0) freq = 1;
 
-                    let amount = parseNumber(row['Amount'] || row['Total'] || row['Jumlah Harga'] || '0');
-                    if (isNaN(amount) || amount === 0) {
+                    let cost = parseNumber(row['cost'] || row['price'] || row['harga'] || row['satuan'] || row['unit cost'] || row['harga satuan'] || '0');
+
+                    let amount = parseNumber(row['amount'] || row['total'] || row['jumlah harga'] || row['total harga'] || '0');
+                    
+                    // Auto-calculate if amount is missing but cost exists
+                    if ((amount === 0 || isNaN(amount)) && cost > 0) {
                         amount = qty * freq * cost;
                     }
-
-                    const remarks = row['Remarks'] || row['Notes'] || row['Catatan'] || '';
-                    const date = row['Date'] || row['Tanggal'] || new Date().toISOString().split('T')[0];
                     
-                    const rowProjectName = row['Project'] || row['Proyek'];
+                    // Auto-calculate cost if amount exists but cost is missing
+                    if ((cost === 0 || isNaN(cost)) && amount > 0) {
+                        cost = amount / (qty * freq);
+                    }
+
+                    const remarks = row['remarks'] || row['notes'] || row['catatan'] || row['note'] || '';
+                    const date = row['date'] || row['tanggal'] || row['tgl'] || new Date().toISOString().split('T')[0];
+                    
+                    const rowProjectName = row['project'] || row['proyek'];
                     let projectId = defaultProjectId;
                     let projectName = defaultProjectName;
                     
@@ -212,12 +234,13 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                         due_date: date,
                         isManual: false
                     };
-                }).filter(item => (item.amount > 0 || item.unit_cost > 0) && item.sub_item !== 'Unknown Item');
+                }).filter(item => (item.amount > 0 || item.unit_cost > 0));
 
                 if (mappedItems.length === 0) {
+                    const headerList = Object.keys(parsedData[0]).join(", ");
                     toast.error("No valid items found", { 
                         id: toastId, 
-                        description: "Check column names (Item, Qty, Harga, Total) or ensure the correct tab is selected." 
+                        description: `Columns found: ${headerList}. Expecting: Item/Uraian, Harga/Amount.` 
                     });
                 } else {
                     setItems(prevItems => {
@@ -227,7 +250,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     
                     toast.success("Synced!", { 
                         id: toastId, 
-                        description: `${mappedItems.length} items loaded from ${gid ? 'current tab' : 'first tab'}.` 
+                        description: `${mappedItems.length} items loaded.` 
                     });
                 }
             },
@@ -252,18 +275,15 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
     setSheetUrl(url);
     try {
       if (url.includes("docs.google.com/spreadsheets")) {
-        // Construct embed URL differently to preserve params
         const urlObj = new URL(url);
         const baseUrl = url.split("/edit")[0];
-        
         let embed = `${baseUrl}/preview?widget=true&headers=false`;
         
-        // Preserve GID for iframe too
+        // Extract GID for embed preview
         const gid = urlObj.searchParams.get("gid") || (urlObj.hash.includes("gid=") ? urlObj.hash.split("gid=")[1].split("&")[0] : "");
         if (gid) {
             embed += `&gid=${gid}`;
         }
-        
         setEmbedUrl(embed);
       } else {
         setEmbedUrl("");
@@ -275,13 +295,11 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
 
   const handleRefreshEmbed = () => {
     if (!sheetUrl) return;
-    
     const timestamp = new Date().getTime();
     if (sheetUrl.includes("docs.google.com/spreadsheets")) {
-        // Re-construct embed with timestamp
-        handleUrlChange(sheetUrl); // Reset base
+        handleUrlChange(sheetUrl);
         setTimeout(() => {
-            setEmbedUrl(prev => prev + `&t=${timestamp}`);
+            setEmbedUrl(prev => prev.includes('?') ? prev + `&t=${timestamp}` : prev + `?t=${timestamp}`);
         }, 50);
     }
     toast.info("Refreshed embed view");

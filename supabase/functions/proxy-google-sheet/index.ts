@@ -21,7 +21,13 @@ serve(async (req) => {
     }
 
     console.log(`Fetching from: ${url}`)
-    const response = await fetch(url)
+    
+    // Add User-Agent to mimic a browser/legitimate client
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    })
     
     if (!response.ok) {
         console.error(`Failed to fetch sheet. Status: ${response.status}`)
@@ -33,11 +39,11 @@ serve(async (req) => {
 
     const text = await response.text()
 
-    // Basic check to see if we got HTML back (auth wall) instead of CSV
+    // Check if we got HTML (likely a login page or error page) instead of CSV
     if (text.trim().startsWith("<!DOCTYPE html") || text.includes("<html")) {
        console.error("Received HTML instead of CSV")
        return new Response(
-            JSON.stringify({ error: "Received HTML. Please ensure the sheet is visible to anyone with the link." }),
+            JSON.stringify({ error: "Received HTML instead of data. Ensure the Google Sheet is set to 'Anyone with the link can View'." }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
        ) 
     }
