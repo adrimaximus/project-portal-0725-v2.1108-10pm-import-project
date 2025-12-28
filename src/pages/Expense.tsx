@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { format, subMonths, isSameMonth, startOfMonth, endOfMonth, eachMonthOfInterval } from "date-fns";
+import { format, subMonths, isSameMonth, startOfMonth, endOfMonth, eachMonthOfInterval, isPast, isToday, isBefore } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
@@ -165,15 +165,42 @@ const ExpensePage = () => {
     
     const chartData = months.map(month => {
       const monthExpenses = expenses.filter(e => isSameMonth(new Date(e.created_at), month));
-      const monthlyTotal = monthExpenses.reduce((sum, e) => sum + e.tf_amount, 0);
-      const monthlyPaid = monthExpenses.reduce((sum, e) => sum + calculatePaidAmount(e), 0);
-      const monthlyOutstanding = monthlyTotal - monthlyPaid;
+      
+      let paid = 0;
+      let overdue = 0;
+      let pending = 0;
+
+      monthExpenses.forEach(e => {
+        const total = e.tf_amount;
+        const paidAmount = calculatePaidAmount(e);
+        const unpaidAmount = total - paidAmount;
+
+        paid += paidAmount;
+
+        if (unpaidAmount > 0) {
+            // Determine if overdue or pending
+            // Logic: If there's a due date and it's past, it's overdue.
+            // If no due date, assume overdue if created in a previous month (stale).
+            // Otherwise pending.
+            const dueDate = e.due_date ? new Date(e.due_date) : null;
+            const isOverdue = dueDate 
+                ? isPast(dueDate) && !isToday(dueDate)
+                : isBefore(endOfMonth(month), now); // If created in past month and no due date, consider overdue
+
+            if (isOverdue) {
+                overdue += unpaidAmount;
+            } else {
+                pending += unpaidAmount;
+            }
+        }
+      });
 
       return {
         name: format(month, 'MMM yyyy'),
-        total: monthlyTotal,
-        paid: monthlyPaid,
-        outstanding: monthlyOutstanding,
+        paid,
+        overdue,
+        pending,
+        total: paid + overdue + pending,
         count: monthExpenses.length
       };
     });
@@ -310,7 +337,7 @@ const ExpensePage = () => {
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Monthly Expense Trends</CardTitle>
-            <CardDescription>Total expenses vs paid and outstanding amounts over the last 12 months.</CardDescription>
+            <CardDescription>Breakdown of expenses by payment status over the last 12 months.</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <div className="h-[300px] w-full">
@@ -335,20 +362,21 @@ const ExpensePage = () => {
                     cursor={{ fill: 'transparent' }}
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
+                        const data = payload[0].payload;
                         return (
                           <div className="rounded-lg border bg-background p-2 shadow-sm text-sm">
                             <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                               <div className="col-span-2 mb-1">
                                 <span className="text-[0.70rem] uppercase text-muted-foreground font-bold">
-                                  {payload[0].payload.name}
+                                  {data.name}
                                 </span>
                               </div>
                               <div className="flex flex-col">
                                 <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  Total Recorded
+                                  Total
                                 </span>
                                 <span className="font-bold text-primary">
-                                  {formatCurrency(payload[0].value as number)}
+                                  {formatCurrency(data.total)}
                                 </span>
                               </div>
                               <div className="flex flex-col">
@@ -356,15 +384,23 @@ const ExpensePage = () => {
                                   Paid
                                 </span>
                                 <span className="font-bold text-green-600">
-                                  {formatCurrency(payload[1].value as number)}
+                                  {formatCurrency(data.paid)}
                                 </span>
                               </div>
-                              <div className="flex flex-col mt-1 col-span-2 border-t pt-1">
+                              <div className="flex flex-col mt-1 pt-1 border-t">
                                 <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  Outstanding (Overdue)
+                                  Overdue
                                 </span>
                                 <span className="font-bold text-red-500">
-                                  {formatCurrency(payload[2].value as number)}
+                                  {formatCurrency(data.overdue)}
+                                </span>
+                              </div>
+                              <div className="flex flex-col mt-1 pt-1 border-t">
+                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                  Pending
+                                </span>
+                                <span className="font-bold text-slate-500">
+                                  {formatCurrency(data.pending)}
                                 </span>
                               </div>
                             </div>
@@ -376,27 +412,26 @@ const ExpensePage = () => {
                   />
                   <Legend />
                   <Bar 
-                    dataKey="total" 
-                    name="Total Expense"
-                    fill="currentColor" 
-                    radius={[4, 4, 0, 0]} 
-                    className="fill-primary/20"
-                    maxBarSize={60}
-                  />
-                  <Bar 
                     dataKey="paid" 
                     name="Paid"
-                    fill="currentColor" 
-                    radius={[4, 4, 0, 0]} 
-                    className="fill-green-500"
+                    stackId="a"
+                    fill="#22c55e" 
+                    radius={[0, 0, 4, 4]} 
                     maxBarSize={60}
                   />
                   <Bar 
-                    dataKey="outstanding" 
-                    name="Outstanding"
-                    fill="currentColor" 
+                    dataKey="overdue" 
+                    name="Overdue"
+                    stackId="a"
+                    fill="#ef4444" 
+                    maxBarSize={60}
+                  />
+                  <Bar 
+                    dataKey="pending" 
+                    name="Pending"
+                    stackId="a"
+                    fill="#94a3b8" 
                     radius={[4, 4, 0, 0]} 
-                    className="fill-red-500"
                     maxBarSize={60}
                   />
                 </BarChart>
