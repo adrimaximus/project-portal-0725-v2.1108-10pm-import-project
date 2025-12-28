@@ -162,24 +162,37 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                 }
 
                 let headerRowIndex = -1;
-                // Keywords based on the provided screenshot
+                // Expanded keywords for better detection
                 const headerKeywords = [
-                    'items', 'sub items', 'qty', 'freq', 'unit cost', 'sub-total', 'remarks'
+                    'items', 'sub items', 'qty', 'freq', 'unit cost', 'sub-total', 'remarks',
+                    'item', 'description', 'price', 'total', 'jumlah', 'harga', 'keterangan'
                 ];
 
+                // Search first 15 rows for headers
                 for (let i = 0; i < Math.min(rawData.length, 15); i++) {
                     const rowStr = rawData[i].join(' ').toLowerCase();
-                    // Match at least 3 keywords to be sure
+                    // Match at least 2 meaningful keywords to be sure
                     const matches = headerKeywords.filter(keyword => rowStr.includes(keyword));
-                    if (matches.length >= 3) {
+                    if (matches.length >= 2) {
                         headerRowIndex = i;
                         break;
                     }
                 }
 
+                // If not found, try to find a row with "No" and "Item" or similar basic structure
                 if (headerRowIndex === -1) {
-                    console.warn("Could not auto-detect header row. Defaulting to row 2 (index 2) based on screenshot structure.");
-                    headerRowIndex = 2; // Defaulting to 3rd row as per screenshot if detection fails
+                     for (let i = 0; i < Math.min(rawData.length, 15); i++) {
+                        const row = rawData[i].map(c => c.toLowerCase().trim());
+                        if ((row.includes('no') || row.includes('no.')) && (row.includes('item') || row.includes('items') || row.includes('description'))) {
+                             headerRowIndex = i;
+                             break;
+                        }
+                     }
+                }
+
+                if (headerRowIndex === -1) {
+                    console.warn("Could not auto-detect header row. Defaulting to row index 0.");
+                    headerRowIndex = 0; 
                 }
 
                 const headers = rawData[headerRowIndex].map(h => h.trim());
@@ -190,7 +203,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
 
                 // Helper to get column index by header name match (Fallback)
                 const getColIndex = (keywords: string[]) => {
-                    return headers.findIndex(h => keywords.some(k => h.toLowerCase().includes(k)));
+                    return headers.findIndex(h => keywords.some(k => h.toLowerCase() === k || h.toLowerCase().includes(k)));
                 };
 
                 let idxCategory = -1;
@@ -226,26 +239,35 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                 } catch (e) {
                     console.warn("AI mapping failed, falling back to manual keyword detection.", e);
                     // Fallback to manual detection
-                    idxCategory = getColIndex(['items']); 
-                    idxSubItem = getColIndex(['sub items', 'sub item', 'description', 'uraian', 'nama barang']);
+                    idxCategory = getColIndex(['items', 'category', 'kategori', 'group', 'pos']); 
+                    idxSubItem = getColIndex(['sub items', 'sub item', 'description', 'uraian', 'nama barang', 'item', 'name']);
                     idxQty = getColIndex(['qty', 'quantity', 'jumlah', 'vol']);
                     idxFreq = getColIndex(['freq', 'frequency', 'days', 'hari']);
                     idxCost = getColIndex(['unit cost', 'cost', 'price', 'harga', 'satuan']);
-                    idxTotal = getColIndex(['sub-total', 'sub total', 'amount', 'total']);
-                    idxRemarks = getColIndex(['remarks', 'keterangan', 'notes']);
+                    idxTotal = getColIndex(['sub-total', 'sub total', 'amount', 'total', 'jumlah total']);
+                    idxRemarks = getColIndex(['remarks', 'keterangan', 'notes', 'catatan']);
 
                     // Heuristics for shifted columns if headers are empty
                     if (headers[0] === '' && headers[1]?.toLowerCase().includes('items')) {
                         const shift = 1;
                         if (idxCategory === -1) idxCategory = 0 + shift;
                         if (idxSubItem === -1) idxSubItem = 1 + shift;
-                        // ... adjust others if needed
                     }
                 }
 
                 // If critical columns are still missing after AI and basic keyword search, try positional heuristics
                 if (idxSubItem === -1) idxSubItem = idxCategory !== -1 ? idxCategory + 1 : 1; 
                 if (idxCategory === -1) idxCategory = Math.max(0, idxSubItem - 1);
+
+                // Validation check
+                if (idxCost === -1 && idxTotal === -1) {
+                     toast.error("Column Mapping Error", { 
+                        id: toastId,
+                        description: "Could not find 'Price', 'Cost', or 'Total' columns. Please check your sheet headers."
+                    });
+                    setIsAiLoading(false);
+                    return;
+                }
 
                 console.log("Final Column Indices:", { idxCategory, idxSubItem, idxQty, idxFreq, idxCost, idxTotal });
 
@@ -270,7 +292,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     if (!subItem) return null; 
 
                     // Skip rows that look like headers or subtotals
-                    if (subItem.toLowerCase() === 'sub-total' || subItem.toLowerCase() === 'total') return null;
+                    if (subItem.toLowerCase().includes('total') || subItem.toLowerCase().includes('grand total')) return null;
 
                     const beneficiary = (idxRemarks !== -1 ? val(idxRemarks) : '') || subItem;
                     
@@ -311,7 +333,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                 if (mappedItems.length === 0) {
                     toast.error("No valid items found", { 
                         id: toastId, 
-                        description: `Checked columns: Cat:${idxCategory}, Item:${idxSubItem}. Verify sheet structure.` 
+                        description: `Checked columns: Cat:${idxCategory}, Item:${idxSubItem}, Cost:${idxCost}. Verify sheet headers match recognized keywords.` 
                     });
                 } else {
                     setItems(prevItems => {
