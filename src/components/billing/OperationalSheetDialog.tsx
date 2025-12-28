@@ -166,7 +166,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     'item', 'uraian', 'deskripsi', 'description', 'keterangan', 'nama barang', 'keperluan', 
                     'qty', 'jumlah', 'vol', 'volume', 
                     'harga', 'price', 'cost', 'satuan', 
-                    'total', 'amount', 'jumlah harga'
+                    'total', 'amount', 'jumlah harga', 'sub-total', 'sub total'
                 ];
 
                 for (let i = 0; i < Math.min(rawData.length, 10); i++) {
@@ -219,7 +219,8 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
 
                     let cost = parseNumber(row['cost'] || row['price'] || row['harga'] || row['satuan'] || row['unit cost'] || row['harga satuan'] || '0');
 
-                    let amount = parseNumber(row['amount'] || row['total'] || row['jumlah harga'] || row['total harga'] || '0');
+                    // Added support for 'sub-total' and 'sub total'
+                    let amount = parseNumber(row['sub-total'] || row['sub total'] || row['amount'] || row['total'] || row['jumlah harga'] || row['total harga'] || '0');
                     
                     if ((amount === 0 || isNaN(amount)) && cost > 0) {
                         amount = qty * freq * cost;
@@ -263,7 +264,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                 if (mappedItems.length === 0) {
                     toast.error("No valid items found", { 
                         id: toastId, 
-                        description: `Headers found: ${headers.join(", ")}. Ensure headers like 'Item' and 'Harga' are present.` 
+                        description: `Headers found: ${headers.join(", ")}. Ensure headers like 'Item' and 'Harga' or 'Sub-Total' are present.` 
                     });
                 } else {
                     setItems(prevItems => {
@@ -273,7 +274,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     
                     toast.success("Synced!", { 
                         id: toastId, 
-                        description: `${mappedItems.length} items loaded.` 
+                        description: `${mappedItems.length} items loaded (Header found at row ${headerRowIndex + 1}).` 
                     });
                 }
             },
