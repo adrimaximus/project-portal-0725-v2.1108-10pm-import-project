@@ -170,12 +170,27 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
             amount: 690000,
             remarks: "",
             due_date: new Date().toISOString().split('T')[0]
+        },
+        // Dana Taktis Entry (AI Rule: Categorized as Other Support)
+        {
+            id: crypto.randomUUID(),
+            project_id: projectId || projects[0]?.id,
+            project_name: projects.find(p => p.id === (projectId || projects[0]?.id))?.name,
+            category: "Other Support",
+            sub_item: "Dana Taktis",
+            beneficiary: "Dana Taktis (PIC)",
+            qty: 1,
+            frequency: 1,
+            unit_cost: 1500000,
+            amount: 1500000,
+            remarks: "Cash pegangan/modal PIC (buffer)",
+            due_date: new Date().toISOString().split('T')[0]
         }
     ];
 
     setItems(prev => [...prev, ...mockItems]);
     setIsAiLoading(false);
-    toast.success("AI successfully extracted 5 items!");
+    toast.success("AI successfully extracted items (including Dana Taktis)!");
   };
 
   const handleAddItem = () => {
