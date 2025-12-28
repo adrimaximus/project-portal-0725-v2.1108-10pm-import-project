@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Building, Edit, Trash2, User, Briefcase, Landmark, MapPin, Copy, MoreVertical, CreditCard } from 'lucide-react';
 import { Company, Person, Project, CustomProperty, BankAccount, PaymentStatus } from '@/types';
-import { getInitials, generatePastelColor, getAvatarUrl, formatInJakarta } from '@/lib/utils';
+import { getInitials, generatePastelColor, getAvatarUrl, formatInJakarta, cn } from '@/lib/utils';
 import CompanyFormDialog from '@/components/people/CompanyFormDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import StatusBadge from '@/components/StatusBadge';
