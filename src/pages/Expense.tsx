@@ -48,7 +48,7 @@ import {
 } from "@/components/ui/tooltip";
 import ExpenseDetailsDialog from "@/components/billing/ExpenseDetailsDialog";
 import ReactMarkdown from 'react-markdown';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 
 const ExpensePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -140,26 +140,38 @@ const ExpensePage = () => {
     const totalExpenses = expenses.length;
     const totalAmount = expenses.reduce((sum, e) => sum + e.tf_amount, 0);
     
-    const paidExpenses = expenses.filter(e => e.status_expense === 'Paid');
-    const totalPaid = paidExpenses.reduce((sum, e) => sum + e.tf_amount, 0);
-    
-    const outstandingExpenses = expenses.filter(e => e.status_expense !== 'Paid' && e.status_expense !== 'Rejected');
-    const totalOutstanding = outstandingExpenses.reduce((sum, e) => sum + e.tf_amount, 0);
+    // Calculate paid amount accurately considering split payments
+    const calculatePaidAmount = (e: Expense) => {
+        const terms = (e as any).payment_terms || [];
+        if (terms.length > 0) {
+           return terms
+             .filter((t: any) => t.status === 'Paid')
+             .reduce((s: number, t: any) => s + (Number(t.amount) || 0), 0);
+        }
+        return e.status_expense === 'Paid' ? e.tf_amount : 0;
+    };
+
+    const totalPaid = expenses.reduce((sum, e) => sum + calculatePaidAmount(e), 0);
+    const totalOutstanding = totalAmount - totalPaid;
 
     const now = new Date();
     const startOfCurrentMonth = startOfMonth(now);
     const thisMonthExpenses = expenses.filter(e => new Date(e.created_at) >= startOfCurrentMonth);
     const totalThisMonth = thisMonthExpenses.reduce((sum, e) => sum + e.tf_amount, 0);
 
-    // Chart Data - Last 6 Months
-    const start = subMonths(now, 5);
+    // Chart Data - Last 12 Months
+    const start = subMonths(now, 11);
     const months = eachMonthOfInterval({ start: startOfMonth(start), end: now });
     
     const chartData = months.map(month => {
       const monthExpenses = expenses.filter(e => isSameMonth(new Date(e.created_at), month));
+      const monthlyTotal = monthExpenses.reduce((sum, e) => sum + e.tf_amount, 0);
+      const monthlyPaid = monthExpenses.reduce((sum, e) => sum + calculatePaidAmount(e), 0);
+
       return {
         name: format(month, 'MMM yyyy'),
-        total: monthExpenses.reduce((sum, e) => sum + e.tf_amount, 0),
+        total: monthlyTotal,
+        paid: monthlyPaid,
         count: monthExpenses.length
       };
     });
@@ -296,7 +308,7 @@ const ExpensePage = () => {
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Monthly Expense Trends</CardTitle>
-            <CardDescription>Total expenses recorded over the last 6 months.</CardDescription>
+            <CardDescription>Total expenses vs paid amounts over the last 12 months.</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <div className="h-[300px] w-full">
@@ -322,22 +334,27 @@ const ExpensePage = () => {
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         return (
-                          <div className="rounded-lg border bg-background p-2 shadow-sm">
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="flex flex-col">
-                                <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  Month
-                                </span>
-                                <span className="font-bold text-muted-foreground">
+                          <div className="rounded-lg border bg-background p-2 shadow-sm text-sm">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                              <div className="col-span-2 mb-1">
+                                <span className="text-[0.70rem] uppercase text-muted-foreground font-bold">
                                   {payload[0].payload.name}
                                 </span>
                               </div>
                               <div className="flex flex-col">
                                 <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  Total
+                                  Total Recorded
                                 </span>
-                                <span className="font-bold">
+                                <span className="font-bold text-primary">
                                   {formatCurrency(payload[0].value as number)}
+                                </span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                  Paid
+                                </span>
+                                <span className="font-bold text-green-600">
+                                  {formatCurrency(payload[1].value as number)}
                                 </span>
                               </div>
                             </div>
@@ -347,11 +364,21 @@ const ExpensePage = () => {
                       return null;
                     }}
                   />
+                  <Legend />
                   <Bar 
                     dataKey="total" 
+                    name="Total Expense"
                     fill="currentColor" 
                     radius={[4, 4, 0, 0]} 
-                    className="fill-primary"
+                    className="fill-primary/50"
+                    maxBarSize={60}
+                  />
+                  <Bar 
+                    dataKey="paid" 
+                    name="Paid"
+                    fill="currentColor" 
+                    radius={[4, 4, 0, 0]} 
+                    className="fill-green-500"
                     maxBarSize={60}
                   />
                 </BarChart>
