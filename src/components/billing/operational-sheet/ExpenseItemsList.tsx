@@ -88,8 +88,8 @@ export function ExpenseItemsList({ items, onRemoveItem, onUpdateItem }: ExpenseI
                       className="h-7 text-xs w-24"
                     />
                     <Input 
-                      value={editValues.beneficiary || ""} 
-                      onChange={e => setEditValues(prev => ({ ...prev, beneficiary: e.target.value, sub_item: e.target.value }))}
+                      value={editValues.sub_item || ""} 
+                      onChange={e => setEditValues(prev => ({ ...prev, sub_item: e.target.value, beneficiary: e.target.value }))}
                       placeholder="Item Name"
                       className="h-7 text-xs flex-1"
                     />
@@ -130,7 +130,7 @@ export function ExpenseItemsList({ items, onRemoveItem, onUpdateItem }: ExpenseI
                 <>
                   <div className="flex items-center gap-2">
                     {item.category && <Badge variant="secondary" className="text-[9px] h-4 px-1 shrink-0">{item.category}</Badge>}
-                    <span className="font-medium text-sm truncate" title={item.beneficiary}>{item.beneficiary}</span>
+                    <span className="font-medium text-sm truncate" title={item.sub_item}>{item.sub_item}</span>
                   </div>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
