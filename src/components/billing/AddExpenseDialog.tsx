@@ -36,6 +36,7 @@ import { MultiSelect } from '@/components/ui/multi-select';
 interface AddExpenseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultProjectId?: string;
 }
 
 const expenseSchema = z.object({
@@ -67,7 +68,7 @@ interface ProjectOption extends Project {
     client_company_name?: string | null;
 }
 
-const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
+const AddExpenseDialog = ({ open, onOpenChange, defaultProjectId }: AddExpenseDialogProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -159,7 +160,7 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
     defaultValues: {
-      project_id: '',
+      project_id: defaultProjectId || '',
       created_by: user?.id,
       beneficiary: '',
       tags: [],
@@ -172,6 +173,13 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
       attachments_jsonb: [], 
     },
   });
+
+  // Effect to set default project ID when dialog opens
+  useEffect(() => {
+    if (open && defaultProjectId) {
+      form.setValue('project_id', defaultProjectId);
+    }
+  }, [open, defaultProjectId, form]);
 
   const { control, handleSubmit, watch, setValue } = form;
   const { fields, append, remove } = useFieldArray({
@@ -701,6 +709,10 @@ const AddExpenseDialog = ({ open, onOpenChange }: AddExpenseDialogProps) => {
 
       toast.success("Expense added successfully.");
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      // Invalidate project specific expenses too if we have a project ID
+      if (values.project_id) {
+          queryClient.invalidateQueries({ queryKey: ['project_expenses', values.project_id] });
+      }
       onOpenChange(false);
     } catch (error: any) {
       toast.error("Failed to add expense.", { description: error.message });
