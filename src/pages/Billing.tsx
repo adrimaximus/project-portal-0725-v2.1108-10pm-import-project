@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import PortalLayout from "@/components/PortalLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useProjects } from "@/hooks/useProjects";
 import { PaymentStatus, Project, Invoice, Member, Owner } from "@/types";
-import { isPast } from "date-fns";
+import { isPast, subMonths, isSameMonth, startOfMonth, eachMonthOfInterval, format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { EditInvoiceDialog } from "@/components/billing/EditInvoiceDialog";
 import BillingStats from "@/components/billing/BillingStats";
@@ -21,6 +21,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSortConfig } from "@/hooks/useSortConfig";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const Billing = () => {
   const { data: projectsData, isLoading } = useProjects({ fetchAll: true });
@@ -176,6 +177,42 @@ const Billing = () => {
     setIsFormOpen(true);
   };
 
+  // Analytics Logic
+  const analytics = useMemo(() => {
+    const now = new Date();
+    const start = subMonths(now, 5);
+    const months = eachMonthOfInterval({ start: startOfMonth(start), end: now });
+    
+    const chartData = months.map(month => {
+      // Billed: Invoices with Due Date in this month
+      const billedInMonth = invoices.filter(inv => 
+        inv.dueDate && isSameMonth(inv.dueDate, month)
+      );
+      const billed = billedInMonth.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+
+      // Collected: Invoices with Paid Date in this month and status is Paid
+      const paidInMonth = invoices.filter(inv => 
+        inv.paidDate && isSameMonth(inv.paidDate, month) && inv.status === 'Paid'
+      );
+      const collected = paidInMonth.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+
+      return {
+        name: format(month, 'MMM yyyy'),
+        billed,
+        collected
+      };
+    });
+
+    return { chartData };
+  }, [invoices]);
+
+  const formatCurrency = (amount: number) => new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+
   if (isLoading) {
     return (
       <PortalLayout>
@@ -188,7 +225,7 @@ const Billing = () => {
 
   return (
     <PortalLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-20">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Billing</h1>
           <p className="text-muted-foreground">
@@ -206,6 +243,75 @@ const Billing = () => {
         />
 
         <BillingStats invoices={filteredInvoices} />
+
+        {/* Analytics Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Billing Analytics</CardTitle>
+            <CardDescription>Monthly Billed (Due) vs Collected (Paid) amounts.</CardDescription>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analytics.chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="#888888" 
+                    fontSize={12} 
+                    tickLine={false} 
+                    axisLine={false} 
+                  />
+                  <YAxis 
+                    stroke="#888888" 
+                    fontSize={12} 
+                    tickLine={false} 
+                    axisLine={false} 
+                    tickFormatter={(value) => new Intl.NumberFormat("id-ID", { notation: "compact", compactDisplay: "short" }).format(value)}
+                  />
+                  <RechartsTooltip
+                    cursor={{ fill: 'transparent' }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="rounded-lg border bg-background p-2 shadow-sm text-sm">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                              <div className="col-span-2 mb-1">
+                                <span className="text-[0.70rem] uppercase text-muted-foreground font-bold">
+                                  {payload[0].payload.name}
+                                </span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                  Billed
+                                </span>
+                                <span className="font-bold text-primary">
+                                  {formatCurrency(payload[0].value as number)}
+                                </span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                  Collected
+                                </span>
+                                <span className="font-bold text-green-600">
+                                  {formatCurrency(payload[1].value as number)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="billed" name="Invoiced" fill="currentColor" radius={[4, 4, 0, 0]} className="fill-primary/50" maxBarSize={40} />
+                  <Bar dataKey="collected" name="Collected" fill="currentColor" radius={[4, 4, 0, 0]} className="fill-green-500" maxBarSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
