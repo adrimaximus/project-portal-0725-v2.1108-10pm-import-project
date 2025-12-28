@@ -51,6 +51,15 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
     }
   };
 
+  const handleRefreshSheet = () => {
+    if (!sheetUrl) return;
+    setEmbedUrl(""); // Clear temporarily
+    toast.info("Refreshing sheet preview...");
+    setTimeout(() => {
+      handleUrlChange(sheetUrl);
+    }, 100);
+  };
+
   const handleAiExtraction = async () => {
     if (!sheetUrl) {
       toast.error("Please enter a Google Sheet URL first.");
@@ -66,7 +75,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
     const defaultProjectId = projects[0]?.id;
     const defaultProjectName = projects[0]?.name;
 
-    // Simulate AI extracted data (with random IDs to ensure refresh is visible)
+    // Simulate AI extracted data
     const newAiItems: BatchExpenseItem[] = [
         {
             id: crypto.randomUUID(),
@@ -265,7 +274,8 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
           <SheetUrlInput 
             sheetUrl={sheetUrl} 
             onUrlChange={handleUrlChange} 
-            onAiExtract={handleAiExtraction} 
+            onAiExtract={handleAiExtraction}
+            onRefresh={handleRefreshSheet}
             isAiLoading={isAiLoading} 
           />
         </div>
