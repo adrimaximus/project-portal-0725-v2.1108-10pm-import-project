@@ -216,27 +216,32 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
     return months;
   }, [projects, chartType, projectStatuses, paymentStatuses]);
 
+  const isCompanyView = chartType.startsWith('company_');
+
   const renderChart = () => {
     switch (chartType) {
       case 'quantity':
       case 'company_quantity':
       case 'company_value': {
-        const isCompanyChart = chartType.startsWith('company_');
-        const valueType = isCompanyChart ? chartType.substring('company_'.length) : chartType;
+        const valueType = isCompanyView ? chartType.substring('company_'.length) : chartType;
 
         return (
-          <BarChart data={chartData}>
+          <BarChart 
+            data={chartData}
+            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+          >
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis
               dataKey="name"
               tickLine={false}
               axisLine={false}
-              fontSize={10}
-              interval={isCompanyChart ? 0 : 1}
-              angle={isCompanyChart ? -45 : 0}
-              textAnchor={isCompanyChart ? 'end' : 'middle'}
-              height={isCompanyChart ? 70 : undefined}
-              dy={isCompanyChart ? 10 : 0}
+              fontSize={11}
+              interval={isCompanyView ? 0 : 1}
+              angle={isCompanyView ? -45 : 0}
+              textAnchor={isCompanyView ? 'end' : 'middle'}
+              height={isCompanyView ? 100 : 30}
+              dy={isCompanyView ? 5 : 10}
+              tickFormatter={(val) => isCompanyView && val.length > 20 ? `${val.slice(0, 20)}...` : val}
             />
             <YAxis
               tickLine={false}
@@ -255,9 +260,9 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
       }
       case 'value': {
         return (
-          <BarChart data={chartData}>
+          <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={1} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={1} height={30} />
             <YAxis 
               tickLine={false} 
               axisLine={false} 
@@ -297,9 +302,9 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
         if (projectStatuses.length === 0) return <div className="flex items-center justify-center h-full">Loading...</div>;
 
         return (
-          <BarChart data={chartData}>
+          <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={1} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={1} height={30} />
             <YAxis tickLine={false} axisLine={false} fontSize={10} />
             <Tooltip content={<CustomTooltip chartType={chartType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
             <Legend content={<CustomLegend />} />
@@ -322,9 +327,9 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
           return <div className="flex items-center justify-center h-full">Loading statuses...</div>;
         }
         return (
-          <BarChart data={chartData}>
+          <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={1} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={1} height={30} />
             <YAxis tickLine={false} axisLine={false} fontSize={10} />
             <Tooltip content={<CustomTooltip chartType={chartType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
             <Legend content={<CustomLegend />} />
@@ -367,10 +372,18 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
           </Select>
         </div>
       </CardHeader>
-      <CardContent className="h-[350px]">
-        <ResponsiveContainer width="100%" height="100%">
-          {renderChart()}
-        </ResponsiveContainer>
+      <CardContent className="h-[400px] p-0 sm:p-6">
+        <div className="h-full w-full overflow-x-auto pb-4">
+          <div style={{ 
+            width: isCompanyView ? `${Math.max(chartData.length * 60, 600)}px` : '100%', 
+            minWidth: '100%', 
+            height: '100%' 
+          }}>
+            <ResponsiveContainer width="100%" height="100%">
+              {renderChart()}
+            </ResponsiveContainer>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
