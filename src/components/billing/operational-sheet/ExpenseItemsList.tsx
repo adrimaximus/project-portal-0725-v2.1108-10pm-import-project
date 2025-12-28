@@ -89,8 +89,8 @@ export function ExpenseItemsList({ items, onRemoveItem, onUpdateItem }: ExpenseI
                     />
                     <Input 
                       value={editValues.sub_item || ""} 
-                      onChange={e => setEditValues(prev => ({ ...prev, sub_item: e.target.value, beneficiary: e.target.value }))}
-                      placeholder="Item Name"
+                      onChange={e => setEditValues(prev => ({ ...prev, sub_item: e.target.value }))}
+                      placeholder="Item Name (Col C)"
                       className="h-7 text-xs flex-1"
                     />
                   </div>
