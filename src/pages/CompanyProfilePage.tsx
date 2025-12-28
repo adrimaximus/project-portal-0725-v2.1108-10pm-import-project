@@ -8,18 +8,20 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Building, Edit, Trash2, User, Briefcase, Landmark, MapPin, Copy, MoreVertical } from 'lucide-react';
-import { Company, Person, Project, CustomProperty, BankAccount } from '@/types';
+import { ArrowLeft, Building, Edit, Trash2, User, Briefcase, Landmark, MapPin, Copy, MoreVertical, CreditCard } from 'lucide-react';
+import { Company, Person, Project, CustomProperty, BankAccount, PaymentStatus } from '@/types';
 import { getInitials, generatePastelColor, getAvatarUrl, formatInJakarta } from '@/lib/utils';
 import CompanyFormDialog from '@/components/people/CompanyFormDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import StatusBadge from '@/components/StatusBadge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Badge } from '@/components/ui/badge';
+import { getPaymentStatusStyles } from '@/lib/utils';
 
 type CompanyProfile = Company & {
   contacts: Person[];
-  projects: Pick<Project, 'id' | 'name' | 'slug' | 'status'>[];
+  projects: (Pick<Project, 'id' | 'name' | 'slug' | 'status'> & { payment_status: PaymentStatus, budget: number | null })[];
 };
 
 const CompanyProfileSkeleton = () => (
@@ -49,7 +51,21 @@ const CompanyProfilePage = () => {
     queryKey: ['company_details', slug],
     queryFn: async () => {
       if (!slug) return null;
+      // Fetch details with projects including payment info
       const { data, error } = await supabase.rpc('get_company_details_by_slug', { p_slug: slug }).single();
+      
+      // Need to refetch projects to include budget and payment_status which might not be in the simple RPC view
+      if (data && data.id) {
+         const { data: projects } = await supabase.from('projects')
+            .select('id, name, slug, status, payment_status, budget')
+            .eq('client_company_id', data.id)
+            .order('created_at', { ascending: false });
+         
+         if (projects) {
+             (data as any).projects = projects;
+         }
+      }
+
       if (error) throw error;
       return data as CompanyProfile;
     },
@@ -174,6 +190,11 @@ Account Number: ${account.account_number}
     });
   };
 
+  const pendingInvoices = useMemo(() => {
+     if (!company?.projects) return [];
+     return company.projects.filter(p => ['Unpaid', 'Overdue', 'Pending', 'Proposed'].includes(p.payment_status));
+  }, [company?.projects]);
+
   if (isLoading || isLoadingCustomProperties || isLoadingBankAccounts) return <CompanyProfileSkeleton />;
   if (error || !company) {
     toast.error("Could not load company profile.");
@@ -278,12 +299,31 @@ Account Number: ${account.account_number}
           </div>
 
           <div className="lg:col-span-2 space-y-6">
-            {/* New Bank Accounts Section */}
+            {/* New Billing Section */}
+            {pendingInvoices.length > 0 && (
+                <Card className="border-orange-200 bg-orange-50/30">
+                    <CardHeader><CardTitle className="flex items-center gap-2 text-orange-800"><CreditCard className="h-5 w-5" /> Pending Invoices</CardTitle></CardHeader>
+                    <CardContent className="space-y-3">
+                        {pendingInvoices.map(project => (
+                            <Link key={project.id} to={`/projects/${project.slug}?tab=overview`} className="flex items-center justify-between p-3 bg-white rounded-lg border border-orange-100 shadow-sm hover:shadow-md transition-all">
+                                <div>
+                                    <p className="font-semibold text-sm">{project.name}</p>
+                                    <p className="text-xs text-muted-foreground">Budget: {project.budget ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(project.budget) : '-'}</p>
+                                </div>
+                                <Badge className={cn(getPaymentStatusStyles(project.payment_status).tw, 'border-transparent font-normal')}>
+                                    {project.payment_status}
+                                </Badge>
+                            </Link>
+                        ))}
+                    </CardContent>
+                </Card>
+            )}
+
             {bankAccounts.length > 0 && (
               <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><Landmark className="h-5 w-5 text-muted-foreground" /> Bank Accounts ({bankAccounts.length})</CardTitle></CardHeader>
                 <CardContent className="space-y-4 text-sm">
-                  {bankAccounts.map((account) => (
+                  {bankAccounts.map((account, index) => (
                     <div key={account.id} className="bg-muted/40 p-4 rounded-lg border text-sm space-y-1 w-full relative">
                       <div className="absolute top-2 right-2">
                         <TooltipProvider>

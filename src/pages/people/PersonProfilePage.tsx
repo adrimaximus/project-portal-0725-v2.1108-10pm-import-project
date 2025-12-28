@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import StatusBadge from '@/components/StatusBadge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import PersonTasks from '@/components/people/PersonTasks';
 
 type Person = BasePerson & { company_id?: string | null };
 
@@ -417,6 +418,10 @@ const PersonProfilePage = () => {
                 </div>
               </CardContent>
             </Card>
+            
+            {person.user_id && (
+              <PersonTasks userId={person.user_id} />
+            )}
 
             {canViewBankInfo && (bankProperties.length > 0 || bankAccounts.length > 0) && (
               <Card>
