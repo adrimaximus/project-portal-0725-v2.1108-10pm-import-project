@@ -37,45 +37,20 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
     enabled: open
   });
 
-  const handleUrlChange = (url: string) => {
-    setSheetUrl(url);
-    try {
-      if (url.includes("docs.google.com/spreadsheets")) {
-        const baseUrl = url.split("/edit")[0];
-        setEmbedUrl(`${baseUrl}/preview?widget=true&headers=false`);
-      } else {
-        setEmbedUrl("");
-      }
-    } catch {
-      setEmbedUrl("");
-    }
-  };
-
-  const handleRefreshSheet = () => {
-    if (!sheetUrl) return;
-    setEmbedUrl(""); // Clear temporarily
-    toast.info("Refreshing sheet preview...");
-    setTimeout(() => {
-      handleUrlChange(sheetUrl);
-    }, 100);
-  };
-
-  const handleAiExtraction = async () => {
-    if (!sheetUrl) {
-      toast.error("Please enter a Google Sheet URL first.");
-      return;
-    }
+  const processSheetUrl = async (url: string) => {
+    if (!url) return;
     
     setIsAiLoading(true);
-    toast.info("AI Agent is analyzing the sheet...", { description: "Extracting items, quantities, and costs." });
+    toast.info("Auto-syncing with sheet...", { description: "Extracting items..." });
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Simulate AI delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
 
     // Fallback project if none selected in form
     const defaultProjectId = projects[0]?.id;
     const defaultProjectName = projects[0]?.name;
 
-    // Simulate AI extracted data
+    // Simulate AI extracted data (randomized to show changes on refresh)
     const newAiItems: BatchExpenseItem[] = [
         {
             id: crypto.randomUUID(),
@@ -170,13 +145,44 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
     ];
 
     setItems(prevItems => {
-        // Keep manual items, discard previous AI items
+        // Keep manual items, replace AI items
         const manualItems = prevItems.filter(item => item.isManual);
         return [...manualItems, ...newAiItems];
     });
 
     setIsAiLoading(false);
-    toast.success("Synced with sheet!", { description: `${newAiItems.length} items extracted from sheet.` });
+    toast.success("Synced!", { description: `${newAiItems.length} items extracted.` });
+  };
+
+  const handleUrlChange = (url: string) => {
+    setSheetUrl(url);
+    try {
+      if (url.includes("docs.google.com/spreadsheets")) {
+        const baseUrl = url.split("/edit")[0];
+        setEmbedUrl(`${baseUrl}/preview?widget=true&headers=false`);
+        processSheetUrl(url);
+      } else {
+        setEmbedUrl("");
+      }
+    } catch {
+      setEmbedUrl("");
+    }
+  };
+
+  const handleRefreshSheet = () => {
+    if (!sheetUrl) return;
+    
+    // Clear iframe temporarily to force reload
+    setEmbedUrl(""); 
+    setTimeout(() => {
+        if (sheetUrl.includes("docs.google.com/spreadsheets")) {
+            const baseUrl = sheetUrl.split("/edit")[0];
+            setEmbedUrl(`${baseUrl}/preview?widget=true&headers=false`);
+        }
+    }, 100);
+
+    // Trigger AI sync
+    processSheetUrl(sheetUrl);
   };
 
   const handleAddItem = (data: ExpenseFormData) => {
@@ -274,7 +280,6 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
           <SheetUrlInput 
             sheetUrl={sheetUrl} 
             onUrlChange={handleUrlChange} 
-            onAiExtract={handleAiExtraction}
             onRefresh={handleRefreshSheet}
             isAiLoading={isAiLoading} 
           />
