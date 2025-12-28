@@ -62,12 +62,12 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
 
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Fallback project if none selected in form (though this logic is mainly for demo, usually context is needed)
-    // We'll use the first available project for the mock data if no specific logic
+    // Fallback project if none selected in form
     const defaultProjectId = projects[0]?.id;
     const defaultProjectName = projects[0]?.name;
 
-    const mockItems: BatchExpenseItem[] = [
+    // Simulate AI extracted data (with random IDs to ensure refresh is visible)
+    const newAiItems: BatchExpenseItem[] = [
         {
             id: crypto.randomUUID(),
             project_id: defaultProjectId,
@@ -80,7 +80,8 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
             unit_cost: 50000,
             amount: 600000,
             remarks: "Event 17 des",
-            due_date: new Date().toISOString().split('T')[0]
+            due_date: new Date().toISOString().split('T')[0],
+            isManual: false
         },
         {
             id: crypto.randomUUID(),
@@ -94,7 +95,8 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
             unit_cost: 81900,
             amount: 327600,
             remarks: "600ml",
-            due_date: new Date().toISOString().split('T')[0]
+            due_date: new Date().toISOString().split('T')[0],
+            isManual: false
         },
         {
             id: crypto.randomUUID(),
@@ -108,7 +110,8 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
             unit_cost: 250000,
             amount: 500000,
             remarks: "Event 17 Des",
-            due_date: new Date().toISOString().split('T')[0]
+            due_date: new Date().toISOString().split('T')[0],
+            isManual: false
         },
         {
             id: crypto.randomUUID(),
@@ -122,7 +125,8 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
             unit_cost: 200000,
             amount: 400000,
             remarks: "",
-            due_date: new Date().toISOString().split('T')[0]
+            due_date: new Date().toISOString().split('T')[0],
+            isManual: false
         },
         {
             id: crypto.randomUUID(),
@@ -136,7 +140,8 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
             unit_cost: 30000,
             amount: 690000,
             remarks: "",
-            due_date: new Date().toISOString().split('T')[0]
+            due_date: new Date().toISOString().split('T')[0],
+            isManual: false
         },
         {
             id: crypto.randomUUID(),
@@ -150,13 +155,19 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
             unit_cost: 3500000,
             amount: 3500000,
             remarks: "Cash pegangan/modal PIC (buffer)",
-            due_date: new Date().toISOString().split('T')[0]
+            due_date: new Date().toISOString().split('T')[0],
+            isManual: false
         }
     ];
 
-    setItems(mockItems);
+    setItems(prevItems => {
+        // Keep manual items, discard previous AI items
+        const manualItems = prevItems.filter(item => item.isManual);
+        return [...manualItems, ...newAiItems];
+    });
+
     setIsAiLoading(false);
-    toast.success("AI successfully synced items!");
+    toast.success("Synced with sheet!", { description: `${newAiItems.length} items extracted from sheet.` });
   };
 
   const handleAddItem = (data: ExpenseFormData) => {
@@ -175,7 +186,8 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
       unit_cost: parseFloat(data.unitCost),
       amount: calculatedAmount,
       remarks: data.remarks,
-      due_date: data.dueDate
+      due_date: data.dueDate,
+      isManual: true // Mark as manual
     };
 
     setItems(prev => [...prev, newItem]);
@@ -199,8 +211,8 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
         remarks: e.remarks || e.category ? `${e.category ? `[${e.category}] ` : ''}${e.remarks}` : 'Operational Sheet Entry',
         due_date: e.due_date ? new Date(e.due_date).toISOString() : null,
         custom_properties: {
-          source: 'operational_sheet',
-          sheet_url: sheetUrl,
+          source: e.isManual ? 'manual_entry' : 'operational_sheet',
+          sheet_url: e.isManual ? null : sheetUrl,
           category: e.category,
           sub_item: e.sub_item,
           qty: e.qty,
@@ -235,6 +247,8 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
     createExpensesMutation.mutate(items);
   };
 
+  const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
@@ -258,7 +272,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
 
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
           {/* Left: Sheet Preview */}
-          <div className="flex-1 bg-muted/10 border-r relative flex flex-col">
+          <div className="flex-1 bg-muted/10 border-r relative flex flex-col min-h-[300px]">
             {embedUrl ? (
               <iframe 
                 src={embedUrl} 
@@ -277,6 +291,12 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
           {/* Right: Data Entry & List */}
           <div className="w-full lg:w-[450px] flex flex-col bg-background shadow-lg z-10 border-l">
             <ManualEntryForm projects={projects} onAdd={handleAddItem} />
+            
+            <div className="bg-muted/20 px-4 py-2 text-xs font-medium text-muted-foreground flex justify-between border-b">
+              <span>{items.length} Items</span>
+              <span>Total: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(totalAmount)}</span>
+            </div>
+
             <ExpenseItemsList items={items} onRemoveItem={handleRemoveItem} />
             
             <div className="p-4 border-t bg-background">
