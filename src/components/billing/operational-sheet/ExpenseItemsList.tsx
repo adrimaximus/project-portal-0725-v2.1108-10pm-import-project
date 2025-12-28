@@ -82,10 +82,10 @@ export function ExpenseItemsList({ items, onRemoveItem, onUpdateItem }: ExpenseI
                 <div className="space-y-2">
                   <div className="flex gap-2">
                     <Input 
-                      value={editValues.category || ""} 
-                      onChange={e => setEditValues(prev => ({ ...prev, category: e.target.value }))}
-                      placeholder="Category"
-                      className="h-7 text-xs w-24"
+                      value={editValues.project_name || ""} 
+                      onChange={e => setEditValues(prev => ({ ...prev, project_name: e.target.value }))}
+                      placeholder="Project (Col A)"
+                      className="h-7 text-xs w-28"
                     />
                     <Input 
                       value={editValues.sub_item || ""} 
@@ -119,17 +119,25 @@ export function ExpenseItemsList({ items, onRemoveItem, onUpdateItem }: ExpenseI
                       placeholder="Cost"
                     />
                   </div>
-                  <Input 
-                    value={editValues.remarks || ""} 
-                    onChange={e => setEditValues(prev => ({ ...prev, remarks: e.target.value }))}
-                    placeholder="Remarks"
-                    className="h-7 text-xs w-full"
-                  />
+                  <div className="flex gap-2">
+                    <Input 
+                      value={editValues.category || ""} 
+                      onChange={e => setEditValues(prev => ({ ...prev, category: e.target.value }))}
+                      placeholder="Category"
+                      className="h-7 text-xs w-24"
+                    />
+                    <Input 
+                      value={editValues.remarks || ""} 
+                      onChange={e => setEditValues(prev => ({ ...prev, remarks: e.target.value }))}
+                      placeholder="Remarks"
+                      className="h-7 text-xs flex-1"
+                    />
+                  </div>
                 </div>
               ) : (
                 <>
                   <div className="flex items-center gap-2">
-                    {item.category && <Badge variant="secondary" className="text-[9px] h-4 px-1 shrink-0">{item.category}</Badge>}
+                    {item.project_name && <Badge variant="secondary" className="text-[9px] h-4 px-1 shrink-0">{item.project_name}</Badge>}
                     <span className="font-medium text-sm truncate" title={item.sub_item}>{item.sub_item}</span>
                   </div>
                   
@@ -147,7 +155,7 @@ export function ExpenseItemsList({ items, onRemoveItem, onUpdateItem }: ExpenseI
                   </div>
                   
                   <div className="text-[10px] text-muted-foreground truncate">
-                     {item.project_name || "Unknown Project"}
+                     {item.category || "Uncategorized"}
                   </div>
                 </>
               )}
