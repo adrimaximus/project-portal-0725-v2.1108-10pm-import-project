@@ -3,7 +3,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useProjects } from "@/hooks/useProjects";
 import { PaymentStatus, Project, Invoice, Member, Owner } from "@/types";
-import { isPast, subMonths, isSameMonth, startOfMonth, eachMonthOfInterval, format, addMonths, isFuture } from "date-fns";
+import { isPast, subMonths, isSameMonth, startOfMonth, endOfMonth, eachMonthOfInterval, format, addMonths, isFuture } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { EditInvoiceDialog } from "@/components/billing/EditInvoiceDialog";
 import BillingStats from "@/components/billing/BillingStats";
