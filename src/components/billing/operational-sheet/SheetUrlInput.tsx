@@ -1,15 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, FileSpreadsheet, RotateCw } from "lucide-react";
+import { Loader2, FileSpreadsheet, RotateCw, Bot } from "lucide-react";
 
 interface SheetUrlInputProps {
   sheetUrl: string;
   onUrlChange: (url: string) => void;
-  onRefresh: () => void;
+  onRefreshEmbed: () => void;
+  onSyncData: () => void;
   isAiLoading: boolean;
 }
 
-export function SheetUrlInput({ sheetUrl, onUrlChange, onRefresh, isAiLoading }: SheetUrlInputProps) {
+export function SheetUrlInput({ sheetUrl, onUrlChange, onRefreshEmbed, onSyncData, isAiLoading }: SheetUrlInputProps) {
   return (
     <div className="flex items-center gap-2 w-full max-w-xl">
       <div className="bg-green-100 p-2 rounded-md">
@@ -30,16 +31,34 @@ export function SheetUrlInput({ sheetUrl, onUrlChange, onRefresh, isAiLoading }:
             </div>
           )}
         </div>
+        
         <Button
           variant="outline"
           size="icon"
           className="h-9 w-9 shrink-0"
-          onClick={onRefresh}
-          disabled={!sheetUrl || isAiLoading}
-          title="Refresh Sheet & Re-sync"
+          onClick={onRefreshEmbed}
+          disabled={!sheetUrl}
+          title="Refresh Embed View"
           type="button"
         >
-          <RotateCw className={`h-4 w-4 text-muted-foreground ${isAiLoading ? 'animate-spin' : ''}`} />
+          <RotateCw className="h-4 w-4 text-muted-foreground" />
+        </Button>
+
+        <Button
+          variant="default"
+          size="sm"
+          className="h-9 px-3 shrink-0 gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+          onClick={onSyncData}
+          disabled={!sheetUrl || isAiLoading}
+          title="Sync Data with AI Agent"
+          type="button"
+        >
+          {isAiLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Bot className="h-4 w-4" />
+          )}
+          <span className="hidden sm:inline">Sync Data</span>
         </Button>
       </div>
     </div>

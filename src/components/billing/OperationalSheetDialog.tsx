@@ -43,52 +43,31 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
     if (!value) return 0;
     const str = String(value).trim();
     
-    // Handle Indonesian format (1.000.000,00) vs Standard (1,000,000.00)
-    // If it contains dots but no commas, or dots appear before commas, it might be IDR/European
-    // Simple heuristic: remove non-numeric chars except . and ,
-    
-    // If it has 'Rp', it's likely IDR
     if (str.toLowerCase().includes('rp')) {
-        // Remove all non-digits
         return parseFloat(str.replace(/\D/g, '')) || 0;
     }
 
-    // Generic parse: replace all non-numeric/dot/comma/minus
     const clean = str.replace(/[^0-9.,-]/g, '');
-    
-    // If only numeric
     if (/^-?\d+$/.test(clean)) return parseFloat(clean);
 
-    // If it has dots and no commas (e.g. 10.000) -> remove dots
     if (clean.includes('.') && !clean.includes(',')) {
-        // Ambiguous: 10.500 (10 thousand five hundred) or 10.5 (ten point five)?
-        // Assume IDR context prefers thousands separator if it looks like integer
-        // Checking if dot is 3 digits from end
         if (/\.\d{3}$/.test(clean) || /\.\d{3}\./.test(clean)) {
              return parseFloat(clean.replace(/\./g, ''));
         }
         return parseFloat(clean);
     }
 
-    // If it has commas and no dots (e.g. 10,000) -> remove commas (standard US)
-    // OR it could be decimal (10,5 -> 10.5)
-    // IDR context often uses comma as decimal
     if (!clean.includes('.') && clean.includes(',')) {
-        // If comma is used as decimal separator
         if (clean.split(',').length === 2 && clean.split(',')[1].length <= 2) {
              return parseFloat(clean.replace(',', '.'));
         }
-        // Else treat as thousand separator
         return parseFloat(clean.replace(/,/g, ''));
     }
 
-    // Mixed (1.000,00 or 1,000.00)
-    // If dot comes before comma -> 1.000,00 (IDR)
     if (clean.indexOf('.') < clean.indexOf(',')) {
         return parseFloat(clean.replace(/\./g, '').replace(',', '.'));
     }
 
-    // If comma comes before dot -> 1,000.00 (US)
     return parseFloat(clean.replace(/,/g, ''));
   };
 
@@ -221,7 +200,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
       if (url.includes("docs.google.com/spreadsheets")) {
         const baseUrl = url.split("/edit")[0];
         setEmbedUrl(`${baseUrl}/preview?widget=true&headers=false`);
-        processSheetUrl(url);
+        // Auto-sync disabled on input change to prevent spam, manual trigger needed
       } else {
         setEmbedUrl("");
       }
@@ -230,12 +209,11 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
     }
   };
 
-  const handleRefreshSheet = () => {
+  const handleRefreshEmbed = () => {
     if (!sheetUrl) return;
     
-    // Clear iframe temporarily to force reload with cache busting
+    // Force iframe reload with timestamp
     const timestamp = new Date().getTime();
-    
     if (sheetUrl.includes("docs.google.com/spreadsheets")) {
         const baseUrl = sheetUrl.split("/edit")[0];
         setEmbedUrl(""); 
@@ -243,8 +221,10 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
             setEmbedUrl(`${baseUrl}/preview?widget=true&headers=false&t=${timestamp}`);
         }, 100);
     }
+    toast.info("Refreshed embed view");
+  };
 
-    // Trigger AI sync with fresh data
+  const handleSyncData = () => {
     processSheetUrl(sheetUrl);
   };
 
@@ -343,7 +323,8 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
           <SheetUrlInput 
             sheetUrl={sheetUrl} 
             onUrlChange={handleUrlChange} 
-            onRefresh={handleRefreshSheet}
+            onRefreshEmbed={handleRefreshEmbed}
+            onSyncData={handleSyncData}
             isAiLoading={isAiLoading} 
           />
         </div>
