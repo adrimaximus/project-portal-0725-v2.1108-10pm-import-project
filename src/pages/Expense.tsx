@@ -167,11 +167,13 @@ const ExpensePage = () => {
       const monthExpenses = expenses.filter(e => isSameMonth(new Date(e.created_at), month));
       const monthlyTotal = monthExpenses.reduce((sum, e) => sum + e.tf_amount, 0);
       const monthlyPaid = monthExpenses.reduce((sum, e) => sum + calculatePaidAmount(e), 0);
+      const monthlyOutstanding = monthlyTotal - monthlyPaid;
 
       return {
         name: format(month, 'MMM yyyy'),
         total: monthlyTotal,
         paid: monthlyPaid,
+        outstanding: monthlyOutstanding,
         count: monthExpenses.length
       };
     });
@@ -308,7 +310,7 @@ const ExpensePage = () => {
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Monthly Expense Trends</CardTitle>
-            <CardDescription>Total expenses vs paid amounts over the last 12 months.</CardDescription>
+            <CardDescription>Stacked view of Paid vs Outstanding amounts (Last 12 Months).</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <div className="h-[300px] w-full">
@@ -333,20 +335,13 @@ const ExpensePage = () => {
                     cursor={{ fill: 'transparent' }}
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
+                        const data = payload[0].payload;
                         return (
                           <div className="rounded-lg border bg-background p-2 shadow-sm text-sm">
                             <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                               <div className="col-span-2 mb-1">
                                 <span className="text-[0.70rem] uppercase text-muted-foreground font-bold">
-                                  {payload[0].payload.name}
-                                </span>
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  Total Recorded
-                                </span>
-                                <span className="font-bold text-primary">
-                                  {formatCurrency(payload[0].value as number)}
+                                  {data.name}
                                 </span>
                               </div>
                               <div className="flex flex-col">
@@ -354,7 +349,21 @@ const ExpensePage = () => {
                                   Paid
                                 </span>
                                 <span className="font-bold text-green-600">
-                                  {formatCurrency(payload[1].value as number)}
+                                  {formatCurrency(data.paid)}
+                                </span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                  Outstanding
+                                </span>
+                                <span className="font-bold text-yellow-600">
+                                  {formatCurrency(data.outstanding)}
+                                </span>
+                              </div>
+                              <div className="col-span-2 mt-1 border-t pt-1 flex justify-between">
+                                <span className="text-[0.70rem] font-medium">Total</span>
+                                <span className="font-bold">
+                                  {formatCurrency(data.total)}
                                 </span>
                               </div>
                             </div>
@@ -366,19 +375,20 @@ const ExpensePage = () => {
                   />
                   <Legend />
                   <Bar 
-                    dataKey="total" 
-                    name="Total Expense"
+                    dataKey="paid" 
+                    name="Paid" 
+                    stackId="a"
                     fill="currentColor" 
-                    radius={[4, 4, 0, 0]} 
-                    className="fill-primary/50"
+                    className="fill-green-500"
                     maxBarSize={60}
                   />
                   <Bar 
-                    dataKey="paid" 
-                    name="Paid"
+                    dataKey="outstanding" 
+                    name="Outstanding" 
+                    stackId="a"
                     fill="currentColor" 
                     radius={[4, 4, 0, 0]} 
-                    className="fill-green-500"
+                    className="fill-yellow-500"
                     maxBarSize={60}
                   />
                 </BarChart>
