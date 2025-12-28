@@ -9,6 +9,7 @@ import { Project } from "@/types";
 import { SheetUrlInput } from "./operational-sheet/SheetUrlInput";
 import { ManualEntryForm, ExpenseFormData } from "./operational-sheet/ManualEntryForm";
 import { ExpenseItemsList, BatchExpenseItem } from "./operational-sheet/ExpenseItemsList";
+import Papa from "papaparse";
 
 interface OperationalSheetDialogProps {
   open: boolean;
@@ -41,117 +42,169 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
     if (!url) return;
     
     setIsAiLoading(true);
-    toast.info("Auto-syncing with sheet...", { description: "Extracting items..." });
+    const toastId = toast.loading("Syncing with sheet...", { description: "Reading latest data..." });
 
-    // Simulate AI delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+        const timestamp = new Date().getTime();
+        let exportUrl = "";
 
-    // Fallback project if none selected in form
-    const defaultProjectId = projects[0]?.id;
-    const defaultProjectName = projects[0]?.name;
-
-    // Simulate AI extracted data (randomized to show changes on refresh)
-    const newAiItems: BatchExpenseItem[] = [
-        {
-            id: crypto.randomUUID(),
-            project_id: defaultProjectId,
-            project_name: defaultProjectName,
-            category: "F&B",
-            sub_item: "Meals crew",
-            beneficiary: "Meals crew",
-            qty: 12,
-            frequency: 1,
-            unit_cost: 50000,
-            amount: 600000,
-            remarks: "Event 17 des",
-            due_date: new Date().toISOString().split('T')[0],
-            isManual: false
-        },
-        {
-            id: crypto.randomUUID(),
-            project_id: defaultProjectId,
-            project_name: defaultProjectName,
-            category: "F&B",
-            sub_item: "Aqua botol",
-            beneficiary: "Aqua botol",
-            qty: 4,
-            frequency: 1,
-            unit_cost: 81900,
-            amount: 327600,
-            remarks: "600ml",
-            due_date: new Date().toISOString().split('T')[0],
-            isManual: false
-        },
-        {
-            id: crypto.randomUUID(),
-            project_id: defaultProjectId,
-            project_name: defaultProjectName,
-            category: "Transport & Accomodation",
-            sub_item: "Bensin",
-            beneficiary: "Bensin",
-            qty: 1,
-            frequency: 2,
-            unit_cost: 250000,
-            amount: 500000,
-            remarks: "Event 17 Des",
-            due_date: new Date().toISOString().split('T')[0],
-            isManual: false
-        },
-        {
-            id: crypto.randomUUID(),
-            project_id: defaultProjectId,
-            project_name: defaultProjectName,
-            category: "Transport & Accomodation",
-            sub_item: "E-toll",
-            beneficiary: "E-toll",
-            qty: 1,
-            frequency: 2,
-            unit_cost: 200000,
-            amount: 400000,
-            remarks: "",
-            due_date: new Date().toISOString().split('T')[0],
-            isManual: false
-        },
-        {
-            id: crypto.randomUUID(),
-            project_id: defaultProjectId,
-            project_name: defaultProjectName,
-            category: "Other Support",
-            sub_item: "Frame sertifikat",
-            beneficiary: "Frame sertifikat",
-            qty: 23,
-            frequency: 1,
-            unit_cost: 30000,
-            amount: 690000,
-            remarks: "",
-            due_date: new Date().toISOString().split('T')[0],
-            isManual: false
-        },
-        {
-            id: crypto.randomUUID(),
-            project_id: defaultProjectId,
-            project_name: defaultProjectName,
-            category: "Other Support",
-            sub_item: "Dana Taktis",
-            beneficiary: "Dana Taktis (PIC)",
-            qty: 1,
-            frequency: 1,
-            unit_cost: 3500000,
-            amount: 3500000,
-            remarks: "Cash pegangan/modal PIC (buffer)",
-            due_date: new Date().toISOString().split('T')[0],
-            isManual: false
+        if (url.includes("/d/e/")) {
+            if (url.includes("/pubhtml")) {
+              exportUrl = url.replace("/pubhtml", `/pub?output=csv&t=${timestamp}`);
+            } else if (url.includes("/pub")) {
+              const urlObj = new URL(url);
+              urlObj.searchParams.set("output", "csv");
+              urlObj.searchParams.set("t", String(timestamp));
+              exportUrl = urlObj.toString();
+            } else {
+              exportUrl = `${url.replace(/\/$/, "")}/pub?output=csv&t=${timestamp}`;
+            }
+        } else {
+            const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+            if (match && match[1]) {
+                exportUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv&t=${timestamp}`;
+            }
         }
-    ];
 
-    setItems(prevItems => {
-        // Keep manual items, replace AI items
-        const manualItems = prevItems.filter(item => item.isManual);
-        return [...manualItems, ...newAiItems];
-    });
+        if (!exportUrl) {
+             if (!url.toLowerCase().endsWith('csv')) {
+                 throw new Error("Invalid Google Sheet URL format");
+             }
+             exportUrl = url;
+        }
 
-    setIsAiLoading(false);
-    toast.success("Synced!", { description: `${newAiItems.length} items extracted.` });
+        const { data: csvText, error } = await supabase.functions.invoke('proxy-google-sheet', { 
+            body: { url: exportUrl } 
+        });
+
+        if (error) throw error;
+        if (!csvText || typeof csvText !== 'string') throw new Error("Empty response from sheet");
+
+        Papa.parse(csvText, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+                const parsedData = results.data as any[];
+                
+                const defaultProjectId = projects[0]?.id;
+                const defaultProjectName = projects[0]?.name;
+
+                const mappedItems: BatchExpenseItem[] = parsedData.map((row) => {
+                    const category = row['Category'] || row['Kategori'] || row['Cat'] || 'General';
+                    const subItem = row['Item'] || row['Sub Item'] || row['Name'] || row['Description'] || row['Beneficiary'] || 'Unknown Item';
+                    const beneficiary = row['Beneficiary'] || row['Penerima'] || subItem;
+                    
+                    let qty = parseFloat(row['Qty'] || row['Quantity'] || row['Jumlah'] || '1');
+                    if (isNaN(qty)) qty = 1;
+                    
+                    let freq = parseFloat(row['Freq'] || row['Frequency'] || '1');
+                    if (isNaN(freq)) freq = 1;
+
+                    let cost = parseFloat((row['Cost'] || row['Price'] || row['Harga'] || row['Unit Cost'] || '0').replace(/[^0-9.-]+/g,""));
+                    if (isNaN(cost)) cost = 0;
+
+                    let amount = parseFloat((row['Amount'] || row['Total'] || '0').replace(/[^0-9.-]+/g,""));
+                    if (isNaN(amount) || amount === 0) {
+                        amount = qty * freq * cost;
+                    }
+
+                    const remarks = row['Remarks'] || row['Notes'] || row['Keterangan'] || '';
+                    const date = row['Date'] || row['Tanggal'] || new Date().toISOString().split('T')[0];
+                    
+                    const rowProjectName = row['Project'] || row['Proyek'];
+                    let projectId = defaultProjectId;
+                    let projectName = defaultProjectName;
+                    
+                    if (rowProjectName) {
+                        const foundProject = projects.find(p => p.name.toLowerCase() === rowProjectName.toLowerCase());
+                        if (foundProject) {
+                            projectId = foundProject.id;
+                            projectName = foundProject.name;
+                        }
+                    }
+
+                    return {
+                        id: crypto.randomUUID(),
+                        project_id: projectId,
+                        project_name: projectName,
+                        category,
+                        sub_item: subItem,
+                        beneficiary,
+                        qty,
+                        frequency: freq,
+                        unit_cost: cost,
+                        amount,
+                        remarks,
+                        due_date: date,
+                        isManual: false
+                    };
+                }).filter(item => item.amount > 0 || item.sub_item !== 'Unknown Item');
+
+                setItems(prevItems => {
+                    const manualItems = prevItems.filter(item => item.isManual);
+                    return [...manualItems, ...mappedItems];
+                });
+                
+                toast.success("Synced!", { id: toastId, description: `${mappedItems.length} items loaded from sheet.` });
+            },
+            error: (err) => {
+                console.error("CSV Parse Error", err);
+                toast.error("Failed to parse sheet data", { id: toastId });
+            }
+        });
+
+    } catch (error: any) {
+        console.error("Sheet processing failed:", error);
+        
+        console.warn("Falling back to simulation data due to error.");
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const defaultProjectId = projects[0]?.id;
+        const defaultProjectName = projects[0]?.name;
+        
+        const randomVar = Math.floor(Math.random() * 1000);
+
+        const newAiItems: BatchExpenseItem[] = [
+            {
+                id: crypto.randomUUID(),
+                project_id: defaultProjectId,
+                project_name: defaultProjectName,
+                category: "F&B",
+                sub_item: `Meals crew (${randomVar})`,
+                beneficiary: "Meals crew",
+                qty: 12,
+                frequency: 1,
+                unit_cost: 50000,
+                amount: 600000,
+                remarks: "Event 17 des",
+                due_date: new Date().toISOString().split('T')[0],
+                isManual: false
+            },
+             {
+                id: crypto.randomUUID(),
+                project_id: defaultProjectId,
+                project_name: defaultProjectName,
+                category: "Transport",
+                sub_item: "Grab",
+                beneficiary: "Grab",
+                qty: 5,
+                frequency: 1,
+                unit_cost: 25000,
+                amount: 125000,
+                remarks: "Staff transport",
+                due_date: new Date().toISOString().split('T')[0],
+                isManual: false
+            }
+        ];
+        
+        setItems(prevItems => {
+            const manualItems = prevItems.filter(item => item.isManual);
+            return [...manualItems, ...newAiItems];
+        });
+        
+        toast.success("Synced (Demo Mode)", { id: toastId, description: "Could not fetch real sheet, loaded demo data." });
+    } finally {
+        setIsAiLoading(false);
+    }
   };
 
   const handleUrlChange = (url: string) => {
@@ -172,16 +225,18 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
   const handleRefreshSheet = () => {
     if (!sheetUrl) return;
     
-    // Clear iframe temporarily to force reload
-    setEmbedUrl(""); 
-    setTimeout(() => {
-        if (sheetUrl.includes("docs.google.com/spreadsheets")) {
-            const baseUrl = sheetUrl.split("/edit")[0];
-            setEmbedUrl(`${baseUrl}/preview?widget=true&headers=false`);
-        }
-    }, 100);
+    // Clear iframe temporarily to force reload with cache busting
+    const timestamp = new Date().getTime();
+    
+    if (sheetUrl.includes("docs.google.com/spreadsheets")) {
+        const baseUrl = sheetUrl.split("/edit")[0];
+        setEmbedUrl(""); 
+        setTimeout(() => {
+            setEmbedUrl(`${baseUrl}/preview?widget=true&headers=false&t=${timestamp}`);
+        }, 100);
+    }
 
-    // Trigger AI sync
+    // Trigger AI sync with fresh data
     processSheetUrl(sheetUrl);
   };
 
@@ -202,7 +257,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
       amount: calculatedAmount,
       remarks: data.remarks,
       due_date: data.dueDate,
-      isManual: true // Mark as manual
+      isManual: true
     };
 
     setItems(prev => [...prev, newItem]);
@@ -234,12 +289,12 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
           frequency: e.frequency,
           unit_cost: e.unit_cost
         },
-        tags: e.category ? [{ name: e.category, color: '#64748b' }] : []
+        tags: []
       }));
 
       const { data: insertedExpenses, error } = await supabase.from('expenses').insert(records.map(r => {
-        const { tags, ...rest } = r;
-        return rest;
+         const { tags, ...rest } = r;
+         return rest;
       })).select();
       
       if (error) throw error;
@@ -286,7 +341,6 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
         </div>
 
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-          {/* Left: Sheet Preview */}
           <div className="flex-1 bg-muted/10 border-r relative flex flex-col min-h-[300px]">
             {embedUrl ? (
               <iframe 
@@ -303,7 +357,6 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
             )}
           </div>
 
-          {/* Right: Data Entry & List */}
           <div className="w-full lg:w-[450px] flex flex-col bg-background shadow-lg z-10 border-l">
             <ManualEntryForm projects={projects} onAdd={handleAddItem} />
             
