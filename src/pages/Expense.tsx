@@ -167,11 +167,13 @@ const ExpensePage = () => {
       const monthExpenses = expenses.filter(e => isSameMonth(new Date(e.created_at), month));
       const monthlyTotal = monthExpenses.reduce((sum, e) => sum + e.tf_amount, 0);
       const monthlyPaid = monthExpenses.reduce((sum, e) => sum + calculatePaidAmount(e), 0);
+      const monthlyOutstanding = monthlyTotal - monthlyPaid;
 
       return {
         name: format(month, 'MMM yyyy'),
         total: monthlyTotal,
         paid: monthlyPaid,
+        outstanding: monthlyOutstanding,
         count: monthExpenses.length
       };
     });
@@ -308,7 +310,7 @@ const ExpensePage = () => {
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Monthly Expense Trends</CardTitle>
-            <CardDescription>Total expenses vs paid amounts over the last 12 months.</CardDescription>
+            <CardDescription>Total expenses vs paid and outstanding amounts over the last 12 months.</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <div className="h-[300px] w-full">
@@ -357,6 +359,14 @@ const ExpensePage = () => {
                                   {formatCurrency(payload[1].value as number)}
                                 </span>
                               </div>
+                              <div className="flex flex-col mt-1 col-span-2 border-t pt-1">
+                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                  Outstanding (Overdue)
+                                </span>
+                                <span className="font-bold text-red-500">
+                                  {formatCurrency(payload[2].value as number)}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         );
@@ -370,7 +380,7 @@ const ExpensePage = () => {
                     name="Total Expense"
                     fill="currentColor" 
                     radius={[4, 4, 0, 0]} 
-                    className="fill-primary/50"
+                    className="fill-primary/20"
                     maxBarSize={60}
                   />
                   <Bar 
@@ -379,6 +389,14 @@ const ExpensePage = () => {
                     fill="currentColor" 
                     radius={[4, 4, 0, 0]} 
                     className="fill-green-500"
+                    maxBarSize={60}
+                  />
+                  <Bar 
+                    dataKey="outstanding" 
+                    name="Outstanding"
+                    fill="currentColor" 
+                    radius={[4, 4, 0, 0]} 
+                    className="fill-red-500"
                     maxBarSize={60}
                   />
                 </BarChart>
