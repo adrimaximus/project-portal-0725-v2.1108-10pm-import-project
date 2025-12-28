@@ -165,7 +165,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                 const headerKeywords = [
                     'item', 'uraian', 'deskripsi', 'description', 'keterangan', 'nama barang', 'keperluan', 
                     'qty', 'jumlah', 'vol', 'volume', 
-                    'freq', 'frequency', 'days', 'hari', // Added frequency keywords
+                    'freq', 'frequency', 'days', 'hari', 
                     'harga', 'price', 'cost', 'satuan', 
                     'total', 'amount', 'jumlah harga', 'sub-total', 'sub total'
                 ];
@@ -186,6 +186,23 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
 
                 const headers = rawData[headerRowIndex].map(h => h.trim());
                 const dataRows = rawData.slice(headerRowIndex + 1);
+
+                // Helper to safely get value by index or key
+                const getValue = (row: any, keys: string[], fallbackIndex?: number) => {
+                    // 1. Try matching by key
+                    for (const key of keys) {
+                        if (row[key] !== undefined && row[key] !== '') return row[key];
+                    }
+                    // 2. Try matching by index if 'row' is an array-like or object indexed by column names
+                    if (fallbackIndex !== undefined) {
+                         // We are mapping from `parsedData` which creates an object with header names as keys.
+                         // To fallback to index, we need to access the original raw row if possible,
+                         // OR assume headers array order matches.
+                         const headerName = headers[fallbackIndex];
+                         if (headerName && row[headerName] !== undefined) return row[headerName];
+                    }
+                    return undefined;
+                };
 
                 const parsedData = dataRows.map(row => {
                     const obj: any = {};
@@ -208,14 +225,33 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                         row[key.toLowerCase().trim()] = rawRow[key];
                     });
 
-                    const category = row['category'] || row['kategori'] || row['cat'] || row['pos'] || row['divisi'] || 'General';
-                    const subItem = row['item'] || row['sub item'] || row['name'] || row['description'] || row['deskripsi'] || row['uraian'] || row['keterangan'] || row['nama barang'] || row['beneficiary'] || row['keperluan'] || 'Unknown Item';
+                    // 1. PROJECT / PROYEK (Column A - Index 0)
+                    const rowProjectName = getValue(row, ['project', 'proyek'], 0);
+                    let projectId = defaultProjectId;
+                    let projectName = defaultProjectName;
+                    
+                    if (rowProjectName) {
+                        const foundProject = projects.find(p => p.name.toLowerCase().includes(rowProjectName.toLowerCase()));
+                        if (foundProject) {
+                            projectId = foundProject.id;
+                            projectName = foundProject.name;
+                        } else {
+                            // If explicit project name found but not in DB, keep it for display
+                            projectName = rowProjectName;
+                        }
+                    }
+
+                    // 2. CATEGORY (Column B - Index 1)
+                    const category = getValue(row, ['category', 'kategori', 'cat', 'pos', 'divisi'], 1) || 'General';
+
+                    // 3. ITEM NAME (Column C - Index 2)
+                    const subItem = getValue(row, ['item', 'sub item', 'name', 'description', 'deskripsi', 'uraian', 'keterangan', 'nama barang', 'beneficiary', 'keperluan'], 2) || 'Unknown Item';
+                    
                     const beneficiary = row['beneficiary'] || row['penerima'] || row['vendor'] || row['suplier'] || row['toko'] || subItem;
                     
                     let qty = parseNumber(row['qty'] || row['quantity'] || row['jumlah'] || row['vol'] || row['volume'] || '1');
                     if (qty === 0) qty = 1; 
                     
-                    // Added days/hari to frequency mapping
                     let freq = parseNumber(row['freq'] || row['frequency'] || row['days'] || row['hari'] || row['durasi'] || '1');
                     if (isNaN(freq)) freq = 1;
 
@@ -233,18 +269,6 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     const remarks = row['remarks'] || row['notes'] || row['catatan'] || row['note'] || '';
                     const date = row['date'] || row['tanggal'] || row['tgl'] || new Date().toISOString().split('T')[0];
                     
-                    const rowProjectName = row['project'] || row['proyek'];
-                    let projectId = defaultProjectId;
-                    let projectName = defaultProjectName;
-                    
-                    if (rowProjectName) {
-                        const foundProject = projects.find(p => p.name.toLowerCase().includes(rowProjectName.toLowerCase()));
-                        if (foundProject) {
-                            projectId = foundProject.id;
-                            projectName = foundProject.name;
-                        }
-                    }
-
                     return {
                         id: crypto.randomUUID(),
                         project_id: projectId,
