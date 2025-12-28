@@ -41,34 +41,75 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
   const parseNumber = (value: any): number => {
     if (typeof value === 'number') return value;
     if (!value) return 0;
-    const str = String(value).trim();
     
-    if (str.toLowerCase().includes('rp')) {
-        return parseFloat(str.replace(/\D/g, '')) || 0;
+    // Clean string: remove Rp, USD, etc, but keep signs, dots, commas
+    let str = String(value).toLowerCase().replace(/rp\.?|idr|usd/g, '').trim();
+    
+    // Handle negative numbers in parentheses e.g. (1000)
+    const isNegative = str.startsWith('(') && str.endsWith(')');
+    if (isNegative) {
+        str = str.slice(1, -1);
     }
 
-    const clean = str.replace(/[^0-9.,-]/g, '');
-    if (/^-?\d+$/.test(clean)) return parseFloat(clean);
-
-    if (clean.includes('.') && !clean.includes(',')) {
-        if (/\.\d{3}$/.test(clean) || /\.\d{3}\./.test(clean)) {
-             return parseFloat(clean.replace(/\./g, ''));
+    // Heuristics for locale (Comma decimal vs Dot decimal)
+    // 1. If it contains BOTH dot and comma:
+    if (str.includes('.') && str.includes(',')) {
+        const lastDot = str.lastIndexOf('.');
+        const lastComma = str.lastIndexOf(',');
+        if (lastComma > lastDot) {
+            // e.g. 1.000,00 (Indonesian/European) -> remove dots, replace comma with dot
+            str = str.replace(/\./g, '').replace(',', '.');
+        } else {
+            // e.g. 1,000.00 (US) -> remove commas
+            str = str.replace(/,/g, '');
         }
-        return parseFloat(clean);
-    }
-
-    if (!clean.includes('.') && clean.includes(',')) {
-        if (clean.split(',').length === 2 && clean.split(',')[1].length <= 2) {
-             return parseFloat(clean.replace(',', '.'));
+    } 
+    // 2. If it contains ONLY comma
+    else if (str.includes(',')) {
+        // e.g. 10,000 (US Thousand) or 10,5 (Indo Decimal)
+        // Check if the part after comma is exactly 3 digits? usually thousand sep.
+        // But price could be 50,000. 
+        // Let's assume if there are multiple commas, it's a thousand sep.
+        const parts = str.split(',');
+        if (parts.length > 2) {
+             // 1,000,000 -> remove commas
+             str = str.replace(/,/g, '');
+        } else if (parts.length === 2) {
+             // 10,000 vs 50,5
+             // If part[1] is 00 or 000, hard to say. 
+             // Common convention in this app context: IDR uses dots for thousands. 
+             // If Google Sheet CSV export uses comma for decimal, it usually quotes the field.
+             // We'll try to guess based on length of suffix. 3 digits usually = thousands.
+             if (parts[1].length === 3) {
+                 str = str.replace(/,/g, '');
+             } else {
+                 str = str.replace(',', '.');
+             }
         }
-        return parseFloat(clean.replace(/,/g, ''));
+    }
+    // 3. If it contains ONLY dot
+    else if (str.includes('.')) {
+        // e.g. 10.000 (Indo Thousand) or 10.5 (US Decimal)
+        const parts = str.split('.');
+        if (parts.length > 2) {
+            str = str.replace(/\./g, '');
+        } else if (parts.length === 2) {
+            if (parts[1].length === 3) {
+                // 10.000 -> likely 10k
+                str = str.replace(/\./g, '');
+            } else {
+                // 10.5 -> likely decimal
+            }
+        }
     }
 
-    if (clean.indexOf('.') < clean.indexOf(',')) {
-        return parseFloat(clean.replace(/\./g, '').replace(',', '.'));
-    }
+    // Final cleanup of non-numeric chars (except dot and minus)
+    str = str.replace(/[^0-9.-]/g, '');
 
-    return parseFloat(clean.replace(/,/g, ''));
+    let num = parseFloat(str);
+    if (isNaN(num)) return 0;
+    
+    return isNegative ? -num : num;
   };
 
   const fetchCsv = async (url: string) => {
@@ -168,8 +209,8 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     'item', 'description', 'price', 'total', 'jumlah', 'harga', 'keterangan'
                 ];
 
-                // Search first 15 rows for headers
-                for (let i = 0; i < Math.min(rawData.length, 15); i++) {
+                // Search first 20 rows for headers
+                for (let i = 0; i < Math.min(rawData.length, 20); i++) {
                     const rowStr = rawData[i].join(' ').toLowerCase();
                     // Match at least 2 meaningful keywords to be sure
                     const matches = headerKeywords.filter(keyword => rowStr.includes(keyword));
@@ -177,17 +218,6 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                         headerRowIndex = i;
                         break;
                     }
-                }
-
-                // If not found, try to find a row with "No" and "Item" or similar basic structure
-                if (headerRowIndex === -1) {
-                     for (let i = 0; i < Math.min(rawData.length, 15); i++) {
-                        const row = rawData[i].map(c => c.toLowerCase().trim());
-                        if ((row.includes('no') || row.includes('no.')) && (row.includes('item') || row.includes('items') || row.includes('description'))) {
-                             headerRowIndex = i;
-                             break;
-                        }
-                     }
                 }
 
                 if (headerRowIndex === -1) {
@@ -216,7 +246,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
 
                 // --- AI Column Mapping ---
                 try {
-                    const previewRows = dataRows.slice(0, 5); // Send first 5 data rows for context
+                    const previewRows = dataRows.slice(0, 5);
                     const { data: aiMapping, error: aiError } = await supabase.functions.invoke('ai-handler', {
                         body: {
                             feature: 'map-sheet-columns',
@@ -237,37 +267,40 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                         idxRemarks = aiMapping.remarks ?? -1;
                     }
                 } catch (e) {
-                    console.warn("AI mapping failed, falling back to manual keyword detection.", e);
-                    // Fallback to manual detection
-                    idxCategory = getColIndex(['items', 'category', 'kategori', 'group', 'pos']); 
-                    idxSubItem = getColIndex(['sub items', 'sub item', 'description', 'uraian', 'nama barang', 'item', 'name']);
-                    idxQty = getColIndex(['qty', 'quantity', 'jumlah', 'vol']);
-                    idxFreq = getColIndex(['freq', 'frequency', 'days', 'hari']);
-                    idxCost = getColIndex(['unit cost', 'cost', 'price', 'harga', 'satuan']);
-                    idxTotal = getColIndex(['sub-total', 'sub total', 'amount', 'total', 'jumlah total']);
-                    idxRemarks = getColIndex(['remarks', 'keterangan', 'notes', 'catatan']);
-
-                    // Heuristics for shifted columns if headers are empty
-                    if (headers[0] === '' && headers[1]?.toLowerCase().includes('items')) {
-                        const shift = 1;
-                        if (idxCategory === -1) idxCategory = 0 + shift;
-                        if (idxSubItem === -1) idxSubItem = 1 + shift;
-                    }
+                    console.warn("AI mapping failed, falling back to manual detection.", e);
                 }
 
-                // If critical columns are still missing after AI and basic keyword search, try positional heuristics
-                if (idxSubItem === -1) idxSubItem = idxCategory !== -1 ? idxCategory + 1 : 1; 
-                if (idxCategory === -1) idxCategory = Math.max(0, idxSubItem - 1);
+                // --- Manual Fallback / Correction ---
+                // If AI didn't find them (returned -1 or error), use keywords
+                if (idxCategory === -1) idxCategory = getColIndex(['items', 'category', 'kategori', 'group', 'pos']);
+                if (idxSubItem === -1) idxSubItem = getColIndex(['sub items', 'sub item', 'description', 'uraian', 'nama barang', 'item', 'name']);
+                if (idxQty === -1) idxQty = getColIndex(['qty', 'quantity', 'jumlah', 'vol']);
+                if (idxFreq === -1) idxFreq = getColIndex(['freq', 'frequency', 'days', 'hari']);
+                if (idxCost === -1) idxCost = getColIndex(['unit cost', 'cost', 'price', 'harga', 'satuan']);
+                if (idxTotal === -1) idxTotal = getColIndex(['sub-total', 'sub total', 'amount', 'total', 'jumlah total']);
+                if (idxRemarks === -1) idxRemarks = getColIndex(['remarks', 'keterangan', 'notes', 'catatan']);
 
-                // Validation check
-                if (idxCost === -1 && idxTotal === -1) {
-                     toast.error("Column Mapping Error", { 
-                        id: toastId,
-                        description: "Could not find 'Price', 'Cost', or 'Total' columns. Please check your sheet headers."
-                    });
-                    setIsAiLoading(false);
-                    return;
+                // --- Positional Fallback Heuristics ---
+                // If we still miss columns, guess based on relative position to 'Sub Item'
+                // Standard structure: No | Category | Sub Item | Qty | Freq | Unit Cost | Total | Remarks
+                if (idxSubItem !== -1) {
+                    if (idxCategory === -1) idxCategory = idxSubItem - 1; // Left of item
+                    if (idxQty === -1) idxQty = idxSubItem + 1; // Right of item
+                    if (idxFreq === -1) idxFreq = idxSubItem + 2; 
+                    if (idxCost === -1) idxCost = idxSubItem + 3;
+                    if (idxTotal === -1) idxTotal = idxSubItem + 4;
+                } else if (idxCategory !== -1) {
+                    // If we only found category, assume item is next to it
+                    idxSubItem = idxCategory + 1;
+                    idxQty = idxCategory + 2;
+                    idxCost = idxCategory + 4;
                 }
+
+                // Sanity check indices (ensure they are within bounds and not negative)
+                const maxCol = headers.length;
+                if (idxCategory >= maxCol) idxCategory = -1;
+                if (idxSubItem >= maxCol) idxSubItem = -1;
+                // Don't invalidate others immediately, allow parsing empty string
 
                 console.log("Final Column Indices:", { idxCategory, idxSubItem, idxQty, idxFreq, idxCost, idxTotal });
 
@@ -277,10 +310,10 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                 let lastCategory = 'General Support'; 
 
                 const mappedItems: BatchExpenseItem[] = dataRows.map((row) => {
-                    const val = (idx: number) => (row[idx] !== undefined ? row[idx] : '');
+                    const val = (idx: number) => (idx !== -1 && row[idx] !== undefined ? row[idx] : '');
 
-                    // 1. CATEGORY (Fill down logic)
-                    let category = idxCategory !== -1 ? val(idxCategory).trim() : '';
+                    // 1. CATEGORY
+                    let category = val(idxCategory).trim();
                     if (category && category !== '') {
                         lastCategory = category;
                     } else {
@@ -288,31 +321,33 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     }
 
                     // 2. SUB ITEM
-                    const subItem = idxSubItem !== -1 ? val(idxSubItem).trim() : '';
+                    const subItem = val(idxSubItem).trim();
                     if (!subItem) return null; 
 
-                    // Skip rows that look like headers or subtotals
-                    if (subItem.toLowerCase().includes('total') || subItem.toLowerCase().includes('grand total')) return null;
+                    // Skip header-like rows
+                    const lowerItem = subItem.toLowerCase();
+                    if (lowerItem.includes('total') || lowerItem.includes('grand total') || lowerItem === 'sub items') return null;
 
-                    const beneficiary = (idxRemarks !== -1 ? val(idxRemarks) : '') || subItem;
+                    const beneficiary = (val(idxRemarks)) || subItem;
                     
-                    let qty = idxQty !== -1 ? parseNumber(val(idxQty) || '1') : 1;
-                    if (qty === 0) qty = 1; 
+                    let qty = parseNumber(val(idxQty) || '1');
+                    if (qty <= 0) qty = 1; 
                     
-                    let freq = idxFreq !== -1 ? parseNumber(val(idxFreq) || '1') : 1;
-                    if (isNaN(freq)) freq = 1;
+                    let freq = parseNumber(val(idxFreq) || '1');
+                    if (freq <= 0) freq = 1;
 
-                    let cost = idxCost !== -1 ? parseNumber(val(idxCost)) : 0;
-                    let amount = idxTotal !== -1 ? parseNumber(val(idxTotal)) : 0;
+                    let cost = parseNumber(val(idxCost));
+                    let amount = parseNumber(val(idxTotal));
                     
-                    if ((amount === 0 || isNaN(amount)) && cost > 0) {
+                    // Logic to infer missing values
+                    if (amount <= 0 && cost > 0) {
                         amount = qty * freq * cost;
                     }
-                    if ((cost === 0 || isNaN(cost)) && amount > 0) {
+                    if (cost <= 0 && amount > 0) {
                         cost = amount / (qty * freq);
                     }
 
-                    const remarks = idxRemarks !== -1 ? val(idxRemarks) : '';
+                    const remarks = val(idxRemarks);
                     
                     return {
                         id: crypto.randomUUID(),
@@ -333,7 +368,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                 if (mappedItems.length === 0) {
                     toast.error("No valid items found", { 
                         id: toastId, 
-                        description: `Checked columns: Cat:${idxCategory}, Item:${idxSubItem}, Cost:${idxCost}. Verify sheet headers match recognized keywords.` 
+                        description: `Checked columns: Cat:${idxCategory}, Item:${idxSubItem}, Cost:${idxCost}, Total:${idxTotal}. Verify headers or currency formats.` 
                     });
                 } else {
                     setItems(prevItems => {
@@ -343,7 +378,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     
                     toast.success("Synced!", { 
                         id: toastId, 
-                        description: `${mappedItems.length} items loaded via AI mapping.` 
+                        description: `${mappedItems.length} items loaded.` 
                     });
                 }
             },
