@@ -50,6 +50,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
     const clean = str.replace(/[^0-9.,-]/g, '');
     if (/^-?\d+$/.test(clean)) return parseFloat(clean);
 
+    // IDR format detection: 1.000.000 (dots as thousands)
     if (clean.includes('.') && !clean.includes(',')) {
         if (/\.\d{3}$/.test(clean) || /\.\d{3}\./.test(clean)) {
              return parseFloat(clean.replace(/\./g, ''));
@@ -57,6 +58,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
         return parseFloat(clean);
     }
 
+    // US/Decimal comma detection
     if (!clean.includes('.') && clean.includes(',')) {
         if (clean.split(',').length === 2 && clean.split(',')[1].length <= 2) {
              return parseFloat(clean.replace(',', '.'));
@@ -64,6 +66,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
         return parseFloat(clean.replace(/,/g, ''));
     }
 
+    // Mixed: 1.000,00 (IDR standard)
     if (clean.indexOf('.') < clean.indexOf(',')) {
         return parseFloat(clean.replace(/\./g, '').replace(',', '.'));
     }
@@ -75,27 +78,46 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
     if (!url) return;
     
     setIsAiLoading(true);
-    const toastId = toast.loading("Syncing with sheet...", { description: "Reading latest data..." });
+    const toastId = toast.loading("Syncing with sheet...", { description: "Reading latest data from 'Ajuan' tab..." });
 
     try {
         const timestamp = new Date().getTime();
         let exportUrl = "";
+        let gid = "";
+
+        // Extract GID to ensure we target the specific tab user is looking at
+        try {
+            const urlObj = new URL(url);
+            gid = urlObj.searchParams.get("gid") || "";
+            // Google sheets often put gid in hash: #gid=12345
+            if (!gid && urlObj.hash.includes("gid=")) {
+                gid = urlObj.hash.split("gid=")[1].split("&")[0];
+            }
+        } catch (e) {
+            console.log("Could not parse GID from URL");
+        }
 
         if (url.includes("/d/e/")) {
+            // Published to web links
             if (url.includes("/pubhtml")) {
               exportUrl = url.replace("/pubhtml", `/pub?output=csv&t=${timestamp}`);
             } else if (url.includes("/pub")) {
               const urlObj = new URL(url);
               urlObj.searchParams.set("output", "csv");
               urlObj.searchParams.set("t", String(timestamp));
+              if (gid) urlObj.searchParams.set("gid", gid);
               exportUrl = urlObj.toString();
             } else {
               exportUrl = `${url.replace(/\/$/, "")}/pub?output=csv&t=${timestamp}`;
             }
         } else {
+            // Standard edit URL
             const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
             if (match && match[1]) {
                 exportUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv&t=${timestamp}`;
+                if (gid) {
+                    exportUrl += `&gid=${gid}`;
+                }
             }
         }
 
@@ -106,12 +128,25 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
              exportUrl = url;
         }
 
+        console.log("Fetching CSV from:", exportUrl);
+
         const { data: csvText, error } = await supabase.functions.invoke('proxy-google-sheet', { 
             body: { url: exportUrl } 
         });
 
-        if (error) throw error;
-        if (!csvText || typeof csvText !== 'string') throw new Error("Empty response from sheet");
+        if (error) {
+            console.error("Edge function error:", error);
+            throw new Error("Failed to connect to sheet proxy.");
+        }
+        
+        if (!csvText || typeof csvText !== 'string') {
+            throw new Error("Received empty data from sheet.");
+        }
+
+        // Check if response is HTML (login page or error page)
+        if (csvText.trim().startsWith("<!DOCTYPE html") || csvText.includes("<html")) {
+            throw new Error("Sheet is likely private. Please set access to 'Anyone with the link' can View.");
+        }
 
         Papa.parse(csvText, {
             header: true,
@@ -119,29 +154,35 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
             complete: (results) => {
                 const parsedData = results.data as any[];
                 
+                if (parsedData.length === 0) {
+                    toast.warning("Sheet is empty", { id: toastId });
+                    return;
+                }
+
                 const defaultProjectId = projects[0]?.id;
                 const defaultProjectName = projects[0]?.name;
 
                 const mappedItems: BatchExpenseItem[] = parsedData.map((row) => {
-                    const category = row['Category'] || row['Kategori'] || row['Cat'] || 'General';
-                    const subItem = row['Item'] || row['Sub Item'] || row['Name'] || row['Description'] || row['Beneficiary'] || 'Unknown Item';
-                    const beneficiary = row['Beneficiary'] || row['Penerima'] || subItem;
+                    // Flexible column matching
+                    const category = row['Category'] || row['Kategori'] || row['Cat'] || row['Pos'] || 'General';
+                    const subItem = row['Item'] || row['Sub Item'] || row['Name'] || row['Description'] || row['Uraian'] || row['Keterangan'] || row['Beneficiary'] || 'Unknown Item';
+                    const beneficiary = row['Beneficiary'] || row['Penerima'] || row['Vendor'] || subItem;
                     
-                    let qty = parseNumber(row['Qty'] || row['Quantity'] || row['Jumlah'] || '1');
+                    let qty = parseNumber(row['Qty'] || row['Quantity'] || row['Jumlah'] || row['Vol'] || '1');
                     if (isNaN(qty)) qty = 1;
                     
                     let freq = parseNumber(row['Freq'] || row['Frequency'] || '1');
                     if (isNaN(freq)) freq = 1;
 
-                    let cost = parseNumber(row['Cost'] || row['Price'] || row['Harga'] || row['Unit Cost'] || '0');
+                    let cost = parseNumber(row['Cost'] || row['Price'] || row['Harga'] || row['Satuan'] || row['Unit Cost'] || '0');
                     if (isNaN(cost)) cost = 0;
 
-                    let amount = parseNumber(row['Amount'] || row['Total'] || '0');
+                    let amount = parseNumber(row['Amount'] || row['Total'] || row['Jumlah Harga'] || '0');
                     if (isNaN(amount) || amount === 0) {
                         amount = qty * freq * cost;
                     }
 
-                    const remarks = row['Remarks'] || row['Notes'] || row['Keterangan'] || '';
+                    const remarks = row['Remarks'] || row['Notes'] || row['Catatan'] || '';
                     const date = row['Date'] || row['Tanggal'] || new Date().toISOString().split('T')[0];
                     
                     const rowProjectName = row['Project'] || row['Proyek'];
@@ -149,7 +190,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     let projectName = defaultProjectName;
                     
                     if (rowProjectName) {
-                        const foundProject = projects.find(p => p.name.toLowerCase() === rowProjectName.toLowerCase());
+                        const foundProject = projects.find(p => p.name.toLowerCase().includes(rowProjectName.toLowerCase()));
                         if (foundProject) {
                             projectId = foundProject.id;
                             projectName = foundProject.name;
@@ -171,14 +212,24 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                         due_date: date,
                         isManual: false
                     };
-                }).filter(item => item.amount > 0 || item.sub_item !== 'Unknown Item');
+                }).filter(item => (item.amount > 0 || item.unit_cost > 0) && item.sub_item !== 'Unknown Item');
 
-                setItems(prevItems => {
-                    const manualItems = prevItems.filter(item => item.isManual);
-                    return [...manualItems, ...mappedItems];
-                });
-                
-                toast.success("Synced!", { id: toastId, description: `${mappedItems.length} items loaded from sheet.` });
+                if (mappedItems.length === 0) {
+                    toast.error("No valid items found", { 
+                        id: toastId, 
+                        description: "Check column names (Item, Qty, Harga, Total) or ensure the correct tab is selected." 
+                    });
+                } else {
+                    setItems(prevItems => {
+                        const manualItems = prevItems.filter(item => item.isManual);
+                        return [...manualItems, ...mappedItems];
+                    });
+                    
+                    toast.success("Synced!", { 
+                        id: toastId, 
+                        description: `${mappedItems.length} items loaded from ${gid ? 'current tab' : 'first tab'}.` 
+                    });
+                }
             },
             error: (err) => {
                 console.error("CSV Parse Error", err);
@@ -188,7 +239,10 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
 
     } catch (error: any) {
         console.error("Sheet processing failed:", error);
-        toast.error("Sync Failed", { id: toastId, description: "Could not fetch sheet data. Please check permissions." });
+        toast.error("Sync Failed", { 
+            id: toastId, 
+            description: error.message || "Could not fetch sheet data." 
+        });
     } finally {
         setIsAiLoading(false);
     }
@@ -198,9 +252,19 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
     setSheetUrl(url);
     try {
       if (url.includes("docs.google.com/spreadsheets")) {
+        // Construct embed URL differently to preserve params
+        const urlObj = new URL(url);
         const baseUrl = url.split("/edit")[0];
-        setEmbedUrl(`${baseUrl}/preview?widget=true&headers=false`);
-        // Auto-sync disabled on input change to prevent spam, manual trigger needed
+        
+        let embed = `${baseUrl}/preview?widget=true&headers=false`;
+        
+        // Preserve GID for iframe too
+        const gid = urlObj.searchParams.get("gid") || (urlObj.hash.includes("gid=") ? urlObj.hash.split("gid=")[1].split("&")[0] : "");
+        if (gid) {
+            embed += `&gid=${gid}`;
+        }
+        
+        setEmbedUrl(embed);
       } else {
         setEmbedUrl("");
       }
@@ -212,14 +276,13 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
   const handleRefreshEmbed = () => {
     if (!sheetUrl) return;
     
-    // Force iframe reload with timestamp
     const timestamp = new Date().getTime();
     if (sheetUrl.includes("docs.google.com/spreadsheets")) {
-        const baseUrl = sheetUrl.split("/edit")[0];
-        setEmbedUrl(""); 
+        // Re-construct embed with timestamp
+        handleUrlChange(sheetUrl); // Reset base
         setTimeout(() => {
-            setEmbedUrl(`${baseUrl}/preview?widget=true&headers=false&t=${timestamp}`);
-        }, 100);
+            setEmbedUrl(prev => prev + `&t=${timestamp}`);
+        }, 50);
     }
     toast.info("Refreshed embed view");
   };
