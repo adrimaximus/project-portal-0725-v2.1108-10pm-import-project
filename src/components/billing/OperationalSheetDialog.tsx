@@ -163,10 +163,11 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
 
                 let headerRowIndex = -1;
                 const headerKeywords = [
-                    'item', 'uraian', 'deskripsi', 'description', 'keterangan', 'nama barang', 'keperluan', 
+                    'items', 'item', 'uraian', 'deskripsi', 'description', 'keterangan', 'nama barang', 'keperluan', 
+                    'sub items', 'sub item',
                     'qty', 'jumlah', 'vol', 'volume', 
                     'freq', 'frequency', 'days', 'hari', 
-                    'harga', 'price', 'cost', 'satuan', 
+                    'harga', 'price', 'cost', 'satuan', 'unit cost',
                     'total', 'amount', 'jumlah harga', 'sub-total', 'sub total'
                 ];
 
@@ -195,9 +196,6 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     }
                     // 2. Try matching by index if 'row' is an array-like or object indexed by column names
                     if (fallbackIndex !== undefined) {
-                         // We are mapping from `parsedData` which creates an object with header names as keys.
-                         // To fallback to index, we need to access the original raw row if possible,
-                         // OR assume headers array order matches.
                          const headerName = headers[fallbackIndex];
                          if (headerName && row[headerName] !== undefined) return row[headerName];
                     }
@@ -207,7 +205,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                 const parsedData = dataRows.map(row => {
                     const obj: any = {};
                     headers.forEach((header, index) => {
-                        if (header && row[index] !== undefined) {
+                        if (header) {
                             obj[header] = row[index];
                         }
                     });
@@ -218,6 +216,9 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
 
                 const defaultProjectId = projects[0]?.id;
                 const defaultProjectName = projects[0]?.name;
+                
+                // Variable to hold the last seen category for fill-down
+                let lastCategory = 'General';
 
                 const mappedItems: BatchExpenseItem[] = parsedData.map((rawRow) => {
                     const row: Record<string, any> = {};
@@ -225,39 +226,35 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                         row[key.toLowerCase().trim()] = rawRow[key];
                     });
 
-                    // 1. PROJECT / PROYEK (Column A - Index 0)
-                    const rowProjectName = getValue(row, ['project', 'proyek'], 0);
-                    let projectId = defaultProjectId;
-                    let projectName = defaultProjectName;
+                    // 1. CATEGORY / ITEMS (Column A - Index 0)
+                    // In the screenshot, Column A is "ITEMS" which acts as Category
+                    let category = getValue(row, ['items', 'category', 'kategori', 'cat', 'pos', 'divisi'], 0);
                     
-                    if (rowProjectName) {
-                        const foundProject = projects.find(p => p.name.toLowerCase().includes(rowProjectName.toLowerCase()));
-                        if (foundProject) {
-                            projectId = foundProject.id;
-                            projectName = foundProject.name;
-                        } else {
-                            // If explicit project name found but not in DB, keep it for display
-                            projectName = rowProjectName;
-                        }
+                    if (category && category.trim() !== '') {
+                        lastCategory = category;
+                    } else {
+                        category = lastCategory; // Fill down
                     }
 
-                    // 2. CATEGORY (Column B - Index 1)
-                    const category = getValue(row, ['category', 'kategori', 'cat', 'pos', 'divisi'], 1) || 'General';
-
-                    // 3. ITEM NAME (Column C - Index 2)
-                    const subItem = getValue(row, ['item', 'sub item', 'name', 'description', 'deskripsi', 'uraian', 'keterangan', 'nama barang', 'beneficiary', 'keperluan'], 2) || 'Unknown Item';
+                    // 2. ITEM NAME / SUB ITEMS (Column B - Index 1)
+                    // In the screenshot, Column B is "SUB ITEMS"
+                    const subItem = getValue(row, ['sub items', 'sub item', 'item', 'name', 'description', 'deskripsi', 'uraian', 'keterangan', 'nama barang', 'beneficiary', 'keperluan'], 1) || 'Unknown Item';
                     
                     const beneficiary = row['beneficiary'] || row['penerima'] || row['vendor'] || row['suplier'] || row['toko'] || subItem;
                     
-                    let qty = parseNumber(row['qty'] || row['quantity'] || row['jumlah'] || row['vol'] || row['volume'] || '1');
+                    // 3. QTY (Column C - Index 2)
+                    let qty = parseNumber(getValue(row, ['qty', 'quantity', 'jumlah', 'vol', 'volume'], 2) || '1');
                     if (qty === 0) qty = 1; 
                     
-                    let freq = parseNumber(row['freq'] || row['frequency'] || row['days'] || row['hari'] || row['durasi'] || '1');
+                    // 4. FREQ (Column D - Index 3)
+                    let freq = parseNumber(getValue(row, ['freq', 'frequency', 'days', 'hari', 'durasi'], 3) || '1');
                     if (isNaN(freq)) freq = 1;
 
-                    let cost = parseNumber(row['cost'] || row['price'] || row['harga'] || row['satuan'] || row['unit cost'] || row['harga satuan'] || '0');
+                    // 5. UNIT COST (Column E - Index 4)
+                    let cost = parseNumber(getValue(row, ['unit cost', 'cost', 'price', 'harga', 'satuan', 'harga satuan'], 4) || '0');
 
-                    let amount = parseNumber(row['sub-total'] || row['sub total'] || row['amount'] || row['total'] || row['jumlah harga'] || row['total harga'] || '0');
+                    // 6. SUB-TOTAL (Column F - Index 5)
+                    let amount = parseNumber(getValue(row, ['sub-total', 'sub total', 'amount', 'total', 'jumlah harga', 'total harga'], 5) || '0');
                     
                     if ((amount === 0 || isNaN(amount)) && cost > 0) {
                         amount = qty * freq * cost;
@@ -269,11 +266,14 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     const remarks = row['remarks'] || row['notes'] || row['catatan'] || row['note'] || '';
                     const date = row['date'] || row['tanggal'] || row['tgl'] || new Date().toISOString().split('T')[0];
                     
+                    // Note: project_name mapping removed as it's not in the screenshot columns A-F.
+                    // We will use the default project selected in the dialog or context.
+                    
                     return {
                         id: crypto.randomUUID(),
-                        project_id: projectId,
-                        project_name: projectName,
-                        category,
+                        project_id: defaultProjectId,
+                        project_name: category, // Using category as project_name for the badge in UI as requested
+                        category: category,
                         sub_item: subItem,
                         beneficiary,
                         qty,
