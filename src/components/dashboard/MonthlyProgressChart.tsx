@@ -161,7 +161,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
         companyData.value += p.budget || 0;
       });
 
-      return Array.from(companies.values());
+      return Array.from(companies.values()).sort((a, b) => a.name.localeCompare(b.name));
     }
 
     const months = Array.from({ length: 12 }, (_, i) => {
