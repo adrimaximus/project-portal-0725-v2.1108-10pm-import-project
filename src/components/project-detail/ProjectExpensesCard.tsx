@@ -5,8 +5,7 @@ import { Plus, Receipt, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { useProjectExpenses } from "@/hooks/useProjectExpenses";
 import { Badge } from "@/components/ui/badge";
 import AddExpenseDialog from "@/components/billing/AddExpenseDialog";
-import EditExpenseDialog from "@/components/billing/EditExpenseDialog";
-import ExpenseDetailDialog from "@/components/billing/ExpenseDetailDialog";
+import ExpenseDetailsDialog from "@/components/billing/ExpenseDetailsDialog";
 import { Expense, Project } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,7 +18,6 @@ interface ProjectExpensesCardProps {
 const ProjectExpensesCard = ({ project }: ProjectExpensesCardProps) => {
   const { data: expenses, isLoading } = useProjectExpenses(project.id);
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const { user, hasPermission } = useAuth();
 
@@ -126,20 +124,10 @@ const ProjectExpensesCard = ({ project }: ProjectExpensesCardProps) => {
         defaultProjectId={project.id}
       />
       
-      <ExpenseDetailDialog 
+      <ExpenseDetailsDialog 
         open={!!selectedExpense}
         onOpenChange={(open) => !open && setSelectedExpense(null)}
         expense={selectedExpense}
-        onEdit={(exp) => {
-            setSelectedExpense(null);
-            setTimeout(() => setExpenseToEdit(exp), 100); // Small delay to ensure smooth transition
-        }}
-      />
-
-      <EditExpenseDialog 
-        open={!!expenseToEdit} 
-        onOpenChange={(open) => !open && setExpenseToEdit(null)} 
-        expense={expenseToEdit}
       />
     </>
   );
