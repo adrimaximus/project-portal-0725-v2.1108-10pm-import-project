@@ -150,7 +150,6 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
             throw new Error("Sheet is likely private. Please set access to 'Anyone with the link' can View.");
         }
 
-        // Use header: false to manually find the header row
         Papa.parse(csvText, {
             header: false,
             skipEmptyLines: true,
@@ -162,39 +161,31 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     return;
                 }
 
-                // SMART HEADER DETECTION LOGIC
                 let headerRowIndex = -1;
                 const headerKeywords = [
-                    'item', 'uraian', 'deskripsi', 'description', 'keterangan', 'nama barang', 'keperluan', // Description
-                    'qty', 'jumlah', 'vol', 'volume', // Quantity
-                    'harga', 'price', 'cost', 'satuan', // Price
-                    'total', 'amount', 'jumlah harga' // Total
+                    'item', 'uraian', 'deskripsi', 'description', 'keterangan', 'nama barang', 'keperluan', 
+                    'qty', 'jumlah', 'vol', 'volume', 
+                    'harga', 'price', 'cost', 'satuan', 
+                    'total', 'amount', 'jumlah harga'
                 ];
 
-                // Scan first 10 rows to find a likely header row
                 for (let i = 0; i < Math.min(rawData.length, 10); i++) {
                     const rowStr = rawData[i].join(' ').toLowerCase();
-                    // Count how many keywords appear in this row
                     const matches = headerKeywords.filter(keyword => rowStr.includes(keyword));
-                    // If we find at least 2 relevant column headers, assume this is the header row
                     if (matches.length >= 2) {
                         headerRowIndex = i;
                         break;
                     }
                 }
 
-                // Fallback: If no header found, assume row 0, but this likely means format is wrong or non-standard
                 if (headerRowIndex === -1) {
                     console.warn("Could not auto-detect header row. Defaulting to row 0.");
                     headerRowIndex = 0;
-                } else {
-                    console.log(`Smart Header Detection: Found headers at row ${headerRowIndex + 1}`);
                 }
 
                 const headers = rawData[headerRowIndex].map(h => h.trim());
                 const dataRows = rawData.slice(headerRowIndex + 1);
 
-                // Convert array of arrays back to array of objects
                 const parsedData = dataRows.map(row => {
                     const obj: any = {};
                     headers.forEach((header, index) => {
@@ -282,7 +273,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     
                     toast.success("Synced!", { 
                         id: toastId, 
-                        description: `${mappedItems.length} items loaded (Header found at row ${headerRowIndex + 1}).` 
+                        description: `${mappedItems.length} items loaded.` 
                     });
                 }
             },
@@ -363,6 +354,20 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
     };
 
     setItems(prev => [...prev, newItem]);
+  };
+
+  const handleUpdateItem = (id: string, updates: Partial<BatchExpenseItem>) => {
+    setItems(prev => prev.map(item => {
+      if (item.id === id) {
+        const updatedItem = { ...item, ...updates };
+        // Auto-recalculate total if components change
+        if (updates.qty !== undefined || updates.frequency !== undefined || updates.unit_cost !== undefined) {
+            updatedItem.amount = (updatedItem.qty || 0) * (updatedItem.frequency || 0) * (updatedItem.unit_cost || 0);
+        }
+        return updatedItem;
+      }
+      return item;
+    }));
   };
 
   const handleRemoveItem = (id: string) => {
@@ -468,7 +473,11 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
               <span>Total: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(totalAmount)}</span>
             </div>
 
-            <ExpenseItemsList items={items} onRemoveItem={handleRemoveItem} />
+            <ExpenseItemsList 
+              items={items} 
+              onRemoveItem={handleRemoveItem} 
+              onUpdateItem={handleUpdateItem}
+            />
             
             <div className="p-4 border-t bg-background">
               <Button 
