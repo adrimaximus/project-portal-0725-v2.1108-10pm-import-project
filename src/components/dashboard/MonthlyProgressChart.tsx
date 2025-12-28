@@ -16,15 +16,45 @@ interface MonthlyProgressChartProps {
 
 const CustomTooltip = ({ active, payload, label, chartType }: any) => {
   if (active && payload && payload.length) {
+    // Helper to format currency
+    const fmt = (val: number) => `Rp\u00A0${new Intl.NumberFormat('id-ID').format(val)}`;
+
+    if (chartType === 'value') {
+      // Specialized tooltip for Value Breakdown
+      return (
+        <div className="rounded-lg border bg-background p-2 shadow-sm text-sm min-w-[150px]">
+          <p className="font-bold mb-2 border-b pb-1">{label}</p>
+          <div className="space-y-1">
+            {payload.slice().reverse().map((entry: any) => (
+              <div key={entry.dataKey} className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                  <span className="capitalize text-muted-foreground">{entry.name}</span>
+                </div>
+                <span className="font-medium">{fmt(entry.value)}</span>
+              </div>
+            ))}
+            <div className="border-t pt-1 mt-1 flex justify-between gap-4">
+              <span className="font-semibold">Total</span>
+              <span className="font-bold">
+                {fmt(payload.reduce((sum: number, entry: any) => sum + (entry.value || 0), 0))}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Default tooltip for other types
     return (
       <div className="rounded-lg border bg-background p-2 shadow-sm text-sm">
         <p className="font-bold mb-2">{label}</p>
-        {chartType === 'quantity' || chartType === 'value' ? (
+        {chartType === 'quantity' || chartType === 'company_value' ? (
           <p className="text-foreground">
             <span className="font-semibold capitalize" style={{ color: payload[0].fill }}>
-              {chartType}:
+              {chartType.replace('company_', '')}:
             </span>{' '}
-            {chartType === 'value' ? `Rp\u00A0${new Intl.NumberFormat('id-ID').format(payload[0].value as number)}` : payload[0].value}
+            {chartType.includes('value') ? fmt(payload[0].value) : payload[0].value}
           </p>
         ) : (
           <ul className="space-y-1">
@@ -139,6 +169,9 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
         name: format(new Date(0, i), 'MMM'),
         quantity: 0,
         value: 0,
+        paid: 0,
+        overdue: 0,
+        pending: 0,
       };
       
       const projectStatusCounts = projectStatuses.length > 0 
@@ -157,7 +190,17 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
         const monthIndex = getMonth(new Date(project.start_date));
         if (months[monthIndex]) {
           months[monthIndex].quantity += 1;
-          months[monthIndex].value += project.budget || 0;
+          const budget = project.budget || 0;
+          months[monthIndex].value += budget;
+
+          // Financial Breakdown
+          if (project.payment_status === 'Paid') {
+            months[monthIndex].paid += budget;
+          } else if (project.payment_status === 'Overdue') {
+            months[monthIndex].overdue += budget;
+          } else {
+            months[monthIndex].pending += budget;
+          }
           
           if (project.status && months[monthIndex][project.status] !== undefined) {
             months[monthIndex][project.status]++;
@@ -176,7 +219,6 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
   const renderChart = () => {
     switch (chartType) {
       case 'quantity':
-      case 'value':
       case 'company_quantity':
       case 'company_value': {
         const isCompanyChart = chartType.startsWith('company_');
@@ -208,6 +250,46 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             />
             <Tooltip content={<CustomTooltip chartType={valueType} />} cursor={{ fill: 'hsl(var(--muted))' }} />
             <Bar dataKey={valueType} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        );
+      }
+      case 'value': {
+        return (
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={10} interval={1} />
+            <YAxis 
+              tickLine={false} 
+              axisLine={false} 
+              fontSize={10} 
+              tickFormatter={(value) => `Rp${new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value)}`}
+            />
+            <Tooltip content={<CustomTooltip chartType="value" />} cursor={{ fill: 'hsl(var(--muted))' }} />
+            <Legend />
+            <Bar 
+              dataKey="paid" 
+              name="Paid" 
+              stackId="a" 
+              fill="#22c55e" 
+              radius={[0, 0, 0, 0]} 
+              maxBarSize={60} 
+            />
+            <Bar 
+              dataKey="overdue" 
+              name="Overdue" 
+              stackId="a" 
+              fill="#ef4444" 
+              radius={[0, 0, 0, 0]} 
+              maxBarSize={60} 
+            />
+            <Bar 
+              dataKey="pending" 
+              name="Pending" 
+              stackId="a" 
+              fill="#94a3b8" 
+              radius={[4, 4, 0, 0]} 
+              maxBarSize={60} 
+            />
           </BarChart>
         );
       }
@@ -278,7 +360,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
               <SelectItem value="quantity">Project Quantity</SelectItem>
               {canViewValue && <SelectItem value="value">Project Value</SelectItem>}
               <SelectItem value="project_status">Project Status</SelectItem>
-              <SelectItem value="payment_status">Payment Status</SelectItem>
+              <SelectItem value="payment_status">Payment Status (Count)</SelectItem>
               <SelectItem value="company_quantity">Company Project Qty</SelectItem>
               {canViewValue && <SelectItem value="company_value">Company Project Value</SelectItem>}
             </SelectContent>
