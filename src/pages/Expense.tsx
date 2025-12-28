@@ -3,7 +3,7 @@ import PortalLayout from "@/components/PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Search, LayoutList, KanbanSquare, Plus, MoreHorizontal, Edit, Trash2, TrendingUp, AlertCircle, CheckCircle2, Wallet } from "lucide-react";
+import { Loader2, Search, LayoutList, KanbanSquare, Plus, MoreHorizontal, Edit, Trash2, TrendingUp, AlertCircle, CheckCircle2, Wallet, FileSpreadsheet, ChevronDown, FileText } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -21,11 +21,13 @@ import { Expense } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import AddExpenseDialog from "@/components/billing/AddExpenseDialog";
+import OperationalSheetDialog from "@/components/billing/OperationalSheetDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import EditExpenseDialog from "@/components/billing/EditExpenseDialog";
 import {
@@ -54,6 +56,7 @@ const ExpensePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [view, setView] = useState<'table' | 'kanban'>('table');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isSheetDialogOpen, setIsSheetDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
@@ -466,10 +469,27 @@ const ExpensePage = () => {
             >
               <KanbanSquare className="h-4 w-4" />
             </Button>
-            <Button onClick={() => setIsAddDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Expense
-            </Button>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Expense
+                  <ChevronDown className="ml-2 h-3 w-3 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[200px]">
+                <DropdownMenuItem onClick={() => setIsAddDialogOpen(true)}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Manual Entry / Invoice
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setIsSheetDialogOpen(true)}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Operational Sheet
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -667,6 +687,7 @@ const ExpensePage = () => {
         )}
       </div>
       <AddExpenseDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
+      <OperationalSheetDialog open={isSheetDialogOpen} onOpenChange={setIsSheetDialogOpen} />
       <EditExpenseDialog
         open={!!editingExpense}
         onOpenChange={(isOpen) => {
