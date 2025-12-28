@@ -84,7 +84,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
     if (!url) return;
     
     setIsAiLoading(true);
-    const toastId = toast.loading("Connecting to sheet...", { description: "Looking for 'Ajuan' tab..." });
+    const toastId = toast.loading("Syncing...", { description: "Reading sheet data..." });
 
     try {
         const timestamp = new Date().getTime();
@@ -102,7 +102,6 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
         }
 
         if (url.includes("/d/e/")) {
-            // Published link
             if (url.includes("/pubhtml")) {
               baseUrl = url.replace("/pubhtml", `/pub?output=csv&t=${timestamp}`);
             } else if (url.includes("/pub")) {
@@ -115,7 +114,6 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
               baseUrl = `${url.replace(/\/$/, "")}/pub?output=csv&t=${timestamp}`;
             }
         } else {
-            // Standard edit link
             const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
             if (match && match[1]) {
                 baseUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv&t=${timestamp}`;
@@ -131,26 +129,16 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
 
         let csvText = "";
         
-        // Strategy: 
-        // 1. If explicit GID provided in URL, use it.
-        // 2. If no GID, try asking for "Ajuan" specifically.
-        // 3. If "Ajuan" fails, fallback to default (first sheet).
-        
         if (gid) {
-            // User provided a specific tab link
             csvText = await fetchCsv(`${baseUrl}&gid=${gid}`);
         } else if (!baseUrl.includes("/d/e/")) { 
-            // Try 'Ajuan' first for standard edit links (published links don't support &sheet= param well usually)
             try {
-                console.log("Attempting to fetch 'Ajuan' tab...");
                 csvText = await fetchCsv(`${baseUrl}&sheet=Ajuan`);
             } catch (e) {
-                console.log("'Ajuan' tab not found, falling back to first tab.");
                 toast.info("Tab 'Ajuan' not found", { id: toastId, description: "Fetching the first tab instead." });
                 csvText = await fetchCsv(baseUrl);
             }
         } else {
-            // Published link, just fetch
              csvText = await fetchCsv(baseUrl);
         }
 
@@ -162,19 +150,62 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
             throw new Error("Sheet is likely private. Please set access to 'Anyone with the link' can View.");
         }
 
+        // Use header: false to manually find the header row
         Papa.parse(csvText, {
-            header: true,
+            header: false,
             skipEmptyLines: true,
             complete: (results) => {
-                const parsedData = results.data as any[];
+                const rawData = results.data as string[][];
                 
-                if (parsedData.length === 0) {
+                if (rawData.length === 0) {
                     toast.warning("Sheet is empty", { id: toastId });
                     return;
                 }
 
-                const headers = Object.keys(parsedData[0]).map(h => h.toLowerCase().trim());
-                console.log("Found CSV Headers:", headers);
+                // SMART HEADER DETECTION LOGIC
+                let headerRowIndex = -1;
+                const headerKeywords = [
+                    'item', 'uraian', 'deskripsi', 'description', 'keterangan', 'nama barang', 'keperluan', // Description
+                    'qty', 'jumlah', 'vol', 'volume', // Quantity
+                    'harga', 'price', 'cost', 'satuan', // Price
+                    'total', 'amount', 'jumlah harga' // Total
+                ];
+
+                // Scan first 10 rows to find a likely header row
+                for (let i = 0; i < Math.min(rawData.length, 10); i++) {
+                    const rowStr = rawData[i].join(' ').toLowerCase();
+                    // Count how many keywords appear in this row
+                    const matches = headerKeywords.filter(keyword => rowStr.includes(keyword));
+                    // If we find at least 2 relevant column headers, assume this is the header row
+                    if (matches.length >= 2) {
+                        headerRowIndex = i;
+                        break;
+                    }
+                }
+
+                // Fallback: If no header found, assume row 0, but this likely means format is wrong or non-standard
+                if (headerRowIndex === -1) {
+                    console.warn("Could not auto-detect header row. Defaulting to row 0.");
+                    headerRowIndex = 0;
+                } else {
+                    console.log(`Smart Header Detection: Found headers at row ${headerRowIndex + 1}`);
+                }
+
+                const headers = rawData[headerRowIndex].map(h => h.trim());
+                const dataRows = rawData.slice(headerRowIndex + 1);
+
+                // Convert array of arrays back to array of objects
+                const parsedData = dataRows.map(row => {
+                    const obj: any = {};
+                    headers.forEach((header, index) => {
+                        if (header && row[index] !== undefined) {
+                            obj[header] = row[index];
+                        }
+                    });
+                    return obj;
+                });
+
+                console.log("Parsed Headers:", headers);
 
                 const defaultProjectId = projects[0]?.id;
                 const defaultProjectName = projects[0]?.name;
@@ -185,31 +216,29 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                         row[key.toLowerCase().trim()] = rawRow[key];
                     });
 
-                    const category = row['category'] || row['kategori'] || row['cat'] || row['pos'] || 'General';
-                    const subItem = row['item'] || row['sub item'] || row['name'] || row['description'] || row['deskripsi'] || row['uraian'] || row['keterangan'] || row['beneficiary'] || row['keperluan'] || row['nama barang'] || 'Unknown Item';
+                    const category = row['category'] || row['kategori'] || row['cat'] || row['pos'] || row['divisi'] || 'General';
+                    const subItem = row['item'] || row['sub item'] || row['name'] || row['description'] || row['deskripsi'] || row['uraian'] || row['keterangan'] || row['nama barang'] || row['beneficiary'] || row['keperluan'] || 'Unknown Item';
                     const beneficiary = row['beneficiary'] || row['penerima'] || row['vendor'] || row['suplier'] || row['toko'] || subItem;
                     
-                    let qty = parseNumber(row['qty'] || row['quantity'] || row['jumlah'] || row['vol'] || '1');
-                    if (isNaN(qty)) qty = 1;
+                    let qty = parseNumber(row['qty'] || row['quantity'] || row['jumlah'] || row['vol'] || row['volume'] || '1');
+                    if (qty === 0) qty = 1; 
                     
                     let freq = parseNumber(row['freq'] || row['frequency'] || '1');
                     if (isNaN(freq)) freq = 1;
 
                     let cost = parseNumber(row['cost'] || row['price'] || row['harga'] || row['satuan'] || row['unit cost'] || row['harga satuan'] || '0');
-                    if (isNaN(cost)) cost = 0;
 
-                    let amount = parseNumber(row['amount'] || row['total'] || row['jumlah harga'] || '0');
-                    if (isNaN(amount) || amount === 0) {
+                    let amount = parseNumber(row['amount'] || row['total'] || row['jumlah harga'] || row['total harga'] || '0');
+                    
+                    if ((amount === 0 || isNaN(amount)) && cost > 0) {
                         amount = qty * freq * cost;
                     }
-                    
-                    // Back-calculate unit cost if only total is provided
-                    if (amount > 0 && cost === 0) {
+                    if ((cost === 0 || isNaN(cost)) && amount > 0) {
                         cost = amount / (qty * freq);
                     }
 
-                    const remarks = row['remarks'] || row['notes'] || row['catatan'] || '';
-                    const date = row['date'] || row['tanggal'] || new Date().toISOString().split('T')[0];
+                    const remarks = row['remarks'] || row['notes'] || row['catatan'] || row['note'] || '';
+                    const date = row['date'] || row['tanggal'] || row['tgl'] || new Date().toISOString().split('T')[0];
                     
                     const rowProjectName = row['project'] || row['proyek'];
                     let projectId = defaultProjectId;
@@ -238,12 +267,12 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                         due_date: date,
                         isManual: false
                     };
-                }).filter(item => (item.amount > 0 || item.unit_cost > 0) && item.sub_item !== 'Unknown Item');
+                }).filter(item => (item.amount > 0 || item.unit_cost > 0));
 
                 if (mappedItems.length === 0) {
                     toast.error("No valid items found", { 
                         id: toastId, 
-                        description: `Columns found: ${headers.join(", ")}. Expecting: Item/Uraian, Harga/Total.` 
+                        description: `Headers found: ${headers.join(", ")}. Ensure headers like 'Item' and 'Harga' are present.` 
                     });
                 } else {
                     setItems(prevItems => {
@@ -253,7 +282,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     
                     toast.success("Synced!", { 
                         id: toastId, 
-                        description: `${mappedItems.length} items loaded.` 
+                        description: `${mappedItems.length} items loaded (Header found at row ${headerRowIndex + 1}).` 
                     });
                 }
             },
@@ -280,7 +309,6 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
       if (url.includes("docs.google.com/spreadsheets")) {
         const urlObj = new URL(url);
         const baseUrl = url.split("/edit")[0];
-        
         let embed = `${baseUrl}/preview?widget=true&headers=false`;
         
         const gid = urlObj.searchParams.get("gid") || (urlObj.hash.includes("gid=") ? urlObj.hash.split("gid=")[1].split("&")[0] : "");
