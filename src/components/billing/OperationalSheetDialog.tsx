@@ -38,6 +38,60 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
     enabled: open
   });
 
+  const parseNumber = (value: any): number => {
+    if (typeof value === 'number') return value;
+    if (!value) return 0;
+    const str = String(value).trim();
+    
+    // Handle Indonesian format (1.000.000,00) vs Standard (1,000,000.00)
+    // If it contains dots but no commas, or dots appear before commas, it might be IDR/European
+    // Simple heuristic: remove non-numeric chars except . and ,
+    
+    // If it has 'Rp', it's likely IDR
+    if (str.toLowerCase().includes('rp')) {
+        // Remove all non-digits
+        return parseFloat(str.replace(/\D/g, '')) || 0;
+    }
+
+    // Generic parse: replace all non-numeric/dot/comma/minus
+    const clean = str.replace(/[^0-9.,-]/g, '');
+    
+    // If only numeric
+    if (/^-?\d+$/.test(clean)) return parseFloat(clean);
+
+    // If it has dots and no commas (e.g. 10.000) -> remove dots
+    if (clean.includes('.') && !clean.includes(',')) {
+        // Ambiguous: 10.500 (10 thousand five hundred) or 10.5 (ten point five)?
+        // Assume IDR context prefers thousands separator if it looks like integer
+        // Checking if dot is 3 digits from end
+        if (/\.\d{3}$/.test(clean) || /\.\d{3}\./.test(clean)) {
+             return parseFloat(clean.replace(/\./g, ''));
+        }
+        return parseFloat(clean);
+    }
+
+    // If it has commas and no dots (e.g. 10,000) -> remove commas (standard US)
+    // OR it could be decimal (10,5 -> 10.5)
+    // IDR context often uses comma as decimal
+    if (!clean.includes('.') && clean.includes(',')) {
+        // If comma is used as decimal separator
+        if (clean.split(',').length === 2 && clean.split(',')[1].length <= 2) {
+             return parseFloat(clean.replace(',', '.'));
+        }
+        // Else treat as thousand separator
+        return parseFloat(clean.replace(/,/g, ''));
+    }
+
+    // Mixed (1.000,00 or 1,000.00)
+    // If dot comes before comma -> 1.000,00 (IDR)
+    if (clean.indexOf('.') < clean.indexOf(',')) {
+        return parseFloat(clean.replace(/\./g, '').replace(',', '.'));
+    }
+
+    // If comma comes before dot -> 1,000.00 (US)
+    return parseFloat(clean.replace(/,/g, ''));
+  };
+
   const processSheetUrl = async (url: string) => {
     if (!url) return;
     
@@ -94,16 +148,16 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     const subItem = row['Item'] || row['Sub Item'] || row['Name'] || row['Description'] || row['Beneficiary'] || 'Unknown Item';
                     const beneficiary = row['Beneficiary'] || row['Penerima'] || subItem;
                     
-                    let qty = parseFloat(row['Qty'] || row['Quantity'] || row['Jumlah'] || '1');
+                    let qty = parseNumber(row['Qty'] || row['Quantity'] || row['Jumlah'] || '1');
                     if (isNaN(qty)) qty = 1;
                     
-                    let freq = parseFloat(row['Freq'] || row['Frequency'] || '1');
+                    let freq = parseNumber(row['Freq'] || row['Frequency'] || '1');
                     if (isNaN(freq)) freq = 1;
 
-                    let cost = parseFloat((row['Cost'] || row['Price'] || row['Harga'] || row['Unit Cost'] || '0').replace(/[^0-9.-]+/g,""));
+                    let cost = parseNumber(row['Cost'] || row['Price'] || row['Harga'] || row['Unit Cost'] || '0');
                     if (isNaN(cost)) cost = 0;
 
-                    let amount = parseFloat((row['Amount'] || row['Total'] || '0').replace(/[^0-9.-]+/g,""));
+                    let amount = parseNumber(row['Amount'] || row['Total'] || '0');
                     if (isNaN(amount) || amount === 0) {
                         amount = qty * freq * cost;
                     }
@@ -155,53 +209,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
 
     } catch (error: any) {
         console.error("Sheet processing failed:", error);
-        
-        console.warn("Falling back to simulation data due to error.");
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const defaultProjectId = projects[0]?.id;
-        const defaultProjectName = projects[0]?.name;
-        
-        const randomVar = Math.floor(Math.random() * 1000);
-
-        const newAiItems: BatchExpenseItem[] = [
-            {
-                id: crypto.randomUUID(),
-                project_id: defaultProjectId,
-                project_name: defaultProjectName,
-                category: "F&B",
-                sub_item: `Meals crew (${randomVar})`,
-                beneficiary: "Meals crew",
-                qty: 12,
-                frequency: 1,
-                unit_cost: 50000,
-                amount: 600000,
-                remarks: "Event 17 des",
-                due_date: new Date().toISOString().split('T')[0],
-                isManual: false
-            },
-             {
-                id: crypto.randomUUID(),
-                project_id: defaultProjectId,
-                project_name: defaultProjectName,
-                category: "Transport",
-                sub_item: "Grab",
-                beneficiary: "Grab",
-                qty: 5,
-                frequency: 1,
-                unit_cost: 25000,
-                amount: 125000,
-                remarks: "Staff transport",
-                due_date: new Date().toISOString().split('T')[0],
-                isManual: false
-            }
-        ];
-        
-        setItems(prevItems => {
-            const manualItems = prevItems.filter(item => item.isManual);
-            return [...manualItems, ...newAiItems];
-        });
-        
-        toast.success("Synced (Demo Mode)", { id: toastId, description: "Could not fetch real sheet, loaded demo data." });
+        toast.error("Sync Failed", { id: toastId, description: "Could not fetch sheet data. Please check permissions." });
     } finally {
         setIsAiLoading(false);
     }
