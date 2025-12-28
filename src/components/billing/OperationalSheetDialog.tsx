@@ -43,107 +43,117 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
     if (!value) return 0;
     const str = String(value).trim();
     
-    // Remove "Rp" or "IDR" symbols
-    const cleanStr = str.replace(/^(rp|idr)\.?\s*/i, '');
-    
-    // IDR format often uses dot as thousands separator and comma as decimal (1.000.000,00)
-    // US format uses comma as thousands and dot as decimal (1,000,000.00)
-    
-    // Check if it looks like IDR format (contains dots but no commas, or dots appearing before commas)
-    const lastDotIndex = cleanStr.lastIndexOf('.');
-    const lastCommaIndex = cleanStr.lastIndexOf(',');
-    
-    let normalized = cleanStr;
-
-    if (lastDotIndex > lastCommaIndex && lastCommaIndex === -1) {
-        // Like "1.000.000" (no comma) -> remove dots
-        // CAUTION: Could be "10.5" (US decimal). Heuristic: multiple dots usually mean thousands.
-        if ((cleanStr.match(/\./g) || []).length > 1) {
-             normalized = cleanStr.replace(/\./g, '');
-        } else {
-             // Single dot. "1000" vs "1.5". If it has 3 digits after dot, assume thousand separator? 
-             // risky. Let's assume Indonesia locale priority if ambiguous.
-             // Actually, safer to strip non-digits if we assume integer amounts for expenses usually
-        }
-    } else if (lastCommaIndex > -1) {
-        // Like "1.000,00" or "1000,50" -> remove dots, replace comma with dot
-        normalized = cleanStr.replace(/\./g, '').replace(',', '.');
+    if (str.toLowerCase().includes('rp')) {
+        return parseFloat(str.replace(/\D/g, '')) || 0;
     }
 
-    // Final fallback cleanup: keep only numbers, dot, minus
-    const finalClean = normalized.replace(/[^0-9.-]/g, '');
-    const floatVal = parseFloat(finalClean);
-    
-    return isNaN(floatVal) ? 0 : floatVal;
+    const clean = str.replace(/[^0-9.,-]/g, '');
+    if (/^-?\d+$/.test(clean)) return parseFloat(clean);
+
+    if (clean.includes('.') && !clean.includes(',')) {
+        if (/\.\d{3}$/.test(clean) || /\.\d{3}\./.test(clean)) {
+             return parseFloat(clean.replace(/\./g, ''));
+        }
+        return parseFloat(clean);
+    }
+
+    if (!clean.includes('.') && clean.includes(',')) {
+        if (clean.split(',').length === 2 && clean.split(',')[1].length <= 2) {
+             return parseFloat(clean.replace(',', '.'));
+        }
+        return parseFloat(clean.replace(/,/g, ''));
+    }
+
+    if (clean.indexOf('.') < clean.indexOf(',')) {
+        return parseFloat(clean.replace(/\./g, '').replace(',', '.'));
+    }
+
+    return parseFloat(clean.replace(/,/g, ''));
+  };
+
+  const fetchCsv = async (url: string) => {
+      const { data, error } = await supabase.functions.invoke('proxy-google-sheet', { 
+          body: { url } 
+      });
+      if (error) throw error;
+      if (data && data.error) throw new Error(data.error);
+      return data;
   };
 
   const processSheetUrl = async (url: string) => {
     if (!url) return;
     
     setIsAiLoading(true);
-    const toastId = toast.loading("Syncing...", { description: "Connecting to Google Sheet..." });
+    const toastId = toast.loading("Connecting to sheet...", { description: "Looking for 'Ajuan' tab..." });
 
     try {
         const timestamp = new Date().getTime();
-        let exportUrl = "";
+        let baseUrl = "";
         let gid = "";
 
-        // Extract GID
         try {
             const urlObj = new URL(url);
             gid = urlObj.searchParams.get("gid") || "";
-            // Handle #gid=12345
             if (!gid && urlObj.hash.includes("gid=")) {
                 gid = urlObj.hash.split("gid=")[1].split("&")[0];
             }
         } catch (e) {
-            // ignore invalid URL structure initially
+            // ignore
         }
 
         if (url.includes("/d/e/")) {
-            // Published to web links
+            // Published link
             if (url.includes("/pubhtml")) {
-              exportUrl = url.replace("/pubhtml", `/pub?output=csv&t=${timestamp}`);
+              baseUrl = url.replace("/pubhtml", `/pub?output=csv&t=${timestamp}`);
             } else if (url.includes("/pub")) {
               const urlObj = new URL(url);
               urlObj.searchParams.set("output", "csv");
               urlObj.searchParams.set("t", String(timestamp));
               if (gid) urlObj.searchParams.set("gid", gid);
-              exportUrl = urlObj.toString();
+              baseUrl = urlObj.toString();
             } else {
-              exportUrl = `${url.replace(/\/$/, "")}/pub?output=csv&t=${timestamp}`;
+              baseUrl = `${url.replace(/\/$/, "")}/pub?output=csv&t=${timestamp}`;
             }
         } else {
-            // Standard edit URL
+            // Standard edit link
             const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
             if (match && match[1]) {
-                exportUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv&t=${timestamp}`;
-                if (gid) {
-                    exportUrl += `&gid=${gid}`;
-                } else {
-                    toast.info("No specific tab selected (GID missing).", { 
-                        description: "Exporting the first tab. Navigate to the 'Ajuan' tab and copy the URL if this is incorrect.",
-                        duration: 5000 
-                    });
-                }
+                baseUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv&t=${timestamp}`;
             }
         }
 
-        if (!exportUrl) {
+        if (!baseUrl) {
              if (!url.toLowerCase().endsWith('csv')) {
                  throw new Error("Invalid Google Sheet URL format");
              }
-             exportUrl = url;
+             baseUrl = url;
         }
 
-        console.log("Fetching CSV from:", exportUrl);
-
-        const { data: csvText, error } = await supabase.functions.invoke('proxy-google-sheet', { 
-            body: { url: exportUrl } 
-        });
-
-        if (error) throw error;
+        let csvText = "";
         
+        // Strategy: 
+        // 1. If explicit GID provided in URL, use it.
+        // 2. If no GID, try asking for "Ajuan" specifically.
+        // 3. If "Ajuan" fails, fallback to default (first sheet).
+        
+        if (gid) {
+            // User provided a specific tab link
+            csvText = await fetchCsv(`${baseUrl}&gid=${gid}`);
+        } else if (!baseUrl.includes("/d/e/")) { 
+            // Try 'Ajuan' first for standard edit links (published links don't support &sheet= param well usually)
+            try {
+                console.log("Attempting to fetch 'Ajuan' tab...");
+                csvText = await fetchCsv(`${baseUrl}&sheet=Ajuan`);
+            } catch (e) {
+                console.log("'Ajuan' tab not found, falling back to first tab.");
+                toast.info("Tab 'Ajuan' not found", { id: toastId, description: "Fetching the first tab instead." });
+                csvText = await fetchCsv(baseUrl);
+            }
+        } else {
+            // Published link, just fetch
+             csvText = await fetchCsv(baseUrl);
+        }
+
         if (!csvText || typeof csvText !== 'string') {
             throw new Error("Received empty data from sheet.");
         }
@@ -163,7 +173,6 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                     return;
                 }
 
-                // Check available headers for debugging
                 const headers = Object.keys(parsedData[0]).map(h => h.toLowerCase().trim());
                 console.log("Found CSV Headers:", headers);
 
@@ -171,41 +180,36 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                 const defaultProjectName = projects[0]?.name;
 
                 const mappedItems: BatchExpenseItem[] = parsedData.map((rawRow) => {
-                    // Create a normalized row object where keys are lowercase and trimmed
                     const row: Record<string, any> = {};
                     Object.keys(rawRow).forEach(key => {
                         row[key.toLowerCase().trim()] = rawRow[key];
                     });
 
-                    // Flexible column matching with Indonesian support
-                    const category = row['category'] || row['kategori'] || row['cat'] || row['pos'] || row['divisi'] || 'General';
-                    
-                    const subItem = row['item'] || row['sub item'] || row['name'] || row['description'] || row['deskripsi'] || row['uraian'] || row['keterangan'] || row['nama barang'] || row['beneficiary'] || row['keperluan'] || 'Unknown Item';
-                    
+                    const category = row['category'] || row['kategori'] || row['cat'] || row['pos'] || 'General';
+                    const subItem = row['item'] || row['sub item'] || row['name'] || row['description'] || row['deskripsi'] || row['uraian'] || row['keterangan'] || row['beneficiary'] || row['keperluan'] || row['nama barang'] || 'Unknown Item';
                     const beneficiary = row['beneficiary'] || row['penerima'] || row['vendor'] || row['suplier'] || row['toko'] || subItem;
                     
-                    let qty = parseNumber(row['qty'] || row['quantity'] || row['jumlah'] || row['vol'] || row['volume'] || '1');
-                    if (qty === 0) qty = 1; // Default to 1 if missing/0
+                    let qty = parseNumber(row['qty'] || row['quantity'] || row['jumlah'] || row['vol'] || '1');
+                    if (isNaN(qty)) qty = 1;
                     
                     let freq = parseNumber(row['freq'] || row['frequency'] || '1');
-                    if (freq === 0) freq = 1;
+                    if (isNaN(freq)) freq = 1;
 
                     let cost = parseNumber(row['cost'] || row['price'] || row['harga'] || row['satuan'] || row['unit cost'] || row['harga satuan'] || '0');
+                    if (isNaN(cost)) cost = 0;
 
-                    let amount = parseNumber(row['amount'] || row['total'] || row['jumlah harga'] || row['total harga'] || '0');
-                    
-                    // Auto-calculate if amount is missing but cost exists
-                    if ((amount === 0 || isNaN(amount)) && cost > 0) {
+                    let amount = parseNumber(row['amount'] || row['total'] || row['jumlah harga'] || '0');
+                    if (isNaN(amount) || amount === 0) {
                         amount = qty * freq * cost;
                     }
                     
-                    // Auto-calculate cost if amount exists but cost is missing
-                    if ((cost === 0 || isNaN(cost)) && amount > 0) {
+                    // Back-calculate unit cost if only total is provided
+                    if (amount > 0 && cost === 0) {
                         cost = amount / (qty * freq);
                     }
 
-                    const remarks = row['remarks'] || row['notes'] || row['catatan'] || row['note'] || '';
-                    const date = row['date'] || row['tanggal'] || row['tgl'] || new Date().toISOString().split('T')[0];
+                    const remarks = row['remarks'] || row['notes'] || row['catatan'] || '';
+                    const date = row['date'] || row['tanggal'] || new Date().toISOString().split('T')[0];
                     
                     const rowProjectName = row['project'] || row['proyek'];
                     let projectId = defaultProjectId;
@@ -234,13 +238,12 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
                         due_date: date,
                         isManual: false
                     };
-                }).filter(item => (item.amount > 0 || item.unit_cost > 0));
+                }).filter(item => (item.amount > 0 || item.unit_cost > 0) && item.sub_item !== 'Unknown Item');
 
                 if (mappedItems.length === 0) {
-                    const headerList = Object.keys(parsedData[0]).join(", ");
                     toast.error("No valid items found", { 
                         id: toastId, 
-                        description: `Columns found: ${headerList}. Expecting: Item/Uraian, Harga/Amount.` 
+                        description: `Columns found: ${headers.join(", ")}. Expecting: Item/Uraian, Harga/Total.` 
                     });
                 } else {
                     setItems(prevItems => {
@@ -277,13 +280,14 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
       if (url.includes("docs.google.com/spreadsheets")) {
         const urlObj = new URL(url);
         const baseUrl = url.split("/edit")[0];
+        
         let embed = `${baseUrl}/preview?widget=true&headers=false`;
         
-        // Extract GID for embed preview
         const gid = urlObj.searchParams.get("gid") || (urlObj.hash.includes("gid=") ? urlObj.hash.split("gid=")[1].split("&")[0] : "");
         if (gid) {
             embed += `&gid=${gid}`;
         }
+        
         setEmbedUrl(embed);
       } else {
         setEmbedUrl("");
@@ -295,6 +299,7 @@ export default function OperationalSheetDialog({ open, onOpenChange }: Operation
 
   const handleRefreshEmbed = () => {
     if (!sheetUrl) return;
+    
     const timestamp = new Date().getTime();
     if (sheetUrl.includes("docs.google.com/spreadsheets")) {
         handleUrlChange(sheetUrl);
