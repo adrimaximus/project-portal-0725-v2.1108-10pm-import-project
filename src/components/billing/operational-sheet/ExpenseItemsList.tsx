@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Wand2, Calculator } from "lucide-react";
+import { Trash2, Wand2, Calculator, Bot } from "lucide-react";
 
 export interface BatchExpenseItem {
   id: string;
@@ -26,8 +26,16 @@ interface ExpenseItemsListProps {
 export function ExpenseItemsList({ items, onRemoveItem }: ExpenseItemsListProps) {
   if (items.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 border-t min-h-[200px]">
-        <p className="text-sm">No items yet. Use AI Sync or add manually.</p>
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 border-t min-h-[300px] bg-muted/5">
+        <div className="bg-purple-50 p-4 rounded-full mb-3 border border-purple-100">
+          <Bot className="h-8 w-8 text-purple-500" />
+        </div>
+        <h3 className="font-medium text-foreground mb-1">AI Agent Ready</h3>
+        <p className="text-xs text-center max-w-[280px] leading-relaxed">
+          Ensure your Google Sheet has a tab named <strong>"Ajuan"</strong>.
+          <br />
+          Click <span className="font-semibold text-purple-600">Sync Agent</span> to extract items automatically.
+        </p>
       </div>
     );
   }

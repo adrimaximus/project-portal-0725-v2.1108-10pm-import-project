@@ -13,10 +13,10 @@ interface SheetUrlInputProps {
 export function SheetUrlInput({ sheetUrl, onUrlChange, onRefreshEmbed, onSyncData, isAiLoading }: SheetUrlInputProps) {
   return (
     <div className="flex items-center gap-2 w-full max-w-xl">
-      <div className="bg-green-100 p-2 rounded-md">
+      <div className="bg-green-100 p-2 rounded-md border border-green-200">
         <FileSpreadsheet className="h-4 w-4 text-green-700 shrink-0" />
       </div>
-      <div className="flex-1 flex items-center gap-1">
+      <div className="flex-1 flex items-center gap-2">
         <div className="relative flex-1">
           <Input
             placeholder="Paste Google Sheet URL here..."
@@ -35,22 +35,24 @@ export function SheetUrlInput({ sheetUrl, onUrlChange, onRefreshEmbed, onSyncDat
         <Button
           variant="outline"
           size="icon"
-          className="h-9 w-9 shrink-0"
+          className="h-9 w-9 shrink-0 border-dashed"
           onClick={onRefreshEmbed}
           disabled={!sheetUrl}
-          title="Refresh Embed View"
+          title="Refresh Embed View Only"
           type="button"
         >
           <RotateCw className="h-4 w-4 text-muted-foreground" />
         </Button>
 
+        <div className="h-6 w-px bg-border mx-1 hidden sm:block" />
+
         <Button
           variant="default"
           size="sm"
-          className="h-9 px-3 shrink-0 gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+          className="h-9 px-4 shrink-0 gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-sm border border-purple-700/20"
           onClick={onSyncData}
           disabled={!sheetUrl || isAiLoading}
-          title="Sync Data with AI Agent"
+          title="Extract data from 'Ajuan' sheet"
           type="button"
         >
           {isAiLoading ? (
@@ -58,7 +60,7 @@ export function SheetUrlInput({ sheetUrl, onUrlChange, onRefreshEmbed, onSyncDat
           ) : (
             <Bot className="h-4 w-4" />
           )}
-          <span className="hidden sm:inline">Sync Data</span>
+          <span className="hidden sm:inline font-medium">Sync Agent</span>
         </Button>
       </div>
     </div>
