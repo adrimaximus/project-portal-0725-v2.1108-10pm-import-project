@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
-import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2, Copy, Download, Edit, Paperclip, X, Tag, MoreVertical } from "lucide-react";
+import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2, Copy, Download, Edit, Paperclip, X, Tag, MoreVertical, Calculator, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +19,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import ReactMarkdown from 'react-markdown';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import EditExpenseDialog from './EditExpenseDialog';
+import PaymentStatusBadge from './PaymentStatusBadge';
 
 interface FileMetadata {
   name: string;
@@ -32,6 +33,9 @@ interface ExpenseDetailsDialogProps {
   expense: Expense | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onStatusChange?: (invoiceId: string, newStatus: any) => void;
+  onEdit?: (invoice: Invoice) => void;
+  onDelete?: (invoice: Invoice) => void;
 }
 
 const formatFileSize = (bytes: number) => {
@@ -166,6 +170,7 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
     style: "currency",
     currency: "IDR",
     minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(amount);
 
   const getStatusBadgeStyle = (status: string) => {
@@ -183,6 +188,8 @@ const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: Expe
   const paymentTerms = (expense as any).payment_terms || [];
   const bankDetails = expense.account_bank;
   const attachments: FileMetadata[] = (expense as any).attachments_jsonb || [];
+  const customProps = expense.custom_properties as any;
+  const isOpSheet = customProps?.source === 'operational_sheet' || customProps?.source === 'manual_entry';
 
   // Use PIC if available, otherwise fallback to project owner
   const pic = expense.pic || expense.project_owner;
@@ -225,7 +232,6 @@ Account Name: ${bankDetails.name || '-'}
   const handleReplyClick = (index: number, type: 'finance' | 'pic', existingFeedback?: string, existingAttachment?: FileMetadata) => {
     setReplyingTerm({ index, type });
     setFeedbackText(existingFeedback || "");
-    // When opening the form, clear the attachment state as we only handle new uploads/replacements here.
     setFeedbackAttachment(null); 
   };
 
@@ -236,7 +242,6 @@ Account Name: ${bankDetails.name || '-'}
     setIsSubmitting(true);
     
     try {
-        // --- File Upload Logic ---
         let attachmentMetadata: FileMetadata | null = null;
         
         if (feedbackAttachment) {
@@ -256,37 +261,21 @@ Account Name: ${bankDetails.name || '-'}
                 type: file.type,
                 storagePath: filePath
             };
-        } else {
-            // If editing existing feedback and no new file is selected, retain the old attachment if it exists
-            const existingTerm = (expense.payment_terms as any[])[index];
-            if (type === 'pic' && existingTerm.pic_attachment && !feedbackText.trim() && !existingTerm.pic_feedback) {
-                // If user clears text but keeps attachment, we should probably allow it, but for now, if both are empty, we clear the attachment too.
-                // If the user is editing and clears the attachment, feedbackAttachment is null, and we set attachmentMetadata to null below.
-            }
         }
-        // --- End File Upload Logic ---
 
         const updatedTerms = [...(expense.payment_terms as any[])];
         
         if (type === 'pic' || type === 'finance') {
-            // Determine the final attachment metadata. If a new file was uploaded, use that. 
-            // If no new file, check if the user is editing existing feedback.
             const existingAttachment = updatedTerms[index].pic_attachment as FileMetadata | undefined;
-            
             let finalAttachment = attachmentMetadata;
             
-            // If we are editing (type='pic') and no new file was uploaded, keep the existing one 
-            // UNLESS the user explicitly removed it (which we don't support yet, but clearing feedbackAttachment handles new uploads).
-            // If editing and no new file is selected, keep the existing one.
             if (type === 'pic' && !feedbackAttachment && existingAttachment) {
                 finalAttachment = existingAttachment;
             }
             
-            // If the user clears the text and there is no new attachment, clear the old attachment too.
             if (!feedbackText.trim() && !feedbackAttachment) {
                 finalAttachment = null;
             }
-
 
             updatedTerms[index] = {
                 ...updatedTerms[index],
@@ -307,7 +296,6 @@ Account Name: ${bankDetails.name || '-'}
         setFeedbackText("");
         setFeedbackAttachment(null);
         
-        // Refresh data explicitly for this dialog and the main list
         await queryClient.invalidateQueries({ queryKey: ['expense_details', expense.id] });
         queryClient.invalidateQueries({ queryKey: ['expenses'] });
         
@@ -335,7 +323,6 @@ Account Name: ${bankDetails.name || '-'}
       if (error) throw error;
       
       toast.success("Term status updated");
-      // Refresh data explicitly for this dialog and the main list
       await queryClient.invalidateQueries({ queryKey: ['expense_details', expense.id] });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
     } catch (err: any) {
@@ -440,6 +427,41 @@ Account Name: ${bankDetails.name || '-'}
           </div>
         </div>
       </div>
+
+      {/* Operational Sheet Details (New Section) */}
+      {isOpSheet && (
+        <>
+          <Separator />
+          <div className="space-y-3 w-full">
+            <div className="flex items-center gap-2">
+              <Receipt className="w-4 h-4 text-muted-foreground shrink-0" />
+              <h4 className="font-semibold text-sm">Operational Sheet Details</h4>
+            </div>
+            <div className="bg-muted/40 p-3 rounded-lg border text-sm grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+              <div>
+                <p className="text-xs text-muted-foreground">Category</p>
+                <p className="font-medium">{customProps.category || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Sub Item / Item</p>
+                <p className="font-medium break-words">{customProps.sub_item || '-'}</p>
+              </div>
+              <div className="sm:col-span-2">
+                <p className="text-xs text-muted-foreground">Calculation</p>
+                <div className="flex items-center gap-2 font-mono text-sm bg-background p-1.5 rounded border mt-1">
+                    <span title="Quantity">{customProps.qty || 0}</span>
+                    <span className="text-muted-foreground">x</span>
+                    <span title="Frequency">{customProps.frequency || 0}</span>
+                    <span className="text-muted-foreground">x</span>
+                    <span title="Unit Cost">{formatCurrency(customProps.unit_cost || 0)}</span>
+                    <span className="text-muted-foreground">=</span>
+                    <span className="font-bold text-primary">{formatCurrency(expense.tf_amount)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Attachments Section */}
       {attachments.length > 0 && (
@@ -838,9 +860,38 @@ Account Name: ${bankDetails.name || '-'}
     return (
       <>
         <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto [&>button]:hidden">
+            <div className="absolute right-4 top-4 flex items-center gap-1">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                    <MoreVertical className="h-4 w-4" />
+                    <span className="sr-only">Actions</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
+                        <Edit className="mr-2 h-4 w-4" /> Edit
+                    </DropdownMenuItem>
+                    {onDelete && (
+                        <DropdownMenuItem onClick={() => onDelete(expense)} className="text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                        </DropdownMenuItem>
+                    )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                onClick={() => onOpenChange(false)}
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </Button>
+            </div>
             <DialogHeader>
-              <div className="flex flex-col sm:flex-row justify-between items-start gap-2 sm:gap-4 pr-8">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-2 sm:gap-4 pr-12">
                 <div>
                   <Title className="text-xl">{expense.beneficiary}</Title>
                   <Description className="mt-1">
@@ -848,21 +899,10 @@ Account Name: ${bankDetails.name || '-'}
                   </Description>
                 </div>
                 <div className="flex items-center gap-2 self-start sm:self-auto">
-                    <Badge className={cn("text-sm px-3 py-1", getStatusBadgeStyle(derivedStatus))}>
-                    {derivedStatus}
-                    </Badge>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
-                                <Edit className="mr-2 h-4 w-4" /> Edit
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                     </DropdownMenu>
+                    <PaymentStatusBadge 
+                        status={derivedStatus} 
+                        onStatusChange={onStatusChange ? (newStatus) => onStatusChange(expense.id, newStatus) : undefined} 
+                    />
                 </div>
               </div>
             </DialogHeader>
@@ -921,9 +961,10 @@ Account Name: ${bankDetails.name || '-'}
                   </DrawerDescription>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                    <Badge className={cn("text-sm px-2 py-1", getStatusBadgeStyle(derivedStatus))}>
-                    {derivedStatus}
-                    </Badge>
+                    <PaymentStatusBadge 
+                        status={derivedStatus} 
+                        onStatusChange={onStatusChange ? (newStatus) => onStatusChange(expense.id, newStatus) : undefined} 
+                    />
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -934,6 +975,11 @@ Account Name: ${bankDetails.name || '-'}
                             <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
                                 <Edit className="mr-2 h-4 w-4" /> Edit
                             </DropdownMenuItem>
+                            {onDelete && (
+                                <DropdownMenuItem onClick={() => onDelete(expense)} className="text-destructive focus:text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                </DropdownMenuItem>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -950,7 +996,7 @@ Account Name: ${bankDetails.name || '-'}
         <DialogContent className="w-full h-[100dvh] max-w-full rounded-none border-0 p-0 flex flex-col">
           <DialogHeader className="p-4 border-b flex-shrink-0 flex flex-row items-center justify-between space-y-0 bg-background">
             <DialogTitle className="truncate pr-4 text-base">{previewFile?.name}</DialogTitle>
-            <Button variant="ghost" size="icon" onClick={() => setPreviewFile(null)} className="-mr-2">
+            <Button variant="ghost" size="icon" onClick={() => setPreviewFile(null)} className="-mr-2 sm:mr-0">
               <X className="h-5 w-5" />
             </Button>
           </DialogHeader>
@@ -970,7 +1016,7 @@ Account Name: ${bankDetails.name || '-'}
              )}
           </div>
           <div className="p-4 border-t flex justify-end gap-2 flex-shrink-0 bg-background safe-area-bottom">
-            <Button variant="outline" className="w-full" onClick={() => window.open(previewFile?.url, '_blank')}>
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => window.open(previewFile?.url, '_blank')}>
                 Open Original
             </Button>
           </div>
