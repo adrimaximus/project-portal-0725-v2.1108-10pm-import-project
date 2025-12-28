@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Project } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { format, getMonth } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProjectStatuses } from '@/hooks/useProjectStatuses';
@@ -15,6 +15,8 @@ interface MonthlyProgressChartProps {
 }
 
 const CustomTooltip = ({ active, payload, label, chartType }: any) => {
+  if (label === '___SEPARATOR___') return null;
+
   if (active && payload && payload.length) {
     // Helper to format currency
     const fmt = (val: number) => `Rp\u00A0${new Intl.NumberFormat('id-ID').format(val)}`;
@@ -161,7 +163,25 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
         companyData.value += p.budget || 0;
       });
 
-      return Array.from(companies.values()).sort((a, b) => a.name.localeCompare(b.name));
+      const allCompanies = Array.from(companies.values());
+      const sortMetric = chartType === 'company_value' ? 'value' : 'quantity';
+
+      // Sort by metric descending
+      const sortedByMetric = [...allCompanies].sort((a, b) => b[sortMetric] - a[sortMetric]);
+
+      // Split into top 5 and rest
+      const top5 = sortedByMetric.slice(0, 5);
+      const rest = sortedByMetric.slice(5);
+
+      // Sort rest alphabetically
+      const restSorted = rest.sort((a, b) => a.name.localeCompare(b.name));
+
+      if (restSorted.length > 0) {
+        // Add a separator
+        return [...top5, { name: '___SEPARATOR___', quantity: 0, value: 0, isSeparator: true }, ...restSorted];
+      }
+
+      return top5;
     }
 
     const months = Array.from({ length: 12 }, (_, i) => {
@@ -231,6 +251,9 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
             margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
           >
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            {isCompanyView && chartData.some((d: any) => d.isSeparator) && (
+              <ReferenceLine x="___SEPARATOR___" stroke="hsl(var(--border))" strokeDasharray="3 3" />
+            )}
             <XAxis
               dataKey="name"
               tickLine={false}
@@ -241,7 +264,10 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
               textAnchor={isCompanyView ? 'end' : 'middle'}
               height={isCompanyView ? 100 : 30}
               dy={isCompanyView ? 5 : 10}
-              tickFormatter={(val) => isCompanyView && val.length > 20 ? `${val.slice(0, 20)}...` : val}
+              tickFormatter={(val) => {
+                if (val === '___SEPARATOR___') return '';
+                return isCompanyView && val.length > 20 ? `${val.slice(0, 20)}...` : val;
+              }}
             />
             <YAxis
               tickLine={false}
