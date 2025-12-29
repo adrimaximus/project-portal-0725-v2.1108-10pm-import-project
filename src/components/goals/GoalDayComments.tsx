@@ -60,6 +60,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
             content,
             user_id,
             profiles (
+              id,
               first_name,
               last_name,
               email
@@ -121,14 +122,15 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
         // Map Replied Message with fallback
         let repliedMessage = null;
         if (item.replied_comment) {
-          // Priority 1: Profile data from the nested join (most reliable)
+          // Get the profile of the person who wrote the ORIGINAL comment being replied to
           const rcProfile = item.replied_comment.profiles;
+          
           let replyAuthorName = 'Unknown User';
           
           if (rcProfile) {
              replyAuthorName = `${rcProfile.first_name || ''} ${rcProfile.last_name || ''}`.trim() || rcProfile.email || 'Unknown';
           } else {
-             // Priority 2: allUsers lookup
+             // Fallback to allUsers lookup using the user_id from the replied comment
              const replyAuthor = allUsers.find(u => u.id === item.replied_comment.user_id);
              if (replyAuthor) replyAuthorName = replyAuthor.name;
           }
@@ -183,7 +185,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     };
   }, [goalId, formattedDate]);
 
-  const handleAddComment = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
+  const handleAddComment = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null) => {
     if (!user) return;
 
     let uploadedAttachments: any[] = [];
@@ -218,6 +220,9 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       }
     }
 
+    // Use the explicit replyToId passed from the input component, or fallback to state
+    const parentCommentId = replyToId !== undefined ? replyToId : (replyingTo?.id || null);
+
     const { error } = await supabase
       .from('goal_comments')
       .insert({
@@ -226,7 +231,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
         comment_date: formattedDate,
         content: text.trim(),
         attachments_jsonb: uploadedAttachments,
-        reply_to_comment_id: replyingTo?.id || null
+        reply_to_comment_id: parentCommentId
       });
 
     if (error) {
@@ -289,7 +294,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     setReplyingTo(comment);
     if (commentInputRef.current) {
       // Auto-mention the user being replied to
-      // Using react-mentions markup: @[Display Name](ID)
       const mentionText = `@[${comment.author.name}](${comment.author.id}) `;
       commentInputRef.current.setText(mentionText);
       commentInputRef.current.focus();
@@ -331,6 +335,19 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     } catch (error) {
       console.error('Error creating ticket:', error);
       toast.error('Failed to create ticket');
+    }
+  };
+
+  // Function to smoothly scroll to the referenced reply
+  const handleGoToReply = (messageId: string) => {
+    const element = document.getElementById(`message-${messageId}`);
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Add a temporary highlight effect
+        element.classList.add('bg-accent/20');
+        setTimeout(() => element.classList.remove('bg-accent/20'), 2000);
+    } else {
+        toast.info("Original comment not found in current view");
     }
   };
 
@@ -386,7 +403,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
                 removeNewAttachment={() => {}}
                 handleEditFileChange={() => {}}
                 editFileInputRef={{ current: null }}
-                onGoToReply={() => {}}
+                onGoToReply={handleGoToReply}
                 allUsers={allUsers}
               />
             ))
