@@ -33,7 +33,6 @@ Deno.serve(async (req) => {
     }
 
     if (!openAiKey) {
-      // Return 200 with error field to bypass generic client error handling
       return new Response(
         JSON.stringify({ error: 'OpenAI API key is missing. Please configure it in Settings > Integrations.' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -58,8 +57,8 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: 'You are a helpful assistant that writes inspiring and clear goal descriptions. Keep it concise (1-2 sentences) and motivating.' },
-          { role: 'user', content: `Write a description for a goal titled "${title}". ${currentDescription ? `Current description draft: "${currentDescription}". Improve or expand upon it.` : ''}` },
+          { role: 'system', content: 'You are a productivity coach. Generate a short, concise (max 20 words), and action-oriented description for a goal. Focus on the "why" or the productivity benefit.' },
+          { role: 'user', content: `Generate a description for a goal titled "${title}". ${currentDescription ? `Current draft: "${currentDescription}".` : ''}` },
         ],
       }),
     })
@@ -84,7 +83,7 @@ Deno.serve(async (req) => {
     console.error('Function Error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } } // Return 200 to pass message to client
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
