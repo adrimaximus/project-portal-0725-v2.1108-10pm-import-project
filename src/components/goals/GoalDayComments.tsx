@@ -81,7 +81,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           event: '*',
           schema: 'public',
           table: 'goal_comments',
-          filter: `goal_id=eq.${goalId}`, // Note: filtering by date in realtime is harder, so we filter in callback or just refetch
+          filter: `goal_id=eq.${goalId}`, 
         },
         () => {
           fetchComments();
@@ -119,6 +119,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       toast.error('Failed to post comment');
     } else {
       setNewComment('');
+      await fetchComments(); // Explicitly fetch comments to ensure UI updates immediately
     }
     setIsSubmitting(false);
   };
@@ -126,7 +127,9 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      if (!isSubmitting) {
+        handleSubmit();
+      }
     }
   };
 
@@ -138,6 +141,8 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
     if (error) {
       toast.error('Failed to delete comment');
+    } else {
+      await fetchComments(); // Also fetch on delete to be safe
     }
   };
 
