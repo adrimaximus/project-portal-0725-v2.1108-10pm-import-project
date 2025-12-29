@@ -46,8 +46,10 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className
               <em className="italic text-muted-foreground">Message unavailable</em>
             ) : (
               // Recursively render reply content without a replyContext to prevent loops
-              // Strip mentions for cleaner quote view
-              <span className="[&>p]:my-0">{replyContext.content || ''}</span>
+              // Strip mentions for cleaner quote view: @[Name](id) -> @Name
+              <span className="[&>p]:my-0">
+                {replyContext.content?.replace(/@\[(.*?)\]\((.*?)\)/g, '@$1') || ''}
+              </span>
             )}
           </div>
         </blockquote>
