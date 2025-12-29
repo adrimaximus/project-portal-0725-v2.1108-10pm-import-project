@@ -52,6 +52,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           content,
           created_at,
           user_id,
+          attachments_jsonb,
           profiles (
             first_name,
             last_name,
@@ -77,8 +78,8 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           email: item.profiles?.email,
           initials: getInitials(`${item.profiles?.first_name || ''} ${item.profiles?.last_name || ''}`.trim() || item.profiles?.email || '')
         },
-        reactions: [], // Goal comments don't support reactions yet
-        attachments_jsonb: [], // Goal comments don't support attachments yet
+        reactions: [], 
+        attachments_jsonb: item.attachments_jsonb || [],
         is_ticket: false
       }));
 
@@ -119,20 +120,55 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const handleAddComment = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
     if (!user) return;
 
-    // Note: Attachments and tickets are not supported for goal comments yet
+    let uploadedAttachments: any[] = [];
+
+    if (attachments && attachments.length > 0) {
+      for (const file of attachments) {
+        try {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+          const filePath = `comments/${goalId}/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('goal_attachments')
+            .upload(filePath, file);
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('goal_attachments')
+            .getPublicUrl(filePath);
+
+          uploadedAttachments.push({
+            type: file.type.startsWith('image/') ? 'image' : 'file',
+            url: publicUrl,
+            name: file.name,
+            size: file.size
+          });
+        } catch (error) {
+          console.error('Error uploading file:', error);
+          toast.error(`Failed to upload ${file.name}`);
+        }
+      }
+    }
+
     const { error } = await supabase
       .from('goal_comments')
       .insert({
         goal_id: goalId,
         user_id: user.id,
         comment_date: formattedDate,
-        content: text.trim()
+        content: text.trim(),
+        attachments_jsonb: uploadedAttachments
       });
 
     if (error) {
       toast.error('Failed to post comment');
     } else {
       await fetchComments();
+      if (commentInputRef.current) {
+        commentInputRef.current.setText('');
+      }
     }
   };
 
@@ -155,8 +191,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     }
   };
 
-  // No-op functions for unsupported features in goal comments
-  const handleNoOp = () => {};
   const handleReaction = (id: string, emoji: string) => {
     toast.info("Reactions coming soon for goals!");
   };
