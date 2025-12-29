@@ -46,7 +46,8 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
   const fetchComments = async () => {
     try {
-      // Optimized query to include profile data for the replied comment's author
+      // Fetch comments including the parent message data (replied_comment)
+      // This allows us to rebuild the conversation thread context visually.
       const { data, error } = await supabase
         .from('goal_comments')
         .select(`
@@ -70,7 +71,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
         `)
         .eq('goal_id', goalId)
         .eq('comment_date', formattedDate)
-        .order('created_at', { ascending: true }); // Oldest first for chat-like flow
+        .order('created_at', { ascending: true }); // Chronological order
 
       if (error) throw error;
 
@@ -120,7 +121,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           };
         });
 
-        // Map Replied Message with fallback
+        // Map Replied Message (The Context)
         let repliedMessage = null;
         const repliedCommentRaw = Array.isArray(item.replied_comment) ? item.replied_comment[0] : item.replied_comment;
 
@@ -228,8 +229,9 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       }
     }
 
-    // Use the explicit replyToId passed from the input component, or fallback to state
-    // IMPORTANT: This uses the ID of the message being replied to (B), not B's parent (A).
+    // Determine Parent ID logic:
+    // If we are in "Replying To" mode, the parent is the ID of the message currently set in state (replyingTo.id).
+    // This creates a direct link: Child -> Parent.
     const parentCommentId = replyToId !== undefined ? replyToId : (replyingTo?.id || null);
 
     const { error } = await supabase
@@ -247,7 +249,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       toast.error('Failed to post comment');
     } else {
       await fetchComments();
-      setReplyingTo(null);
+      setReplyingTo(null); // Clear context after sending
       if (commentInputRef.current) {
         commentInputRef.current.setText('');
       }
@@ -300,16 +302,18 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   };
 
   const handleReply = (comment: CommentType) => {
-    // FIX: Clean the comment object to remove any existing repliedMessage data.
-    // This ensures that when we set this message as the "Replying To" target,
-    // the UI renders *this* message as the context, not the message *it* was replying to.
-    const cleanCommentContext = {
+    // LOGIC FIX: When clicking reply, we set the 'replyingTo' context to the CLICKED message.
+    // We strictly strip any 'repliedMessage' (nested context) from it. 
+    // This ensures the input UI shows "Replying to [Clicked Message]" as a flat, single block.
+    // The database parent_id will be [Clicked Message].id.
+    
+    const replyContext: CommentType = {
       ...comment,
-      repliedMessage: null,
-      reply_to_comment_id: null // Ensure we don't accidentally cascade the ID visually
+      repliedMessage: null, // Remove nested context to prevent UI nesting/cascading
+      reply_to_comment_id: null // Clear this so UI doesn't try to look up grandparents
     };
     
-    setReplyingTo(cleanCommentContext);
+    setReplyingTo(replyContext);
     
     if (commentInputRef.current) {
       const mentionText = `@[${comment.author.name}](${comment.author.id}) `;
