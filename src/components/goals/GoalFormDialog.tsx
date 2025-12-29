@@ -63,36 +63,54 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
       fetchTags();
       const savedDraft = SafeLocalStorage.getItem<typeof formData>(storageKey);
       
-      if (savedDraft) {
-        setFormData(savedDraft);
-        toast.info("Draft restored.");
-      } else if (isEditMode && goal) {
-        setFormData({
-          title: goal.title, description: goal.description || '', type: goal.type,
-          frequency: goal.frequency, specificDays: goal.specific_days || [],
-          targetQuantity: goal.target_quantity, targetPeriod: goal.target_period || 'Monthly',
-          targetValue: goal.target_value, unit: goal.unit || '', color: goal.color,
-          icon: goal.icon, tags: goal.tags || [],
-        });
-      } else {
-        // Randomize Icon and Color for new goals
-        const randomIcon = allIcons.length > 0 
-          ? allIcons[Math.floor(Math.random() * allIcons.length)] 
-          : 'Target';
-        const randomColor = colors.length > 0 
-          ? colors[Math.floor(Math.random() * colors.length)] 
-          : '#4ECDC4';
+      // Determine if the draft is "meaningful" (user actually entered data)
+      // If it only contains the default/random values from a previous session (empty title/desc), ignore it.
+      const hasUserTyped = savedDraft && (
+        (savedDraft.title && savedDraft.title.trim() !== '') || 
+        (savedDraft.description && savedDraft.description.trim() !== '')
+      );
 
-        setFormData({
-          title: '', description: '', type: 'frequency', frequency: 'Daily',
-          specificDays: [], targetQuantity: undefined, targetPeriod: 'Monthly',
-          targetValue: undefined, unit: '', color: randomColor, icon: randomIcon, tags: [],
-        });
+      if (isEditMode && goal) {
+        if (savedDraft) {
+          setFormData(savedDraft);
+          toast.info("Draft restored.");
+        } else {
+          setFormData({
+            title: goal.title, description: goal.description || '', type: goal.type,
+            frequency: goal.frequency, specificDays: goal.specific_days || [],
+            targetQuantity: goal.target_quantity, targetPeriod: goal.target_period || 'Monthly',
+            targetValue: goal.target_value, unit: goal.unit || '', color: goal.color,
+            icon: goal.icon, tags: goal.tags || [],
+          });
+        }
+      } else {
+        // NEW GOAL MODE
+        if (hasUserTyped) {
+          setFormData(savedDraft);
+          toast.info("Draft restored.");
+        } else {
+          // Randomize Icon and Color for fresh new goals
+          const randomIcon = allIcons.length > 0 
+            ? allIcons[Math.floor(Math.random() * allIcons.length)] 
+            : 'Target';
+          const randomColor = colors.length > 0 
+            ? colors[Math.floor(Math.random() * colors.length)] 
+            : '#4ECDC4';
+
+          setFormData({
+            title: '', description: '', type: 'frequency', frequency: 'Daily',
+            specificDays: [], targetQuantity: undefined, targetPeriod: 'Monthly',
+            targetValue: undefined, unit: '', color: randomColor, icon: randomIcon, tags: [],
+          });
+          
+          // Clear any "empty" draft to prevent sticky randoms
+          SafeLocalStorage.removeItem(storageKey);
+        }
       }
     }
   }, [goal, open, isEditMode, user, fetchTags, storageKey]);
 
-  // Debounced save to local storage to prevent input lag
+  // Debounced save to local storage
   useEffect(() => {
     if (open) {
       const handler = setTimeout(() => {
