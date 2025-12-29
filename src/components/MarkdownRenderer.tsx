@@ -46,6 +46,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className
             );
           },
           
+          // Removed text-sm so it inherits from parent (e.g. text-xs in reply blocks)
           p: ({node, children, ...props}) => <p {...props} className="mb-2 last:mb-0">{children}</p>,
           
           ul: ({node, ...props}) => <ul className="list-disc list-outside ml-5 mb-2 space-y-1" {...props} />,
@@ -57,7 +58,6 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className
           ),
           
           code: ({node, className, children, ...props}: any) => {
-            // Detect if it's an inline code block or multiline
             const match = /language-(\w+)/.exec(className || '');
             const isMultiLine = String(children).includes('\n');
             
@@ -114,7 +114,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className
                     <input 
                       type="checkbox" 
                       className="h-4 w-4 rounded border-primary text-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50 accent-primary" 
-                      disabled={true} // Render-only in view mode
+                      disabled={true} 
                       checked={props.checked} 
                       {...props} 
                     />
@@ -124,7 +124,6 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className
             return <input {...props} />
           },
           
-          // Handle del/strikethrough
           del: ({node, ...props}) => <del className="text-muted-foreground" {...props} />,
         }}
       >
