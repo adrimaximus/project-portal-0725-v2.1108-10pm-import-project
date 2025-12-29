@@ -26,8 +26,8 @@ interface CommentProps {
   setEditedText: (text: string) => void;
   handleSaveEdit: () => void;
   handleCancelEdit: () => void;
-  onReply: (comment: CommentType) => void;
-  onCreateTicketFromComment: (comment: CommentType) => void;
+  onReply?: (comment: CommentType) => void;
+  onCreateTicketFromComment?: (comment: CommentType) => void;
   newAttachments?: File[];
   removeNewAttachment?: (index: number) => void;
   handleEditFileChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -225,11 +225,13 @@ const Comment: React.FC<CommentProps> = ({
                 </div>
               )}
               <div className="mt-1 flex items-center gap-2">
-                <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs" onClick={() => onReply(comment)}>
-                  <CornerUpLeft className="h-3 w-3 mr-1" /> Reply
-                </Button>
+                {onReply && (
+                  <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs" onClick={() => onReply(comment)}>
+                    <CornerUpLeft className="h-3 w-3 mr-1" /> Reply
+                  </Button>
+                )}
                 <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => onToggleReaction(comment.id, emoji)} />
-                {!comment.is_ticket && (
+                {!comment.is_ticket && onCreateTicketFromComment && (
                   <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs" onClick={() => onCreateTicketFromComment(comment)}>
                     <Ticket className="h-3 w-3 sm:mr-1" />
                     <span className="hidden sm:inline">Create Ticket</span>
