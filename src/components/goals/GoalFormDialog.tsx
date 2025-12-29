@@ -85,9 +85,16 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
     }
   }, [goal, open, isEditMode, user, fetchTags, storageKey]);
 
+  // Debounced save to local storage to prevent input lag
   useEffect(() => {
     if (open) {
-      SafeLocalStorage.setItem(storageKey, formData);
+      const handler = setTimeout(() => {
+        SafeLocalStorage.setItem(storageKey, formData);
+      }, 500); // 500ms delay
+
+      return () => {
+        clearTimeout(handler);
+      };
     }
   }, [formData, open, storageKey]);
 
