@@ -138,7 +138,14 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
     }
 
     const mentionedUserIds = parseMentions(finalText);
-    onAddCommentOrTicket(finalText, isTicket, attachments, mentionedUserIds, replyTo?.id);
+    
+    // If we are replying to "Unknown User", treat it as a root comment
+    let finalReplyToId = replyTo?.id;
+    if (replyTo && (replyTo.author.name === 'Unknown User' || replyTo.author.name === 'Unknown')) {
+      finalReplyToId = undefined;
+    }
+
+    onAddCommentOrTicket(finalText, isTicket, attachments, mentionedUserIds, finalReplyToId);
     setText('');
     setIsTicket(false);
     setAttachments([]);
@@ -186,6 +193,8 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
         marginTop: '8px',
       };
 
+  const showReplyBanner = replyTo && replyTo.author.name !== 'Unknown User' && replyTo.author.name !== 'Unknown';
+
   return (
     <div ref={containerRef} className="flex items-end space-x-3 w-full">
       <Avatar className="w-8 h-8 shrink-0 mb-1 hidden sm:block">
@@ -195,12 +204,12 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
         </AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1 w-full">
-        {replyTo && (
+        {showReplyBanner && (
           <div className="p-1.5 mb-1.5 bg-muted/60 rounded-md flex justify-between items-center text-xs">
             <div className="border-l-2 border-primary pl-2 overflow-hidden w-full">
-              <p className="font-semibold text-primary">Replying to {replyTo.author.name}</p>
+              <p className="font-semibold text-primary">Replying to {replyTo!.author.name}</p>
               <div className="text-muted-foreground line-clamp-1">
-                <InteractiveText text={replyTo.text || ''} members={allUsers} />
+                <InteractiveText text={replyTo!.text || ''} members={allUsers} />
               </div>
             </div>
             <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-6 w-6 flex-shrink-0 ml-1">

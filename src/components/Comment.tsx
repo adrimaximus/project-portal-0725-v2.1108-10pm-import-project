@@ -79,6 +79,9 @@ const Comment: React.FC<CommentProps> = ({
     }))
   ], [allUsers]);
 
+  // Hide reply block if sender is unknown
+  const showReplyBlock = comment.repliedMessage && comment.repliedMessage.senderName !== 'Unknown User' && comment.repliedMessage.senderName !== 'Unknown';
+
   return (
     <>
       <div id={`message-${comment.id}`} className="flex items-start gap-3">
@@ -198,7 +201,7 @@ const Comment: React.FC<CommentProps> = ({
             </div>
           ) : (
             <>
-              {comment.repliedMessage && (
+              {showReplyBlock && comment.repliedMessage && (
                 <button
                   onClick={() => onGoToReply && comment.reply_to_comment_id && onGoToReply(comment.reply_to_comment_id)}
                   className="w-full text-left flex items-start gap-2 text-xs p-2 mb-2 bg-muted rounded-md hover:bg-muted/80 transition-colors"
