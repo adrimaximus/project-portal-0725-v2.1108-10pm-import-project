@@ -62,6 +62,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
     if (open) {
       fetchTags();
       const savedDraft = SafeLocalStorage.getItem<typeof formData>(storageKey);
+      
       if (savedDraft) {
         setFormData(savedDraft);
         toast.info("Draft restored.");
@@ -74,8 +75,14 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
           icon: goal.icon, tags: goal.tags || [],
         });
       } else {
-        const randomIcon = allIcons[Math.floor(Math.random() * allIcons.length)];
-        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        // Randomize Icon and Color for new goals
+        const randomIcon = allIcons.length > 0 
+          ? allIcons[Math.floor(Math.random() * allIcons.length)] 
+          : 'Target';
+        const randomColor = colors.length > 0 
+          ? colors[Math.floor(Math.random() * colors.length)] 
+          : '#4ECDC4';
+
         setFormData({
           title: '', description: '', type: 'frequency', frequency: 'Daily',
           specificDays: [], targetQuantity: undefined, targetPeriod: 'Monthly',
@@ -90,7 +97,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
     if (open) {
       const handler = setTimeout(() => {
         SafeLocalStorage.setItem(storageKey, formData);
-      }, 500); // 500ms delay
+      }, 500);
 
       return () => {
         clearTimeout(handler);
@@ -103,7 +110,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 
-  // Dedicated handlers to prevent recreating arrow functions in render
+  // Dedicated handlers
   const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => handleChange('title', e.target.value), [handleChange]);
   const handleDescriptionChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => handleChange('description', e.target.value), [handleChange]);
   const handleTypeChange = useCallback((v: string) => handleChange('type', v as GoalType), [handleChange]);
