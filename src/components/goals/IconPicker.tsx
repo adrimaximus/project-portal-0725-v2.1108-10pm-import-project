@@ -1,3 +1,4 @@
+import React from 'react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { allIcons, getIconComponent } from '@/data/icons';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -8,7 +9,7 @@ interface IconPickerProps {
   color: string;
 }
 
-const IconPicker = ({ value, onChange, color }: IconPickerProps) => {
+const IconPicker = React.memo(({ value, onChange, color }: IconPickerProps) => {
   return (
     <ScrollArea className="h-[150px] p-2 border rounded-md">
       <ToggleGroup
@@ -29,6 +30,8 @@ const IconPicker = ({ value, onChange, color }: IconPickerProps) => {
       </ToggleGroup>
     </ScrollArea>
   );
-};
+});
+
+IconPicker.displayName = 'IconPicker';
 
 export default IconPicker;

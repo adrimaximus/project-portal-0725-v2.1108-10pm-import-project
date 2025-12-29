@@ -1,3 +1,4 @@
+import React from 'react';
 import { HexColorPicker, HexColorInput } from 'react-colorful';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ const pastelColors = [
   '#C7CEEA', '#E2F0CB', '#A7C7E7', '#F3E5AB',
 ];
 
-const ColorPicker = ({ color, setColor }: ColorPickerProps) => {
+const ColorPicker = React.memo(({ color, setColor }: ColorPickerProps) => {
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -57,6 +58,8 @@ const ColorPicker = ({ color, setColor }: ColorPickerProps) => {
       </PopoverContent>
     </Popover>
   );
-};
+});
+
+ColorPicker.displayName = 'ColorPicker';
 
 export default ColorPicker;
