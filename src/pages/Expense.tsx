@@ -418,7 +418,7 @@ const ExpensePage = () => {
                     dataKey="paid" 
                     name="Paid"
                     stackId="a"
-                    fill="#22c55e" 
+                    fill="hsl(var(--primary))" 
                     radius={[0, 0, 4, 4]} 
                     maxBarSize={60}
                   />
@@ -426,14 +426,14 @@ const ExpensePage = () => {
                     dataKey="overdue" 
                     name="Overdue"
                     stackId="a"
-                    fill="#ef4444" 
+                    fill="hsl(var(--destructive))" 
                     maxBarSize={60}
                   />
                   <Bar 
                     dataKey="pending" 
                     name="Pending"
                     stackId="a"
-                    fill="#94a3b8" 
+                    fill="hsl(var(--secondary))" 
                     radius={[4, 4, 0, 0]} 
                     maxBarSize={60}
                   />

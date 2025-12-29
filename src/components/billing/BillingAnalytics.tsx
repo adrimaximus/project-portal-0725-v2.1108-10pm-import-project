@@ -195,9 +195,9 @@ export const BillingAnalytics = ({ invoices }: BillingAnalyticsProps) => {
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--muted)/0.4)' }} />
                   <Legend wrapperStyle={{ paddingTop: '10px' }} />
                   
-                  <Bar dataKey="paid" name="Paid" stackId="a" fill="#22c55e" radius={[0, 0, 4, 4]} maxBarSize={50} />
-                  <Bar dataKey="overdue" name="Overdue" stackId="a" fill="#ef4444" maxBarSize={50} />
-                  <Bar dataKey="pending" name="Pending" stackId="a" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                  <Bar dataKey="paid" name="Paid" stackId="a" fill="hsl(var(--primary))" radius={[0, 0, 4, 4]} maxBarSize={50} />
+                  <Bar dataKey="overdue" name="Overdue" stackId="a" fill="hsl(var(--destructive))" maxBarSize={50} />
+                  <Bar dataKey="pending" name="Pending" stackId="a" fill="hsl(var(--secondary))" radius={[4, 4, 0, 0]} maxBarSize={50} />
                 </BarChart>
               </ResponsiveContainer>
           </div>
