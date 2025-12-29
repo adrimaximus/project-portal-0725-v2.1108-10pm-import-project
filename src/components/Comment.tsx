@@ -79,12 +79,26 @@ const Comment: React.FC<CommentProps> = ({
     }))
   ], [allUsers]);
 
-  // Hide reply block if sender is unknown
-  const showReplyBlock = comment.repliedMessage && comment.repliedMessage.senderName !== 'Unknown User' && comment.repliedMessage.senderName !== 'Unknown';
+  // Ensure reply block shows if there is a replied message, even if unknown user logic is handled upstream
+  const showReplyBlock = !!comment.repliedMessage;
+
+  const handleScrollToReply = () => {
+    if (onGoToReply && comment.reply_to_comment_id) {
+        onGoToReply(comment.reply_to_comment_id);
+    } else if (comment.reply_to_comment_id) {
+        // Fallback smooth scroll if onGoToReply not provided
+        const element = document.getElementById(`message-${comment.reply_to_comment_id}`);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.classList.add('bg-accent/20');
+            setTimeout(() => element.classList.remove('bg-accent/20'), 2000);
+        }
+    }
+  };
 
   return (
     <>
-      <div id={`message-${comment.id}`} className="flex items-start gap-3">
+      <div id={`message-${comment.id}`} className="flex items-start gap-3 transition-colors duration-500 rounded-lg p-1 -m-1">
         <Avatar className="h-8 w-8">
           <AvatarImage src={getAvatarUrl(author.avatar_url, author.id)} />
           <AvatarFallback style={generatePastelColor(author.id)}>
@@ -203,20 +217,19 @@ const Comment: React.FC<CommentProps> = ({
             <>
               {showReplyBlock && comment.repliedMessage && (
                 <button
-                  onClick={() => onGoToReply && comment.reply_to_comment_id && onGoToReply(comment.reply_to_comment_id)}
-                  className="w-full text-left flex items-start gap-2 text-xs p-2 mb-2 bg-muted rounded-md hover:bg-muted/80 transition-colors"
-                  disabled={!onGoToReply || !comment.reply_to_comment_id}
+                  onClick={handleScrollToReply}
+                  className="w-full text-left flex items-start gap-2 text-xs p-2 my-1 bg-muted/50 border-l-2 border-primary/50 rounded-r-md hover:bg-muted/80 transition-colors"
+                  disabled={!comment.reply_to_comment_id}
                 >
-                  <div className="w-0.5 bg-primary rounded-full self-stretch"></div>
                   <div className="flex-1 overflow-hidden">
-                    <p className="font-semibold text-primary">Replying to {comment.repliedMessage.senderName}</p>
-                    <div className="italic line-clamp-3 prose prose-sm dark:prose-invert max-w-none text-muted-foreground [&_p]:m-0 [&_p]:inline">
+                    <p className="font-semibold text-primary/80 mb-0.5">{comment.repliedMessage.senderName}</p>
+                    <div className="line-clamp-2 text-muted-foreground">
                       <MarkdownRenderer>{comment.repliedMessage.content || ''}</MarkdownRenderer>
                     </div>
                   </div>
                 </button>
               )}
-              <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-0 [&_p]:text-justify">
+              <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-0 [&_p]:text-justify mt-1">
                 <MarkdownRenderer>{comment.text || ''}</MarkdownRenderer>
               </div>
               {attachments.length > 0 && (
@@ -228,12 +241,12 @@ const Comment: React.FC<CommentProps> = ({
                 </div>
               )}
               <div className="mt-1 flex items-center gap-2">
-                <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs" onClick={() => onReply(comment)}>
+                <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs hover:text-foreground" onClick={() => onReply(comment)}>
                   <CornerUpLeft className="h-3 w-3 mr-1" /> Reply
                 </Button>
                 <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => onToggleReaction(comment.id, emoji)} />
                 {!comment.is_ticket && (
-                  <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs" onClick={() => onCreateTicketFromComment(comment)}>
+                  <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs hover:text-foreground" onClick={() => onCreateTicketFromComment(comment)}>
                     <Ticket className="h-3 w-3 sm:mr-1" />
                     <span className="hidden sm:inline">Create Ticket</span>
                   </Button>
