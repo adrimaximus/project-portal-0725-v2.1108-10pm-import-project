@@ -47,7 +47,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const fetchComments = async () => {
     try {
       // Fetch comments including the parent message data (replied_comment)
-      // This allows us to rebuild the conversation thread context visually.
+      // We explicitly fetch created_at to show relative time in the embed
       const { data, error } = await supabase
         .from('goal_comments')
         .select(`
@@ -59,8 +59,10 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
             id, emoji, user_id
           ),
           replied_comment:goal_comments!reply_to_comment_id (
+            id,
             content,
             user_id,
+            created_at,
             profiles (
               id,
               first_name,
@@ -140,7 +142,8 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           repliedMessage = {
             content: repliedCommentRaw.content,
             senderName: replyAuthorName,
-            isDeleted: false
+            isDeleted: false,
+            timestamp: repliedCommentRaw.created_at // Capture timestamp for UI
           };
         }
 
@@ -230,9 +233,9 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     }
 
     // Determine Parent ID logic:
-    // If we are in "Replying To" mode, the parent is the ID of the message currently set in state (replyingTo.id).
-    // This creates a direct link: Child -> Parent.
-    const parentCommentId = replyToId !== undefined ? replyToId : (replyingTo?.id || null);
+    // This MUST use the ID of the message currently set in state (replyingTo.id) if replyToId is not passed.
+    // This ensures we link directly to the message the user clicked "Reply" on.
+    const parentCommentId = replyToId !== undefined ? replyToId : (replyingTo ? replyingTo.id : null);
 
     const { error } = await supabase
       .from('goal_comments')
@@ -302,15 +305,13 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   };
 
   const handleReply = (comment: CommentType) => {
-    // LOGIC FIX: When clicking reply, we set the 'replyingTo' context to the CLICKED message.
-    // We strictly strip any 'repliedMessage' (nested context) from it. 
-    // This ensures the input UI shows "Replying to [Clicked Message]" as a flat, single block.
-    // The database parent_id will be [Clicked Message].id.
-    
+    // CRITICAL: Set the reply context to the *exact* message clicked.
+    // We strip existing nested replies to avoid deep nesting in the UI/Input preview.
+    // But the ID preserved in `replyContext` will be the parent ID.
     const replyContext: CommentType = {
       ...comment,
-      repliedMessage: null, // Remove nested context to prevent UI nesting/cascading
-      reply_to_comment_id: null // Clear this so UI doesn't try to look up grandparents
+      repliedMessage: null, // Clear visual nesting for the input banner
+      reply_to_comment_id: null 
     };
     
     setReplyingTo(replyContext);
