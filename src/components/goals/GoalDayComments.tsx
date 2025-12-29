@@ -132,7 +132,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     if (error) {
       toast.error('Failed to post comment');
     } else {
-      // Explicitly fetch comments to update UI immediately
       await fetchComments();
     }
   };
@@ -156,6 +155,8 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     }
   };
 
+  // No-op functions for unsupported features in goal comments
+  const handleNoOp = () => {};
   const handleReaction = (id: string, emoji: string) => {
     toast.info("Reactions coming soon for goals!");
   };
@@ -204,12 +205,14 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
                 onEdit={() => toast.info("Editing coming soon")}
                 onDelete={(c) => handleDeleteComment(c)}
                 onToggleReaction={handleReaction}
+                onReply={() => {}}
+                onCreateTicketFromComment={() => {}}
                 newAttachments={[]}
                 removeNewAttachment={() => {}}
                 handleEditFileChange={() => {}}
                 editFileInputRef={{ current: null }}
+                onGoToReply={() => {}}
                 allUsers={allUsers}
-                // Optional props omitted to hide Reply and Ticket buttons
               />
             ))
           )}
