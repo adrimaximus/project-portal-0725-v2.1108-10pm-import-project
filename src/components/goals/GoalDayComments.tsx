@@ -1,27 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { formatDistanceToNow, format } from 'date-fns';
-import { Send, Trash2, Loader2 } from 'lucide-react';
-import { getAvatarUrl, getInitials, generatePastelColor } from '@/lib/utils';
+import { format } from 'date-fns';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-
-interface Comment {
-  id: string;
-  content: string;
-  created_at: string;
-  user_id: string;
-  profiles: {
-    first_name: string | null;
-    last_name: string | null;
-    email: string | null;
-    avatar_url: string | null;
-  };
-}
+import CommentInput, { CommentInputHandle } from '@/components/CommentInput';
+import Comment from '@/components/Comment';
+import { User, Comment as CommentType } from '@/types';
+import { getInitials } from '@/lib/utils';
 
 interface GoalDayCommentsProps {
   goalId: string;
@@ -30,14 +17,31 @@ interface GoalDayCommentsProps {
 
 const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const { user } = useAuth();
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [comments, setComments] = useState<CommentType[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isFetching, setIsFetching] = useState(true);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
+  const commentInputRef = useRef<CommentInputHandle>(null);
+  
   // Use local date formatting to match the calendar day exactly
   const formattedDate = format(date, 'yyyy-MM-dd');
+
+  // Fetch users for mentions
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const { data } = await supabase.from('profiles').select('*');
+      if (data) {
+        const mappedUsers: User[] = data.map((p) => ({
+          id: p.id,
+          name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email || 'Unknown',
+          avatar_url: p.avatar_url,
+          email: p.email,
+          initials: getInitials(`${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email || '')
+        }));
+        setAllUsers(mappedUsers);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   const fetchComments = async () => {
     try {
@@ -60,7 +64,25 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setComments(data as any || []);
+
+      // Transform goal comments to match CommentType
+      const transformedComments: CommentType[] = (data || []).map((item: any) => ({
+        id: item.id,
+        text: item.content,
+        created_at: item.created_at,
+        author: {
+          id: item.user_id,
+          name: `${item.profiles?.first_name || ''} ${item.profiles?.last_name || ''}`.trim() || item.profiles?.email || 'Unknown',
+          avatar_url: item.profiles?.avatar_url,
+          email: item.profiles?.email,
+          initials: getInitials(`${item.profiles?.first_name || ''} ${item.profiles?.last_name || ''}`.trim() || item.profiles?.email || '')
+        },
+        reactions: [], // Goal comments don't support reactions yet
+        attachments_jsonb: [], // Goal comments don't support attachments yet
+        is_ticket: false
+      }));
+
+      setComments(transformedComments);
     } catch (error) {
       console.error('Error fetching comments:', error);
       toast.error('Could not load comments');
@@ -94,65 +116,69 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     };
   }, [goalId, formattedDate]);
 
-  // Scroll to bottom when comments change
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [comments]);
+  const handleAddComment = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
+    if (!user) return;
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!newComment.trim() || !user) return;
-
-    setIsSubmitting(true);
+    // Note: Attachments and tickets are not supported for goal comments yet
     const { error } = await supabase
       .from('goal_comments')
       .insert({
         goal_id: goalId,
         user_id: user.id,
         comment_date: formattedDate,
-        content: newComment.trim()
+        content: text.trim()
       });
 
     if (error) {
       toast.error('Failed to post comment');
     } else {
-      setNewComment('');
-      await fetchComments(); // Explicitly fetch comments to ensure UI updates immediately
-    }
-    setIsSubmitting(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (!isSubmitting) {
-        handleSubmit();
-      }
+      await fetchComments();
     }
   };
 
-  const handleDelete = async (commentId: string) => {
+  const handleDeleteComment = async (comment: CommentType) => {
+    if (comment.author.id !== user?.id) {
+      toast.error("You can only delete your own comments");
+      return;
+    }
+
     const { error } = await supabase
       .from('goal_comments')
       .delete()
-      .eq('id', commentId);
+      .eq('id', comment.id);
 
     if (error) {
       toast.error('Failed to delete comment');
     } else {
-      await fetchComments(); // Also fetch on delete to be safe
+      toast.success('Comment deleted');
+      await fetchComments();
     }
   };
 
+  // No-op functions for unsupported features in goal comments
+  const handleNoOp = () => {};
+  const handleReaction = (id: string, emoji: string) => {
+    toast.info("Reactions coming soon for goals!");
+  };
+
   return (
-    <div className="flex flex-col h-[350px] border-t bg-muted/10">
+    <div className="flex flex-col h-[450px] border-t bg-muted/10">
       <div className="p-3 border-b bg-background/50 backdrop-blur-sm flex justify-between items-center">
         <h4 className="text-sm font-semibold text-muted-foreground">Comments & Notes</h4>
         <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
           {format(date, 'MMM d, yyyy')}
         </span>
+      </div>
+
+      <div className="flex-shrink-0 p-3 border-b bg-background">
+        <CommentInput
+          ref={commentInputRef}
+          onAddCommentOrTicket={handleAddComment}
+          allUsers={allUsers}
+          storageKey={`goal-comment-${goalId}-${formattedDate}`}
+          dropUp={false}
+          placeholder="Add a note... (@ to mention)"
+        />
       </div>
       
       <ScrollArea className="flex-1 p-4">
@@ -167,72 +193,31 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
               No notes yet for this day. <br/> Add a reason for missing it, or a celebration for completing it!
             </div>
           ) : (
-            comments.map((comment) => {
-              const fullName = `${comment.profiles.first_name || ''} ${comment.profiles.last_name || ''}`.trim() || comment.profiles.email || 'Unknown';
-              const isOwner = user?.id === comment.user_id;
-              
-              return (
-                <div key={comment.id} className={`flex gap-3 ${isOwner ? 'flex-row-reverse' : ''}`}>
-                  <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarImage src={getAvatarUrl(comment.profiles.avatar_url, comment.user_id)} />
-                    <AvatarFallback style={generatePastelColor(comment.user_id)}>
-                      {getInitials(fullName)}
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <div className={`flex flex-col max-w-[85%] ${isOwner ? 'items-end' : 'items-start'}`}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-foreground">{fullName}</span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-                      </span>
-                    </div>
-                    
-                    <div className={`relative group p-3 rounded-lg text-sm whitespace-pre-wrap ${
-                      isOwner 
-                        ? 'bg-primary text-primary-foreground rounded-tr-none' 
-                        : 'bg-white border text-foreground rounded-tl-none shadow-sm'
-                    }`}>
-                      {comment.content}
-                      {isOwner && (
-                        <button
-                          onClick={() => handleDelete(comment.id)}
-                          className={`absolute -left-8 top-2 opacity-0 group-hover:opacity-100 p-1 rounded-full hover:bg-muted transition-all ${
-                            isOwner ? 'text-muted-foreground hover:text-destructive' : ''
-                          }`}
-                          title="Delete note"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+            [...comments].reverse().map((comment) => (
+              <Comment
+                key={comment.id}
+                comment={comment}
+                isEditing={false}
+                editedText=""
+                setEditedText={() => {}}
+                handleSaveEdit={() => {}}
+                handleCancelEdit={() => {}}
+                onEdit={() => toast.info("Editing coming soon")}
+                onDelete={(c) => handleDeleteComment(c)}
+                onToggleReaction={handleReaction}
+                onReply={() => {}}
+                onCreateTicketFromComment={() => {}}
+                newAttachments={[]}
+                removeNewAttachment={() => {}}
+                handleEditFileChange={() => {}}
+                editFileInputRef={{ current: null }}
+                onGoToReply={() => {}}
+                allUsers={allUsers}
+              />
+            ))
           )}
-          <div ref={scrollRef} />
         </div>
       </ScrollArea>
-
-      <div className="p-3 border-t bg-background flex gap-2 items-end">
-        <Textarea
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Add a note... (Press Enter to send)"
-          className="flex-1 min-h-[2.5rem] max-h-24 text-sm resize-none py-2"
-          disabled={isSubmitting}
-        />
-        <Button 
-          onClick={(e) => handleSubmit(e)} 
-          size="icon" 
-          className="h-10 w-10 shrink-0 mb-[1px]" 
-          disabled={isSubmitting || !newComment.trim()}
-        >
-          {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-        </Button>
-      </div>
     </div>
   );
 };
