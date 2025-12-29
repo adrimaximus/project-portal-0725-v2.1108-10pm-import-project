@@ -1,3 +1,4 @@
+Newest) so replies appear after the original message.">
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,6 +23,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const [isFetching, setIsFetching] = useState(true);
   const [replyingTo, setReplyingTo] = useState<CommentType | null>(null);
   const commentInputRef = useRef<CommentInputHandle>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   
   const formattedDate = format(date, 'yyyy-MM-dd');
 
@@ -188,6 +190,19 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       supabase.removeChannel(channel);
     };
   }, [goalId, formattedDate]);
+
+  // Auto-scroll to bottom on new comments
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      const scrollElement = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollElement) {
+        // Simple timeout to ensure content renders before scrolling
+        setTimeout(() => {
+            scrollElement.scrollTop = scrollElement.scrollHeight;
+        }, 100);
+      }
+    }
+  }, [comments]);
 
   const handleAddComment = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null) => {
     if (!user) return;
@@ -368,7 +383,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
         </span>
       </div>
 
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="space-y-4">
           {isFetching ? (
             <div className="flex justify-center items-center py-8 text-muted-foreground">
@@ -380,9 +395,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
               No notes yet for this day. <br/> Add a reason for missing it, or a celebration for completing it!
             </div>
           ) : (
-            // Reversing the array here to show Newest at the TOP of the list, 
-            // matching the behavior in TaskCommentsList.tsx
-            [...comments].reverse().map((comment) => (
+            comments.map((comment) => (
               <Comment
                 key={comment.id}
                 comment={comment}
