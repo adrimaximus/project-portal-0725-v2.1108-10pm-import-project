@@ -296,8 +296,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const handleReply = (comment: CommentType) => {
     setReplyingTo(comment);
     if (commentInputRef.current) {
-      const mentionText = `@[${comment.author.name}](${comment.author.id}) `;
-      commentInputRef.current.setText(mentionText);
       commentInputRef.current.focus();
     }
   };
