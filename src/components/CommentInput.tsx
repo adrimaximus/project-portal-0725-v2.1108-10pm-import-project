@@ -20,6 +20,7 @@ interface CommentInputProps {
   onCancelReply?: () => void;
   storageKey: string;
   dropUp?: boolean;
+  placeholder?: string;
 }
 
 export interface CommentInputHandle {
@@ -35,7 +36,8 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
   replyTo, 
   onCancelReply, 
   storageKey,
-  dropUp = true 
+  dropUp = true,
+  placeholder = "Add a comment..."
 }, ref) => {
   const { user } = useAuth();
   
@@ -204,19 +206,6 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
         </AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1 w-full">
-        {showReplyBanner && (
-          <div className="p-1.5 mb-1.5 bg-muted/60 rounded-md flex justify-between items-center text-xs">
-            <div className="border-l-2 border-primary pl-2 overflow-hidden w-full">
-              <p className="font-semibold text-primary">Replying to {replyTo!.author.name}</p>
-              <div className="text-muted-foreground line-clamp-1">
-                <InteractiveText text={replyTo!.text || ''} members={allUsers} />
-              </div>
-            </div>
-            <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-6 w-6 flex-shrink-0 ml-1">
-              <X className="h-3 w-3" />
-            </Button>
-          </div>
-        )}
         <div 
           className={cn(
             "border rounded-xl focus-within:ring-1 focus-within:ring-ring relative transition-colors bg-background",
@@ -226,6 +215,20 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
+          {showReplyBanner && (
+            <div className="mx-2 mt-2 p-2 bg-muted/50 rounded-md border-l-4 border-primary flex justify-between items-start gap-2">
+              <div className="overflow-hidden w-full text-xs">
+                <p className="font-semibold text-primary mb-0.5">Replying to {replyTo!.author.name}</p>
+                <div className="text-muted-foreground line-clamp-1">
+                  <InteractiveText text={replyTo!.text || ''} members={allUsers} />
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-5 w-5 flex-shrink-0 -mt-1 -mr-1 hover:bg-background/50">
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+
           {isDragging && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-[1px] z-50 rounded-lg pointer-events-none">
               <div className="text-primary font-medium flex items-center gap-2 bg-background p-3 rounded-lg shadow-sm border animate-in fade-in zoom-in-95 duration-200">
@@ -239,7 +242,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
             <MentionsInput
               value={text}
               onChange={(event, newValue) => setText(newValue)}
-              placeholder="Add a comment..."
+              placeholder={placeholder}
               className="mentions-input w-full"
               a11ySuggestionsListLabel={"Suggested mentions"}
               inputRef={mentionsInputRef}
