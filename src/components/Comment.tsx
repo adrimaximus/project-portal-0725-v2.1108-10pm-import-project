@@ -79,8 +79,35 @@ const Comment: React.FC<CommentProps> = ({
     }))
   ], [allUsers]);
 
-  // Ensure reply block shows if there is a replied message, even if unknown user logic is handled upstream
-  const showReplyBlock = !!comment.repliedMessage;
+  // Normalize replied message data to handle both 'repliedMessage' (Project comments) 
+  // and 'replied_comment' (Goal comments from raw Supabase join)
+  const repliedMsg = useMemo(() => {
+    if (comment.repliedMessage) return comment.repliedMessage;
+    
+    const rawReply = (comment as any).replied_comment;
+    if (rawReply) {
+      // Handle potential array from Supabase join
+      const reply = Array.isArray(rawReply) ? rawReply[0] : rawReply;
+      if (!reply) return null;
+      
+      const replyAuthor = Array.isArray(reply.author) ? reply.author[0] : reply.profiles || reply.author;
+      // Handle profiles array from join if necessary or single object
+      const authorProfile = Array.isArray(replyAuthor) ? replyAuthor[0] : replyAuthor;
+      
+      const senderName = authorProfile 
+          ? ([authorProfile.first_name, authorProfile.last_name].filter(Boolean).join(' ') || authorProfile.email) 
+          : 'Unknown User';
+          
+      return {
+          content: reply.content,
+          senderName,
+          isDeleted: false
+      };
+    }
+    return null;
+  }, [comment]);
+
+  const showReplyBlock = !!repliedMsg;
 
   const handleScrollToReply = () => {
     if (onGoToReply && comment.reply_to_comment_id) {
@@ -215,16 +242,16 @@ const Comment: React.FC<CommentProps> = ({
             </div>
           ) : (
             <>
-              {showReplyBlock && comment.repliedMessage && (
+              {showReplyBlock && repliedMsg && (
                 <button
                   onClick={handleScrollToReply}
                   className="w-full text-left flex items-start gap-2 text-xs p-2 my-1 bg-muted/50 border-l-2 border-primary/50 rounded-r-md hover:bg-muted/80 transition-colors"
                   disabled={!comment.reply_to_comment_id}
                 >
                   <div className="flex-1 overflow-hidden">
-                    <p className="font-semibold text-primary/80 mb-0.5">{comment.repliedMessage.senderName}</p>
+                    <p className="font-semibold text-primary/80 mb-0.5">Replying to {repliedMsg.senderName}</p>
                     <div className="line-clamp-2 text-muted-foreground">
-                      <MarkdownRenderer>{comment.repliedMessage.content || ''}</MarkdownRenderer>
+                      <MarkdownRenderer>{repliedMsg.content || ''}</MarkdownRenderer>
                     </div>
                   </div>
                 </button>
