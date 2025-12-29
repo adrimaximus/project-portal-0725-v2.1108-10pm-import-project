@@ -245,15 +245,13 @@ const Comment: React.FC<CommentProps> = ({
               {showReplyBlock && repliedMsg && (
                 <button
                   onClick={handleScrollToReply}
-                  className="w-full text-left flex items-start gap-2 text-xs p-2 my-1 bg-muted/50 border-l-2 border-primary/50 rounded-r-md hover:bg-muted/80 transition-colors"
+                  className="w-full text-left flex flex-col items-start gap-0.5 text-xs p-2.5 my-1.5 bg-muted/30 border-l-[3px] border-primary/50 rounded-r-md hover:bg-muted/50 transition-colors"
                   disabled={!comment.reply_to_comment_id}
                 >
-                  <div className="flex-1 overflow-hidden">
-                    <p className="font-semibold text-primary/80 mb-0.5">Replying to {repliedMsg.senderName}</p>
-                    <div className="line-clamp-2 text-muted-foreground">
-                      <MarkdownRenderer>{repliedMsg.content || ''}</MarkdownRenderer>
-                    </div>
-                  </div>
+                  <span className="font-semibold text-primary mb-0.5">Replying to {repliedMsg.senderName}</span>
+                  <span className="line-clamp-2 text-muted-foreground/90 w-full">
+                    <MarkdownRenderer className="text-xs [&>p]:mb-0 [&>p]:leading-normal text-muted-foreground">{repliedMsg.content || ''}</MarkdownRenderer>
+                  </span>
                 </button>
               )}
               <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-0 [&_p]:text-justify mt-1">
