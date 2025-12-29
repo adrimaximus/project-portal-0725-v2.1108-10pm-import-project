@@ -26,7 +26,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className
       {replyContext && (
         <button
           onClick={onReplyClick}
-          className="w-full text-left flex flex-col items-start gap-0.5 text-xs p-2.5 mb-2 bg-muted/30 border-l-[3px] border-primary/50 rounded-r-md hover:bg-muted/50 transition-colors select-none"
+          className="w-full text-left flex flex-col items-start gap-0.5 text-xs p-2 mb-2 bg-muted/50 border-l-4 border-primary rounded-md hover:bg-muted/70 transition-colors select-none"
           disabled={!onReplyClick}
         >
           <span className="font-semibold text-primary mb-0.5">Replying to {replyContext.senderName}</span>
