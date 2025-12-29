@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useCommentManager } from '@/hooks/useCommentManager';
 import { Comment as CommentType, User, Task } from '@/types';
 import CommentInput, { CommentInputHandle } from '../CommentInput';
@@ -8,6 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useTaskDrawer } from '@/contexts/TaskDrawerContext';
+import { ScrollArea } from '../ui/scroll-area';
 
 interface TaskCommentsProps {
   taskId: string;
@@ -33,9 +34,17 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, projectId }) => {
   const [replyTo, setReplyTo] = useState<CommentType | null>(null);
   const commentInputRef = useRef<CommentInputHandle>(null);
   const { onOpen: onOpenTaskModal } = useTaskModal();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Only allow mentioning users assigned to the task
   const taskAssignees = useMemo(() => task?.assignedTo || [], [task?.assignedTo]);
+
+  // Scroll to bottom when comments load
+  useEffect(() => {
+    if (messagesEndRef.current && !isLoadingComments) {
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [comments.length, isLoadingComments]);
 
   const pollForTask = (commentId: string) => {
     let attempts = 0;
@@ -151,28 +160,32 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, projectId }) => {
   };
 
   return (
-    <div className="space-y-6">
-      <TaskCommentsList
-        comments={comments}
-        isLoading={isLoadingComments}
-        onEdit={handleEditClick}
-        onDelete={setCommentToDelete}
-        onToggleReaction={(commentId, emoji) => toggleReaction.mutate({ commentId, emoji })}
-        editingCommentId={editingCommentId}
-        editedText={editedText}
-        setEditedText={setEditedText}
-        handleSaveEdit={handleSaveEdit}
-        handleCancelEdit={handleCancelEdit}
-        newAttachments={newAttachments}
-        removeNewAttachment={removeNewAttachment}
-        handleEditFileChange={handleEditFileChange}
-        editFileInputRef={editFileInputRef}
-        onReply={handleReply}
-        onCreateTicketFromComment={handleCreateTicketFromComment}
-        onGoToReply={handleGoToReply}
-        allUsers={taskAssignees}
-      />
-      <div className="pt-4 border-t">
+    <div className="flex flex-col h-[500px]">
+      <ScrollArea className="flex-1 p-2">
+        <TaskCommentsList
+            comments={comments}
+            isLoading={isLoadingComments}
+            onEdit={handleEditClick}
+            onDelete={setCommentToDelete}
+            onToggleReaction={(commentId, emoji) => toggleReaction.mutate({ commentId, emoji })}
+            editingCommentId={editingCommentId}
+            editedText={editedText}
+            setEditedText={setEditedText}
+            handleSaveEdit={handleSaveEdit}
+            handleCancelEdit={handleCancelEdit}
+            newAttachments={newAttachments}
+            removeNewAttachment={removeNewAttachment}
+            handleEditFileChange={handleEditFileChange}
+            editFileInputRef={editFileInputRef}
+            onReply={handleReply}
+            onCreateTicketFromComment={handleCreateTicketFromComment}
+            onGoToReply={handleGoToReply}
+            allUsers={taskAssignees}
+        />
+        <div ref={messagesEndRef} />
+      </ScrollArea>
+
+      <div className="pt-4 border-t bg-background sticky bottom-0">
         <CommentInput
           ref={commentInputRef}
           onAddCommentOrTicket={handleAddComment}
@@ -180,8 +193,10 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, projectId }) => {
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
           storageKey={`comment-draft-task-${taskId}`}
+          dropUp={true}
         />
       </div>
+
       <AlertDialog open={!!commentToDelete} onOpenChange={() => setCommentToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
