@@ -127,8 +127,8 @@ const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
   };
 
   const currentTeam = isEditing ? editedTeam : project.assignedTo;
-  const projectAdmins = currentTeam.filter(member => member.role === 'admin');
-  const teamMembers = currentTeam.filter(member => member.role === 'member');
+  const projectAdmins = currentTeam.filter(member => member.role === 'admin' && member.id !== project.created_by?.id);
+  const teamMembers = currentTeam.filter(member => member.role === 'member' && member.id !== project.created_by?.id);
   const assignableUsers = project.created_by ? allUsers.filter(u => u.id !== project.created_by.id) : allUsers;
   const canChangeOwner = currentUser && (currentUser.id === project.created_by.id || currentUser.role === 'admin' || currentUser.role === 'master admin');
 
