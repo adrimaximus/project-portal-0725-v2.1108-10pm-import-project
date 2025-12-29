@@ -45,7 +45,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
   const fetchComments = async () => {
     try {
-      // Simplified query to avoid deep nesting issues
+      // Optimized query to include profile data for the replied comment's author
       const { data, error } = await supabase
         .from('goal_comments')
         .select(`
@@ -58,7 +58,12 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           ),
           replied_comment:goal_comments!reply_to_comment_id (
             content,
-            user_id
+            user_id,
+            profiles (
+              first_name,
+              last_name,
+              email
+            )
           )
         `)
         .eq('goal_id', goalId)
@@ -67,7 +72,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
       if (error) throw error;
 
-      // Helper to find user details from allUsers or the profile included in the comment
+      // Helper to find user details
       const getUserDetails = (userId: string, profileData?: any): User => {
         // Try to find in allUsers first (if loaded)
         const foundUser = allUsers.find(u => u.id === userId);
@@ -113,12 +118,20 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           };
         });
 
-        // Map Replied Message
+        // Map Replied Message with fallback
         let repliedMessage = null;
         if (item.replied_comment) {
-          // We try to find the author of the replied comment from our users list
-          const replyAuthor = allUsers.find(u => u.id === item.replied_comment.user_id);
-          const replyAuthorName = replyAuthor ? replyAuthor.name : 'Unknown User';
+          // Priority 1: Profile data from the nested join (most reliable)
+          const rcProfile = item.replied_comment.profiles;
+          let replyAuthorName = 'Unknown User';
+          
+          if (rcProfile) {
+             replyAuthorName = `${rcProfile.first_name || ''} ${rcProfile.last_name || ''}`.trim() || rcProfile.email || 'Unknown';
+          } else {
+             // Priority 2: allUsers lookup
+             const replyAuthor = allUsers.find(u => u.id === item.replied_comment.user_id);
+             if (replyAuthor) replyAuthorName = replyAuthor.name;
+          }
           
           repliedMessage = {
             content: item.replied_comment.content,
@@ -149,18 +162,16 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     }
   };
 
-  // Re-fetch when allUsers loads to ensure names are populated correctly
   useEffect(() => {
     if (allUsers.length > 0) {
       fetchComments();
     }
-  }, [allUsers.length]); // Only re-run when users are initially loaded
+  }, [allUsers.length]);
 
   useEffect(() => {
     setIsFetching(true);
     fetchComments();
     
-    // Subscribe to changes
     const channel = supabase
       .channel('goal-comments-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'goal_comments', filter: `goal_id=eq.${goalId}` }, () => fetchComments())
@@ -251,12 +262,10 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const handleReaction = async (commentId: string, emoji: string) => {
     if (!user) return;
 
-    // Check if reaction exists
     const currentComment = comments.find(c => c.id === commentId);
     const existingReaction = currentComment?.reactions?.find(r => r.user_id === user.id && r.emoji === emoji);
 
     if (existingReaction) {
-      // Remove reaction
       const { error } = await supabase
         .from('goal_comment_reactions')
         .delete()
@@ -264,7 +273,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       
       if (error) toast.error('Failed to remove reaction');
     } else {
-      // Add reaction
       const { error } = await supabase
         .from('goal_comment_reactions')
         .insert({
@@ -275,12 +283,15 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       
       if (error) toast.error('Failed to add reaction');
     }
-    // Realtime will update the UI
   };
 
   const handleReply = (comment: CommentType) => {
     setReplyingTo(comment);
     if (commentInputRef.current) {
+      // Auto-mention the user being replied to
+      // Using react-mentions markup: @[Display Name](ID)
+      const mentionText = `@[${comment.author.name}](${comment.author.id}) `;
+      commentInputRef.current.setText(mentionText);
       commentInputRef.current.focus();
     }
   };
@@ -289,19 +300,17 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     if (!user) return;
     
     try {
-      // 1. Get User's Personal Project ID
       const { data: projectId, error: projectError } = await supabase.rpc('get_personal_project_id');
       
       if (projectError || !projectId) {
         throw new Error('Could not find personal project');
       }
 
-      // 2. Create Task in Personal Project
       const { error: taskError } = await supabase.from('tasks').insert({
         project_id: projectId,
         title: 'Ticket: ' + (comment.text.length > 50 ? comment.text.substring(0, 50) + '...' : comment.text),
         description: `Source Goal Comment: ${window.location.origin}/goals\n\n${comment.text}`,
-        origin_ticket_id: comment.id, // Store reference to goal comment
+        origin_ticket_id: comment.id,
         created_by: user.id,
         status: 'To do',
         priority: 'Normal'
@@ -309,7 +318,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
       if (taskError) throw taskError;
 
-      // 3. Mark comment as ticket
       const { error: updateError } = await supabase
         .from('goal_comments')
         .update({ is_ticket: true })
@@ -378,7 +386,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
                 removeNewAttachment={() => {}}
                 handleEditFileChange={() => {}}
                 editFileInputRef={{ current: null }}
-                onGoToReply={() => {}} // Could implement scroll to reply if needed
+                onGoToReply={() => {}}
                 allUsers={allUsers}
               />
             ))
