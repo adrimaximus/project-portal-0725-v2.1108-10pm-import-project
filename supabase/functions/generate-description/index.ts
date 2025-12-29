@@ -1,4 +1,4 @@
-import "https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,11 +12,30 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const openAiKey = Deno.env.get('OPENAI_API_KEY')
+    // 1. Try getting from Env (Secret)
+    let openAiKey = Deno.env.get('OPENAI_API_KEY')
+
+    // 2. If not found, try getting from Database (app_config)
+    if (!openAiKey) {
+        const supabaseAdmin = createClient(
+            Deno.env.get('SUPABASE_URL') ?? '',
+            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        )
+        const { data: config } = await supabaseAdmin
+            .from('app_config')
+            .select('value')
+            .eq('key', 'OPENAI_API_KEY')
+            .maybeSingle()
+            
+        if (config?.value) {
+            openAiKey = config.value
+        }
+    }
+
     if (!openAiKey) {
       // Return 200 with error field to bypass generic client error handling
       return new Response(
-        JSON.stringify({ error: 'OpenAI API key is missing. Please add OPENAI_API_KEY to your Supabase Edge Function secrets.' }),
+        JSON.stringify({ error: 'OpenAI API key is missing. Please configure it in Settings > Integrations.' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
