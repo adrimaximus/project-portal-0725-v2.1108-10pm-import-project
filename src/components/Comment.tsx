@@ -98,7 +98,7 @@ const Comment: React.FC<CommentProps> = ({
 
   return (
     <>
-      <div id={`message-${comment.id}`} className="flex items-start gap-3 transition-colors duration-500 rounded-lg p-1 -m-1">
+      <div id={`message-${comment.id}`} className="flex items-start gap-3 transition-colors duration-500 rounded-lg p-1 -m-1 scroll-mt-20">
         <Avatar className="h-8 w-8">
           <AvatarImage src={getAvatarUrl(author.avatar_url, author.id)} />
           <AvatarFallback style={generatePastelColor(author.id)}>
@@ -224,7 +224,7 @@ const Comment: React.FC<CommentProps> = ({
                   <div className="flex-1 overflow-hidden">
                     <p className="font-semibold text-primary/80 mb-0.5">{comment.repliedMessage.senderName}</p>
                     <div className="line-clamp-2 text-muted-foreground">
-                      <MarkdownRenderer>{comment.repliedMessage.content || ''}</MarkdownRenderer>
+                      <MarkdownRenderer className="[&>p]:mb-0">{comment.repliedMessage.content || ''}</MarkdownRenderer>
                     </div>
                   </div>
                 </button>
