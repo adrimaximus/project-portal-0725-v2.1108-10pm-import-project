@@ -192,10 +192,10 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
   // Auto-scroll to bottom on new comments
   useEffect(() => {
-    if (messagesEndRef.current) {
+    if (messagesEndRef.current && !isFetching) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [comments]);
+  }, [comments, isFetching]);
 
   const handleAddComment = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null) => {
     if (!user) return;
@@ -303,7 +303,16 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   };
 
   const handleReply = (comment: CommentType) => {
-    setReplyingTo(comment);
+    // Ensure we reply to the CLICKED message (target), not its parent.
+    // Also strip any nested context so the input doesn't render cascading replies.
+    const cleanCommentContext = {
+      ...comment,
+      repliedMessage: null,
+      reply_to_comment_id: null
+    };
+    
+    setReplyingTo(cleanCommentContext);
+    
     if (commentInputRef.current) {
       const mentionText = `@[${comment.author.name}](${comment.author.id}) `;
       commentInputRef.current.scrollIntoView();
