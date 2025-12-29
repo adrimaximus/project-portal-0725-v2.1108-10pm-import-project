@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { TagsMultiselect } from '@/components/ui/TagsMultiselect';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,6 +51,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
   });
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const fetchTags = useCallback(async () => {
     if (!user) return;
@@ -136,6 +137,29 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
     setAllTags(prev => [...prev, newTag]);
     return newTag;
   }, [user]);
+
+  const handleGenerateDescription = async () => {
+    if (!formData.title) {
+      toast.error("Please enter a title first.");
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-description', {
+        body: { title: formData.title, currentDescription: formData.description }
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      
+      handleChange('description', data.description);
+      toast.success("Description generated!");
+    } catch (error: any) {
+      console.error("AI Generation error:", error);
+      toast.error(error.message || "Failed to generate description");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleSave = useCallback(async () => {
     if (!formData.title) {
@@ -242,8 +266,19 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
             <Input id="title" value={formData.title} onChange={handleTitleChange} className="col-span-3" placeholder="e.g., Drink more water" />
           </div>
           <div className="grid grid-cols-4 items-start gap-4">
-            <div className="text-right pt-2">
+            <div className="text-right pt-2 flex flex-col items-end gap-1">
               <Label htmlFor="description">Description</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={handleGenerateDescription}
+                disabled={isGenerating || !formData.title}
+                title="Generate with AI"
+              >
+                {isGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 text-yellow-500" />}
+              </Button>
             </div>
             <div className="col-span-3">
               <Textarea 
