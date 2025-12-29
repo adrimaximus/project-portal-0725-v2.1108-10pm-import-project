@@ -20,7 +20,6 @@ interface CommentInputProps {
   onCancelReply?: () => void;
   storageKey: string;
   dropUp?: boolean;
-  placeholder?: string;
 }
 
 export interface CommentInputHandle {
@@ -36,8 +35,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
   replyTo, 
   onCancelReply, 
   storageKey,
-  dropUp = true,
-  placeholder = "Add a comment..."
+  dropUp = true 
 }, ref) => {
   const { user } = useAuth();
   
@@ -207,14 +205,14 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
       </Avatar>
       <div className="min-w-0 flex-1 w-full">
         {showReplyBanner && (
-          <div className="p-2 mb-2 bg-muted rounded-md flex justify-between items-start gap-2 animate-in fade-in slide-in-from-bottom-1 duration-200">
-            <div className="flex-1 overflow-hidden">
-              <p className="text-xs font-semibold text-primary mb-0.5">Replying to {replyTo!.author.name}</p>
-              <div className="text-xs text-muted-foreground line-clamp-2">
+          <div className="p-1.5 mb-1.5 bg-muted/60 rounded-md flex justify-between items-center text-xs">
+            <div className="border-l-2 border-primary pl-2 overflow-hidden w-full">
+              <p className="font-semibold text-primary">Replying to {replyTo!.author.name}</p>
+              <div className="text-muted-foreground line-clamp-1">
                 <InteractiveText text={replyTo!.text || ''} members={allUsers} />
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-6 w-6 flex-shrink-0 -mt-1 -mr-1">
+            <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-6 w-6 flex-shrink-0 ml-1">
               <X className="h-3 w-3" />
             </Button>
           </div>
@@ -241,7 +239,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
             <MentionsInput
               value={text}
               onChange={(event, newValue) => setText(newValue)}
-              placeholder={placeholder}
+              placeholder="Add a comment..."
               className="mentions-input w-full"
               a11ySuggestionsListLabel={"Suggested mentions"}
               inputRef={mentionsInputRef}

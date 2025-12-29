@@ -45,8 +45,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
   const fetchComments = async () => {
     try {
-      // Fetch comments with their authors, reactions, and the comment they are replying to
-      // We use !reply_to_comment_id to explicitly tell PostgREST to use the foreign key on this column
+      // Optimized query to include profile data for the replied comment's author
       const { data, error } = await supabase
         .from('goal_comments')
         .select(`
@@ -58,7 +57,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
             id, emoji, user_id
           ),
           replied_comment:goal_comments!reply_to_comment_id (
-            id,
             content,
             user_id,
             profiles (
@@ -77,6 +75,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
       // Helper to find user details
       const getUserDetails = (userId: string, profileData?: any): User => {
+        // Handle case where profileData might be an array (if 1-many inference happens)
         const profile = Array.isArray(profileData) ? profileData[0] : profileData;
 
         if (profile) {
@@ -89,6 +88,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           };
         }
 
+        // Try to find in allUsers if profile relation failed
         const foundUser = allUsers.find(u => u.id === userId);
         if (foundUser) return foundUser;
 
@@ -121,9 +121,9 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           };
         });
 
-        // Map Replied Message
+        // Map Replied Message with fallback
         let repliedMessage = null;
-        // The relation might return an object or array depending on the client version/setup, usually object for belongsTo
+        // Check if replied_comment exists (could be object or array)
         const repliedCommentRaw = Array.isArray(item.replied_comment) ? item.replied_comment[0] : item.replied_comment;
 
         if (repliedCommentRaw) {
@@ -134,6 +134,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           if (rcProfile) {
              replyAuthorName = `${rcProfile.first_name || ''} ${rcProfile.last_name || ''}`.trim() || rcProfile.email || 'Unknown';
           } else if (repliedCommentRaw.user_id) {
+             // Fallback to allUsers lookup
              const replyAuthor = allUsers.find(u => u.id === repliedCommentRaw.user_id);
              if (replyAuthor) replyAuthorName = replyAuthor.name;
           }
@@ -154,7 +155,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           attachments_jsonb: item.attachments_jsonb || [],
           is_ticket: item.is_ticket,
           reply_to_comment_id: item.reply_to_comment_id,
-          repliedMessage: repliedMessage // This attaches the parent comment content to the child comment
+          repliedMessage
         };
       });
 
@@ -296,6 +297,9 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const handleReply = (comment: CommentType) => {
     setReplyingTo(comment);
     if (commentInputRef.current) {
+      // Auto-mention the user being replied to
+      const mentionText = `@[${comment.author.name}](${comment.author.id}) `;
+      commentInputRef.current.setText(mentionText);
       commentInputRef.current.focus();
     }
   };
@@ -338,10 +342,12 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     }
   };
 
+  // Function to smoothly scroll to the referenced reply
   const handleGoToReply = (messageId: string) => {
     const element = document.getElementById(`message-${messageId}`);
     if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Add a temporary highlight effect
         element.classList.add('bg-accent/20');
         setTimeout(() => element.classList.remove('bg-accent/20'), 2000);
     } else {

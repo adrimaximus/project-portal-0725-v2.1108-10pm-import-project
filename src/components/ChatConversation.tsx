@@ -3,16 +3,15 @@ import { Message, Collaborator } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import MessageAttachment from "./MessageAttachment";
 import { useAuth } from "@/contexts/AuthContext";
-import { cn, generatePastelColor, formatDistanceToNow, getInitials, getAvatarUrl } from "@/lib/utils";
-import { isSameDay, parseISO, isToday, isYesterday, format } from 'date-fns';
+import { cn, generatePastelColor, getInitials, getAvatarUrl } from "@/lib/utils";
+import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns';
 import { Loader2, Share, Camera, Mic, Ban } from "lucide-react";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
 import MessageReactions from "./MessageReactions";
 import { useChatContext } from "@/contexts/ChatContext";
 import { ChatMessageActions } from "./ChatMessageActions";
 import FileIcon from './FileIcon';
-import MarkdownRenderer from './MarkdownRenderer';
-import { id } from 'date-fns/locale';
+import InteractiveText from './InteractiveText';
 
 interface ChatConversationProps {
   messages: Message[];
@@ -57,6 +56,8 @@ const formatDateSeparator = (timestamp: string) => {
 };
 
 // Helper to clean mentions and markdown links for previews
+// @[Name](id) -> @Name
+// [Text](url) -> Text
 const formatTextContent = (text: string | null | undefined) => {
   if (!text) return "";
   return text
@@ -186,42 +187,41 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                   <span>Forwarded</span>
                                 </div>
                               )}
-                              
-                              {/* Reply Block - Updated Style */}
                               {message.repliedMessage && message.reply_to_message_id && (
                                 <button 
                                   onClick={() => handleScrollToMessage(message.reply_to_message_id!)}
                                   className={cn(
-                                    "w-full text-left flex flex-col items-start gap-0.5 text-xs p-2.5 my-1.5 border-l-[3px] border-primary/50 rounded-r-md transition-colors",
-                                    isCurrentUser 
-                                      ? "bg-black/10 hover:bg-black/20 text-primary-foreground border-primary-foreground/40" 
-                                      : "bg-muted/40 hover:bg-muted/60"
+                                    "w-full text-left pt-1 px-2 pb-2 my-1 text-sm rounded-md border-l-2 border-current transition-colors",
+                                    isCurrentUser ? "bg-black/10 hover:bg-black/20 text-primary-foreground" : "bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20"
                                   )}
                                 >
-                                   <span className={cn("font-semibold mb-0.5", isCurrentUser ? "text-primary-foreground" : "text-primary")}>
-                                     Replying to {message.repliedMessage.senderName}
-                                   </span>
-                                   
-                                   <span className={cn("line-clamp-2 w-full", isCurrentUser ? "text-primary-foreground/90" : "text-muted-foreground/90")}>
-                                    {message.repliedMessage.isDeleted ? (
-                                      <span className="italic">This message was deleted.</span>
-                                    ) : message.repliedMessage.attachment ? (
-                                      <div className="flex items-center gap-1.5">
-                                        {message.repliedMessage.attachment.type?.startsWith('image/') && <Camera className="h-3 w-3 flex-shrink-0" />}
-                                        {message.repliedMessage.attachment.type?.startsWith('audio/') && <Mic className="h-3 w-3 flex-shrink-0" />}
-                                        {!message.repliedMessage.attachment.type?.startsWith('image/') && !message.repliedMessage.attachment.type?.startsWith('audio/') && <FileIcon fileType={message.repliedMessage.attachment.type || ''} className="h-3 w-3 flex-shrink-0" />}
-                                        <span className="truncate">{formatTextContent(message.repliedMessage.content) || message.repliedMessage.attachment.name}</span>
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1 overflow-hidden">
+                                      <p className="font-semibold opacity-90">{message.repliedMessage.senderName}</p>
+                                      <div className={cn(
+                                          "text-xs line-clamp-3 opacity-80 prose prose-sm max-w-none [&_p]:my-0",
+                                          isCurrentUser 
+                                            ? "prose dark:prose-invert [--tw-prose-body:#e3e3e3] [--tw-prose-links:#e3e3e3] [--tw-prose-bold:#e3e3e3] [--tw-prose-invert-body:#374151] [--tw-prose-invert-links:#374151] [--tw-prose-invert-bold:#374151]"
+                                            : "dark:prose-invert"
+                                      )}>
+                                        {message.repliedMessage.isDeleted ? (
+                                          <p className="italic">This message was deleted.</p>
+                                        ) : message.repliedMessage.attachment ? (
+                                          <div className="flex items-center gap-1.5">
+                                            {message.repliedMessage.attachment.type?.startsWith('image/') && <Camera className="h-3 w-3 flex-shrink-0" />}
+                                            {message.repliedMessage.attachment.type?.startsWith('audio/') && <Mic className="h-3 w-3 flex-shrink-0" />}
+                                            {!message.repliedMessage.attachment.type?.startsWith('image/') && !message.repliedMessage.attachment.type?.startsWith('audio/') && <FileIcon fileType={message.repliedMessage.attachment.type || ''} className="h-3 w-3 flex-shrink-0" />}
+                                            <span className="truncate">{formatTextContent(message.repliedMessage.content) || message.repliedMessage.attachment.name}</span>
+                                          </div>
+                                        ) : (
+                                          <InteractiveText text={formatTextContent(message.repliedMessage.content)} members={members} />
+                                        )}
                                       </div>
-                                    ) : (
-                                      <MarkdownRenderer className={cn("text-xs [&>p]:mb-0 [&>p]:leading-normal", isCurrentUser ? "text-primary-foreground/90" : "text-muted-foreground")}>
-                                        {message.repliedMessage.content || ''}
-                                      </MarkdownRenderer>
+                                    </div>
+                                    {message.repliedMessage.attachment?.type?.startsWith('image/') && (
+                                      <img src={message.repliedMessage.attachment.url} alt="Reply preview" className="h-10 w-10 object-cover rounded-md ml-2 flex-shrink-0" />
                                     )}
-                                   </span>
-                                   
-                                   {message.repliedMessage.attachment?.type?.startsWith('image/') && (
-                                     <img src={message.repliedMessage.attachment.url} alt="Reply preview" className="h-10 w-10 object-cover rounded-md mt-1 flex-shrink-0" />
-                                   )}
+                                  </div>
                                 </button>
                               )}
 
@@ -252,7 +252,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                             ? "prose dark:prose-invert [--tw-prose-body:#e3e3e3] [--tw-prose-links:#e3e3e3] [--tw-prose-bold:#e3e3e3] [--tw-prose-invert-body:#374151] [--tw-prose-invert-links:#374151] [--tw-prose-invert-bold:#374151]"
                                             : "dark:prose-invert"
                                         )}>
-                                          <MarkdownRenderer>{message.text}</MarkdownRenderer>
+                                          <InteractiveText text={message.text} members={members} />
                                         </div>
                                       </div>
                                       <div className="flex-shrink-0 self-end flex items-center gap-1">
@@ -292,7 +292,7 @@ export const ChatConversation = ({ messages, members, isLoading, onReply }: Chat
                                             ? "prose dark:prose-invert [--tw-prose-body:#e3e3e3] [--tw-prose-links:#e3e3e3] [--tw-prose-bold:#e3e3e3] [--tw-prose-invert-body:#374151] [--tw-prose-invert-links:#374151] [--tw-prose-invert-bold:#374151]"
                                             : "dark:prose-invert"
                                         )}>
-                                          <MarkdownRenderer>{message.text}</MarkdownRenderer>
+                                          <InteractiveText text={message.text} members={members} />
                                         </div>
                                       )
                                     )}

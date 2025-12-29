@@ -79,32 +79,8 @@ const Comment: React.FC<CommentProps> = ({
     }))
   ], [allUsers]);
 
-  // Normalize replied message data to handle both 'repliedMessage' (Project comments) 
-  // and 'replied_comment' (Goal comments from raw Supabase join)
-  const repliedMsg = useMemo(() => {
-    if (comment.repliedMessage) return comment.repliedMessage;
-    
-    const rawReply = (comment as any).replied_comment;
-    if (rawReply) {
-      // Handle potential array from Supabase join
-      const reply = Array.isArray(rawReply) ? rawReply[0] : rawReply;
-      if (!reply) return null;
-      
-      const replyAuthor = Array.isArray(reply.author) ? reply.author[0] : reply.author;
-      const senderName = replyAuthor 
-          ? ([replyAuthor.first_name, replyAuthor.last_name].filter(Boolean).join(' ') || replyAuthor.email) 
-          : 'Unknown User';
-          
-      return {
-          content: reply.content,
-          senderName,
-          isDeleted: false
-      };
-    }
-    return null;
-  }, [comment]);
-
-  const showReplyBlock = !!repliedMsg;
+  // Ensure reply block shows if there is a replied message, even if unknown user logic is handled upstream
+  const showReplyBlock = !!comment.repliedMessage;
 
   const handleScrollToReply = () => {
     if (onGoToReply && comment.reply_to_comment_id) {
@@ -122,7 +98,7 @@ const Comment: React.FC<CommentProps> = ({
 
   return (
     <>
-      <div id={`message-${comment.id}`} className="flex items-start gap-3 transition-colors duration-500 rounded-lg p-1 -m-1 scroll-mt-20">
+      <div id={`message-${comment.id}`} className="flex items-start gap-3 transition-colors duration-500 rounded-lg p-1 -m-1">
         <Avatar className="h-8 w-8">
           <AvatarImage src={getAvatarUrl(author.avatar_url, author.id)} />
           <AvatarFallback style={generatePastelColor(author.id)}>
@@ -239,16 +215,18 @@ const Comment: React.FC<CommentProps> = ({
             </div>
           ) : (
             <>
-              {showReplyBlock && repliedMsg && (
+              {showReplyBlock && comment.repliedMessage && (
                 <button
                   onClick={handleScrollToReply}
-                  className="w-full text-left flex flex-col items-start gap-0.5 text-xs p-2.5 my-1.5 bg-muted/30 border-l-[3px] border-primary/50 rounded-r-md hover:bg-muted/50 transition-colors"
+                  className="w-full text-left flex items-start gap-2 text-xs p-2 my-1 bg-muted/50 border-l-2 border-primary/50 rounded-r-md hover:bg-muted/80 transition-colors"
                   disabled={!comment.reply_to_comment_id}
                 >
-                  <span className="font-semibold text-primary mb-0.5">Replying to {repliedMsg.senderName}</span>
-                  <span className="line-clamp-2 text-muted-foreground/90 w-full">
-                    <MarkdownRenderer className="text-xs [&>p]:mb-0 [&>p]:leading-normal text-muted-foreground">{repliedMsg.content || ''}</MarkdownRenderer>
-                  </span>
+                  <div className="flex-1 overflow-hidden">
+                    <p className="font-semibold text-primary/80 mb-0.5">{comment.repliedMessage.senderName}</p>
+                    <div className="line-clamp-2 text-muted-foreground">
+                      <MarkdownRenderer>{comment.repliedMessage.content || ''}</MarkdownRenderer>
+                    </div>
+                  </div>
                 </button>
               )}
               <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-0 [&_p]:text-justify mt-1">
