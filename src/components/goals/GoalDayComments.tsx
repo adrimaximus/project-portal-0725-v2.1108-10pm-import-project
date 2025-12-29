@@ -22,6 +22,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const [isFetching, setIsFetching] = useState(true);
   const [replyingTo, setReplyingTo] = useState<CommentType | null>(null);
   const commentInputRef = useRef<CommentInputHandle>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const formattedDate = format(date, 'yyyy-MM-dd');
 
@@ -189,6 +190,13 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     };
   }, [goalId, formattedDate]);
 
+  // Auto-scroll to bottom on new comments
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [comments]);
+
   const handleAddComment = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null) => {
     if (!user) return;
 
@@ -320,7 +328,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
       const { error: taskError } = await supabase.from('tasks').insert({
         project_id: projectId,
-        title: 'Ticket: ' + (comment.text.length > 50 ? comment.text.substring(0, 50) + '...' : comment.text),
+        title: 'Ticket: ' + (comment.text ? (comment.text.length > 50 ? comment.text.substring(0, 50) + '...' : comment.text) : 'New Ticket'),
         description: `Source Goal Comment: ${window.location.origin}/goals\n\n${comment.text}`,
         origin_ticket_id: comment.id,
         created_by: user.id,
@@ -380,7 +388,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
               No notes yet for this day. <br/> Add a reason for missing it, or a celebration for completing it!
             </div>
           ) : (
-            [...comments].reverse().map((comment) => (
+            comments.map((comment) => (
               <Comment
                 key={comment.id}
                 comment={comment}
@@ -403,6 +411,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
               />
             ))
           )}
+          <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
 
