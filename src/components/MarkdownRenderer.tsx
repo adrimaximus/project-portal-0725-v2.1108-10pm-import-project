@@ -46,8 +46,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className
             );
           },
           
-          // Removed text-sm so it inherits from parent (e.g. text-xs in reply blocks)
-          p: ({node, children, ...props}) => <p {...props} className="mb-2 last:mb-0">{children}</p>,
+          // Added text-sm as requested
+          p: ({node, children, ...props}) => <p {...props} className="mb-2 last:mb-0 text-sm">{children}</p>,
           
           ul: ({node, ...props}) => <ul className="list-disc list-outside ml-5 mb-2 space-y-1" {...props} />,
           ol: ({node, ...props}) => <ol className="list-decimal list-outside ml-5 mb-2 space-y-1" {...props} />,

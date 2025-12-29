@@ -46,6 +46,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const fetchComments = async () => {
     try {
       // Optimized query to include profile data for the replied comment's author
+      // Removing explicit !reply_to_comment_id hint to let Supabase detect the self-relation automatically
       const { data, error } = await supabase
         .from('goal_comments')
         .select(`
@@ -56,7 +57,8 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           goal_comment_reactions (
             id, emoji, user_id
           ),
-          replied_comment:goal_comments!reply_to_comment_id (
+          replied_comment:goal_comments (
+            id,
             content,
             user_id,
             profiles (
