@@ -1,4 +1,3 @@
-Newest) so replies appear after the original message.">
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -335,7 +334,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
       const { error: taskError } = await supabase.from('tasks').insert({
         project_id: projectId,
-        title: 'Ticket: ' + (comment.text.length > 50 ? comment.text.substring(0, 50) + '...' : comment.text),
+        title: 'Ticket: ' + (comment.text ? (comment.text.length > 50 ? comment.text.substring(0, 50) + '...' : comment.text) : 'New Ticket'),
         description: `Source Goal Comment: ${window.location.origin}/goals\n\n${comment.text}`,
         origin_ticket_id: comment.id,
         created_by: user.id,
