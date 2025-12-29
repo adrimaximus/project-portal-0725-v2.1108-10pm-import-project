@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { TagsMultiselect } from '@/components/ui/TagsMultiselect';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Wand2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,6 +51,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
   });
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const fetchTags = useCallback(async () => {
     if (!user) return;
@@ -63,8 +64,6 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
       fetchTags();
       const savedDraft = SafeLocalStorage.getItem<typeof formData>(storageKey);
       
-      // Determine if the draft is "meaningful" (user actually entered data)
-      // If it only contains the default/random values from a previous session (empty title/desc), ignore it.
       const hasUserTyped = savedDraft && (
         (savedDraft.title && savedDraft.title.trim() !== '') || 
         (savedDraft.description && savedDraft.description.trim() !== '')
@@ -84,12 +83,10 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
           });
         }
       } else {
-        // NEW GOAL MODE
         if (hasUserTyped) {
           setFormData(savedDraft);
           toast.info("Draft restored.");
         } else {
-          // Randomize Icon and Color for fresh new goals
           const randomIcon = allIcons.length > 0 
             ? allIcons[Math.floor(Math.random() * allIcons.length)] 
             : 'Target';
@@ -103,14 +100,12 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
             targetValue: undefined, unit: '', color: randomColor, icon: randomIcon, tags: [],
           });
           
-          // Clear any "empty" draft to prevent sticky randoms
           SafeLocalStorage.removeItem(storageKey);
         }
       }
     }
   }, [goal, open, isEditMode, user, fetchTags, storageKey]);
 
-  // Debounced save to local storage
   useEffect(() => {
     if (open) {
       const handler = setTimeout(() => {
@@ -123,12 +118,10 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
     }
   }, [formData, open, storageKey]);
 
-  // Memoized generic handler
   const handleChange = useCallback((field: keyof typeof formData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 
-  // Dedicated handlers
   const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => handleChange('title', e.target.value), [handleChange]);
   const handleDescriptionChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => handleChange('description', e.target.value), [handleChange]);
   const handleTypeChange = useCallback((v: string) => handleChange('type', v as GoalType), [handleChange]);
@@ -146,6 +139,28 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
     setAllTags(prev => [...prev, newTag]);
     return newTag;
   }, [user]);
+
+  const handleGenerateDescription = async () => {
+    if (!formData.title) {
+      toast.error("Please enter a title first to generate a description.");
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-description', {
+        body: { title: formData.title, currentDescription: formData.description }
+      });
+      if (error) throw error;
+      if (data?.description) {
+        handleChange('description', data.description);
+        toast.success("Description generated!");
+      }
+    } catch (error: any) {
+      toast.error("Failed to generate description: " + error.message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleSave = useCallback(async () => {
     if (!formData.title) {
@@ -251,9 +266,29 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
             <Label htmlFor="title" className="text-right">Title</Label>
             <Input id="title" value={formData.title} onChange={handleTitleChange} className="col-span-3" placeholder="e.g., Drink more water" />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="description" className="text-right">Description</Label>
-            <Textarea id="description" value={formData.description} onChange={handleDescriptionChange} className="col-span-3" placeholder="Why is this goal important?" />
+          <div className="grid grid-cols-4 items-start gap-4">
+            <div className="text-right pt-2">
+              <Label htmlFor="description">Description</Label>
+            </div>
+            <div className="col-span-3 relative">
+              <Textarea 
+                id="description" 
+                value={formData.description} 
+                onChange={handleDescriptionChange} 
+                className="pr-10" 
+                placeholder="Why is this goal important?" 
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="absolute right-2 top-2 h-6 w-6 text-muted-foreground hover:text-primary"
+                onClick={handleGenerateDescription}
+                disabled={isGenerating || !formData.title}
+                title="Generate description with AI"
+              >
+                {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label className="text-right">Type</Label>
