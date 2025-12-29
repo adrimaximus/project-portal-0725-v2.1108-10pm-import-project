@@ -298,8 +298,13 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     setReplyingTo(comment);
     if (commentInputRef.current) {
       const mentionText = `@[${comment.author.name}](${comment.author.id}) `;
-      commentInputRef.current.setText(mentionText);
-      commentInputRef.current.focus();
+      commentInputRef.current.scrollIntoView();
+      setTimeout(() => {
+        if (commentInputRef.current) {
+          commentInputRef.current.setText(mentionText, true);
+          commentInputRef.current.focus();
+        }
+      }, 100);
     }
   };
 
@@ -363,19 +368,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
         </span>
       </div>
 
-      <div className="flex-shrink-0 p-3 border-b bg-background">
-        <CommentInput
-          ref={commentInputRef}
-          onAddCommentOrTicket={handleAddComment}
-          allUsers={allUsers}
-          storageKey={`goal-comment-${goalId}-${formattedDate}`}
-          dropUp={false}
-          placeholder="Add a note... (@ to mention)"
-          replyTo={replyingTo}
-          onCancelReply={() => setReplyingTo(null)}
-        />
-      </div>
-      
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
           {isFetching ? (
@@ -413,6 +405,19 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           )}
         </div>
       </ScrollArea>
+
+      <div className="flex-shrink-0 p-3 border-t bg-background">
+        <CommentInput
+          ref={commentInputRef}
+          onAddCommentOrTicket={handleAddComment}
+          allUsers={allUsers}
+          storageKey={`goal-comment-${goalId}-${formattedDate}`}
+          dropUp={true}
+          placeholder="Add a note... (@ to mention)"
+          replyTo={replyingTo}
+          onCancelReply={() => setReplyingTo(null)}
+        />
+      </div>
     </div>
   );
 };
