@@ -20,9 +20,9 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const [comments, setComments] = useState<CommentType[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isFetching, setIsFetching] = useState(true);
+  const [replyingTo, setReplyingTo] = useState<CommentType | null>(null);
   const commentInputRef = useRef<CommentInputHandle>(null);
   
-  // Use local date formatting to match the calendar day exactly
   const formattedDate = format(date, 'yyyy-MM-dd');
 
   // Fetch users for mentions
@@ -45,19 +45,21 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
   const fetchComments = async () => {
     try {
+      // Fetch comments with author profile, reactions, and parent comment info
       const { data, error } = await supabase
         .from('goal_comments')
         .select(`
-          id,
-          content,
-          created_at,
-          user_id,
-          attachments_jsonb,
-          profiles (
-            first_name,
-            last_name,
-            email,
-            avatar_url
+          *,
+          profiles!user_id (
+            id, first_name, last_name, email, avatar_url
+          ),
+          goal_comment_reactions (
+            id, emoji, user_id, 
+            profiles (id, first_name, last_name, email)
+          ),
+          replied_comment:goal_comments!reply_to_comment_id (
+            content,
+            profiles!user_id (first_name, last_name, email)
           )
         `)
         .eq('goal_id', goalId)
@@ -66,22 +68,48 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
       if (error) throw error;
 
-      // Transform goal comments to match CommentType
-      const transformedComments: CommentType[] = (data || []).map((item: any) => ({
-        id: item.id,
-        text: item.content,
-        created_at: item.created_at,
-        author: {
+      const transformedComments: CommentType[] = (data || []).map((item: any) => {
+        // Map Author
+        const author: User = {
           id: item.user_id,
           name: `${item.profiles?.first_name || ''} ${item.profiles?.last_name || ''}`.trim() || item.profiles?.email || 'Unknown',
           avatar_url: item.profiles?.avatar_url,
           email: item.profiles?.email,
           initials: getInitials(`${item.profiles?.first_name || ''} ${item.profiles?.last_name || ''}`.trim() || item.profiles?.email || '')
-        },
-        reactions: [], 
-        attachments_jsonb: item.attachments_jsonb || [],
-        is_ticket: false
-      }));
+        };
+
+        // Map Reactions
+        const reactions = (item.goal_comment_reactions || []).map((r: any) => ({
+          id: r.id,
+          emoji: r.emoji,
+          user_id: r.user_id,
+          user_name: `${r.profiles?.first_name || ''} ${r.profiles?.last_name || ''}`.trim() || r.profiles?.email || 'Unknown',
+          profiles: r.profiles
+        }));
+
+        // Map Replied Message
+        let repliedMessage = null;
+        if (item.replied_comment) {
+          const replyAuthorName = `${item.replied_comment.profiles?.first_name || ''} ${item.replied_comment.profiles?.last_name || ''}`.trim() || item.replied_comment.profiles?.email || 'Unknown';
+          repliedMessage = {
+            content: item.replied_comment.content,
+            senderName: replyAuthorName,
+            isDeleted: false // Simplification
+          };
+        }
+
+        return {
+          id: item.id,
+          text: item.content,
+          created_at: item.created_at,
+          author,
+          reactions,
+          attachments_jsonb: item.attachments_jsonb || [],
+          is_ticket: item.is_ticket,
+          reply_to_comment_id: item.reply_to_comment_id,
+          repliedMessage
+        };
+      });
 
       setComments(transformedComments);
     } catch (error) {
@@ -96,20 +124,11 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     setIsFetching(true);
     fetchComments();
     
+    // Subscribe to changes
     const channel = supabase
-      .channel('goal-comments-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'goal_comments',
-          filter: `goal_id=eq.${goalId}`, 
-        },
-        () => {
-          fetchComments();
-        }
-      )
+      .channel('goal-comments-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'goal_comments', filter: `goal_id=eq.${goalId}` }, () => fetchComments())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'goal_comment_reactions' }, () => fetchComments())
       .subscribe();
 
     return () => {
@@ -159,13 +178,15 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
         user_id: user.id,
         comment_date: formattedDate,
         content: text.trim(),
-        attachments_jsonb: uploadedAttachments
+        attachments_jsonb: uploadedAttachments,
+        reply_to_comment_id: replyingTo?.id || null
       });
 
     if (error) {
       toast.error('Failed to post comment');
     } else {
       await fetchComments();
+      setReplyingTo(null);
       if (commentInputRef.current) {
         commentInputRef.current.setText('');
       }
@@ -191,8 +212,82 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     }
   };
 
-  const handleReaction = (id: string, emoji: string) => {
-    toast.info("Reactions coming soon for goals!");
+  const handleReaction = async (commentId: string, emoji: string) => {
+    if (!user) return;
+
+    // Check if reaction exists
+    const currentComment = comments.find(c => c.id === commentId);
+    const existingReaction = currentComment?.reactions?.find(r => r.user_id === user.id && r.emoji === emoji);
+
+    if (existingReaction) {
+      // Remove reaction
+      const { error } = await supabase
+        .from('goal_comment_reactions')
+        .delete()
+        .eq('id', existingReaction.id);
+      
+      if (error) toast.error('Failed to remove reaction');
+    } else {
+      // Add reaction
+      const { error } = await supabase
+        .from('goal_comment_reactions')
+        .insert({
+          comment_id: commentId,
+          user_id: user.id,
+          emoji: emoji
+        });
+      
+      if (error) toast.error('Failed to add reaction');
+    }
+    // Realtime will update the UI
+  };
+
+  const handleReply = (comment: CommentType) => {
+    setReplyingTo(comment);
+    if (commentInputRef.current) {
+      commentInputRef.current.focus();
+    }
+  };
+
+  const handleCreateTicket = async (comment: CommentType) => {
+    if (!user) return;
+    
+    try {
+      // 1. Get User's Personal Project ID
+      const { data: projectId, error: projectError } = await supabase.rpc('get_personal_project_id');
+      
+      if (projectError || !projectId) {
+        throw new Error('Could not find personal project');
+      }
+
+      // 2. Create Task in Personal Project
+      const { error: taskError } = await supabase.from('tasks').insert({
+        project_id: projectId,
+        title: 'Ticket: ' + (comment.text.length > 50 ? comment.text.substring(0, 50) + '...' : comment.text),
+        description: `Source Goal Comment: ${window.location.origin}/goals\n\n${comment.text}`,
+        origin_ticket_id: comment.id, // Store reference to goal comment
+        created_by: user.id,
+        status: 'To do',
+        priority: 'Normal'
+      });
+
+      if (taskError) throw taskError;
+
+      // 3. Mark comment as ticket
+      const { error: updateError } = await supabase
+        .from('goal_comments')
+        .update({ is_ticket: true })
+        .eq('id', comment.id);
+
+      if (updateError) throw updateError;
+
+      toast.success('Ticket created in your personal project');
+      await fetchComments();
+
+    } catch (error) {
+      console.error('Error creating ticket:', error);
+      toast.error('Failed to create ticket');
+    }
   };
 
   return (
@@ -212,6 +307,8 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           storageKey={`goal-comment-${goalId}-${formattedDate}`}
           dropUp={false}
           placeholder="Add a note... (@ to mention)"
+          replyingTo={replyingTo}
+          onCancelReply={() => setReplyingTo(null)}
         />
       </div>
       
@@ -239,13 +336,13 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
                 onEdit={() => toast.info("Editing coming soon")}
                 onDelete={(c) => handleDeleteComment(c)}
                 onToggleReaction={handleReaction}
-                onReply={() => {}}
-                onCreateTicketFromComment={() => {}}
+                onReply={handleReply}
+                onCreateTicketFromComment={handleCreateTicket}
                 newAttachments={[]}
                 removeNewAttachment={() => {}}
                 handleEditFileChange={() => {}}
                 editFileInputRef={{ current: null }}
-                onGoToReply={() => {}}
+                onGoToReply={() => {}} // Could implement scroll to reply if needed
                 allUsers={allUsers}
               />
             ))
