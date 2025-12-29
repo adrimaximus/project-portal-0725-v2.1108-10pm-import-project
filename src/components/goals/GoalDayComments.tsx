@@ -25,6 +25,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   
   const formattedDate = format(date, 'yyyy-MM-dd');
 
+  // Fetch users for mentions and mapping
   useEffect(() => {
     const fetchUsers = async () => {
       const { data } = await supabase.from('profiles').select('*');
@@ -44,8 +45,8 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
   const fetchComments = async () => {
     try {
-      // Explicitly specifying the FK constraint for the self-join: !goal_comments_reply_to_comment_id_fkey
-      // Note: If the FK name differs, we use the column name shortcut !reply_to_comment_id
+      // Fetch comments with their authors, reactions, and the comment they are replying to
+      // We use !reply_to_comment_id to explicitly tell PostgREST to use the foreign key on this column
       const { data, error } = await supabase
         .from('goal_comments')
         .select(`
@@ -74,6 +75,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
       if (error) throw error;
 
+      // Helper to find user details
       const getUserDetails = (userId: string, profileData?: any): User => {
         const profile = Array.isArray(profileData) ? profileData[0] : profileData;
 
@@ -99,8 +101,10 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       };
 
       const transformedComments: CommentType[] = (data || []).map((item: any) => {
+        // Map Author
         const author = getUserDetails(item.user_id, item.profiles);
 
+        // Map Reactions
         const reactions = (item.goal_comment_reactions || []).map((r: any) => {
           const reactor = allUsers.find(u => u.id === r.user_id);
           return {
@@ -117,7 +121,9 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           };
         });
 
+        // Map Replied Message
         let repliedMessage = null;
+        // The relation might return an object or array depending on the client version/setup, usually object for belongsTo
         const repliedCommentRaw = Array.isArray(item.replied_comment) ? item.replied_comment[0] : item.replied_comment;
 
         if (repliedCommentRaw) {
@@ -148,7 +154,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           attachments_jsonb: item.attachments_jsonb || [],
           is_ticket: item.is_ticket,
           reply_to_comment_id: item.reply_to_comment_id,
-          repliedMessage
+          repliedMessage: repliedMessage // This attaches the parent comment content to the child comment
         };
       });
 
@@ -217,6 +223,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       }
     }
 
+    // Use the explicit replyToId passed from the input component, or fallback to state
     const parentCommentId = replyToId !== undefined ? replyToId : (replyingTo?.id || null);
 
     const { error } = await supabase
