@@ -380,6 +380,8 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
               No notes yet for this day. <br/> Add a reason for missing it, or a celebration for completing it!
             </div>
           ) : (
+            // Reversing the array here to show Newest at the TOP of the list, 
+            // matching the behavior in TaskCommentsList.tsx
             [...comments].reverse().map((comment) => (
               <Comment
                 key={comment.id}
