@@ -72,7 +72,6 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
       if (isEditMode && goal) {
         if (savedDraft) {
           setFormData(savedDraft);
-          toast.info("Draft restored.");
         } else {
           setFormData({
             title: goal.title, description: goal.description || '', type: goal.type,
@@ -85,7 +84,6 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
       } else {
         if (hasUserTyped) {
           setFormData(savedDraft);
-          toast.info("Draft restored.");
         } else {
           const randomIcon = allIcons.length > 0 
             ? allIcons[Math.floor(Math.random() * allIcons.length)] 
