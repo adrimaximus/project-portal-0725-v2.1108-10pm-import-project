@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { TagsMultiselect } from '@/components/ui/TagsMultiselect';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
-import { Loader2, Wand2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,7 +51,6 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
   });
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
 
   const fetchTags = useCallback(async () => {
     if (!user) return;
@@ -137,36 +136,6 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
     setAllTags(prev => [...prev, newTag]);
     return newTag;
   }, [user]);
-
-  const handleGenerateDescription = async () => {
-    if (!formData.title) {
-      toast.error("Please enter a title first to generate a description.");
-      return;
-    }
-    setIsGenerating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-description', {
-        body: { title: formData.title, currentDescription: formData.description }
-      });
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      if (data?.description) {
-        handleChange('description', data.description);
-        toast.success("Description generated!");
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to generate description");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
 
   const handleSave = useCallback(async () => {
     if (!formData.title) {
@@ -276,24 +245,13 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
             <div className="text-right pt-2">
               <Label htmlFor="description">Description</Label>
             </div>
-            <div className="col-span-3 relative">
+            <div className="col-span-3">
               <Textarea 
                 id="description" 
                 value={formData.description} 
                 onChange={handleDescriptionChange} 
-                className="pr-10" 
                 placeholder="Why is this goal important?" 
               />
-              <Button
-                size="icon"
-                variant="ghost"
-                className="absolute right-2 top-2 h-6 w-6 text-muted-foreground hover:text-primary"
-                onClick={handleGenerateDescription}
-                disabled={isGenerating || !formData.title}
-                title="Generate description with AI"
-              >
-                {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-              </Button>
             </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
