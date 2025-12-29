@@ -25,7 +25,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   
   const formattedDate = format(date, 'yyyy-MM-dd');
 
-  // Fetch users for mentions and mapping
   useEffect(() => {
     const fetchUsers = async () => {
       const { data } = await supabase.from('profiles').select('*');
@@ -45,8 +44,8 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
   const fetchComments = async () => {
     try {
-      // Optimized query to include profile data for the replied comment's author
-      // Removing explicit !reply_to_comment_id hint to let Supabase detect the self-relation automatically
+      // Explicitly specifying the FK constraint for the self-join: !goal_comments_reply_to_comment_id_fkey
+      // Note: If the FK name differs, we use the column name shortcut !reply_to_comment_id
       const { data, error } = await supabase
         .from('goal_comments')
         .select(`
@@ -57,7 +56,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           goal_comment_reactions (
             id, emoji, user_id
           ),
-          replied_comment:goal_comments (
+          replied_comment:goal_comments!reply_to_comment_id (
             id,
             content,
             user_id,
@@ -75,9 +74,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
       if (error) throw error;
 
-      // Helper to find user details
       const getUserDetails = (userId: string, profileData?: any): User => {
-        // Handle case where profileData might be an array (if 1-many inference happens)
         const profile = Array.isArray(profileData) ? profileData[0] : profileData;
 
         if (profile) {
@@ -90,7 +87,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           };
         }
 
-        // Try to find in allUsers if profile relation failed
         const foundUser = allUsers.find(u => u.id === userId);
         if (foundUser) return foundUser;
 
@@ -103,10 +99,8 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       };
 
       const transformedComments: CommentType[] = (data || []).map((item: any) => {
-        // Map Author
         const author = getUserDetails(item.user_id, item.profiles);
 
-        // Map Reactions
         const reactions = (item.goal_comment_reactions || []).map((r: any) => {
           const reactor = allUsers.find(u => u.id === r.user_id);
           return {
@@ -123,9 +117,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           };
         });
 
-        // Map Replied Message with fallback
         let repliedMessage = null;
-        // Check if replied_comment exists (could be object or array)
         const repliedCommentRaw = Array.isArray(item.replied_comment) ? item.replied_comment[0] : item.replied_comment;
 
         if (repliedCommentRaw) {
@@ -136,7 +128,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           if (rcProfile) {
              replyAuthorName = `${rcProfile.first_name || ''} ${rcProfile.last_name || ''}`.trim() || rcProfile.email || 'Unknown';
           } else if (repliedCommentRaw.user_id) {
-             // Fallback to allUsers lookup
              const replyAuthor = allUsers.find(u => u.id === repliedCommentRaw.user_id);
              if (replyAuthor) replyAuthorName = replyAuthor.name;
           }
@@ -226,7 +217,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       }
     }
 
-    // Use the explicit replyToId passed from the input component, or fallback to state
     const parentCommentId = replyToId !== undefined ? replyToId : (replyingTo?.id || null);
 
     const { error } = await supabase
@@ -299,7 +289,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const handleReply = (comment: CommentType) => {
     setReplyingTo(comment);
     if (commentInputRef.current) {
-      // Auto-mention the user being replied to
       const mentionText = `@[${comment.author.name}](${comment.author.id}) `;
       commentInputRef.current.setText(mentionText);
       commentInputRef.current.focus();
@@ -344,12 +333,10 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     }
   };
 
-  // Function to smoothly scroll to the referenced reply
   const handleGoToReply = (messageId: string) => {
     const element = document.getElementById(`message-${messageId}`);
     if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        // Add a temporary highlight effect
         element.classList.add('bg-accent/20');
         setTimeout(() => element.classList.remove('bg-accent/20'), 2000);
     } else {
