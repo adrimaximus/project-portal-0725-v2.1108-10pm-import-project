@@ -70,13 +70,12 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
         `)
         .eq('goal_id', goalId)
         .eq('comment_date', formattedDate)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true }); // Oldest first for chat-like flow
 
       if (error) throw error;
 
       // Helper to find user details
       const getUserDetails = (userId: string, profileData?: any): User => {
-        // Handle case where profileData might be an array (if 1-many inference happens)
         const profile = Array.isArray(profileData) ? profileData[0] : profileData;
 
         if (profile) {
@@ -89,7 +88,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           };
         }
 
-        // Try to find in allUsers if profile relation failed
         const foundUser = allUsers.find(u => u.id === userId);
         if (foundUser) return foundUser;
 
@@ -124,7 +122,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
         // Map Replied Message with fallback
         let repliedMessage = null;
-        // Check if replied_comment exists (could be object or array)
         const repliedCommentRaw = Array.isArray(item.replied_comment) ? item.replied_comment[0] : item.replied_comment;
 
         if (repliedCommentRaw) {
@@ -135,7 +132,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           if (rcProfile) {
              replyAuthorName = `${rcProfile.first_name || ''} ${rcProfile.last_name || ''}`.trim() || rcProfile.email || 'Unknown';
           } else if (repliedCommentRaw.user_id) {
-             // Fallback to allUsers lookup
              const replyAuthor = allUsers.find(u => u.id === repliedCommentRaw.user_id);
              if (replyAuthor) replyAuthorName = replyAuthor.name;
           }
@@ -233,6 +229,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     }
 
     // Use the explicit replyToId passed from the input component, or fallback to state
+    // IMPORTANT: This uses the ID of the message being replied to (B), not B's parent (A).
     const parentCommentId = replyToId !== undefined ? replyToId : (replyingTo?.id || null);
 
     const { error } = await supabase
@@ -303,12 +300,13 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   };
 
   const handleReply = (comment: CommentType) => {
-    // Ensure we reply to the CLICKED message (target), not its parent.
-    // Also strip any nested context so the input doesn't render cascading replies.
+    // FIX: Clean the comment object to remove any existing repliedMessage data.
+    // This ensures that when we set this message as the "Replying To" target,
+    // the UI renders *this* message as the context, not the message *it* was replying to.
     const cleanCommentContext = {
       ...comment,
       repliedMessage: null,
-      reply_to_comment_id: null
+      reply_to_comment_id: null // Ensure we don't accidentally cascade the ID visually
     };
     
     setReplyingTo(cleanCommentContext);
@@ -363,12 +361,10 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     }
   };
 
-  // Function to smoothly scroll to the referenced reply
   const handleGoToReply = (messageId: string) => {
     const element = document.getElementById(`message-${messageId}`);
     if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        // Add a temporary highlight effect
         element.classList.add('bg-accent/20');
         setTimeout(() => element.classList.remove('bg-accent/20'), 2000);
     } else {
