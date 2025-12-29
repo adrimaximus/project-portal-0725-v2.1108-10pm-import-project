@@ -43,7 +43,10 @@ Deno.serve(async (req) => {
     const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
 
     if (!openai && !anthropic) {
-      throw new Error("No AI provider is configured.");
+      return new Response(JSON.stringify({ error: "No AI provider is configured. Please check your settings." }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
     }
 
     const owner = goal.collaborators.find((c: any) => c.id === goal.user_id);
@@ -92,8 +95,6 @@ Konteks Kemajuan: ${JSON.stringify(progressContext, null, 2)}`;
         max_tokens: 200,
       });
       result = response.choices[0].message.content;
-    } else {
-      throw new Error("No AI provider configured.");
     }
 
     return new Response(JSON.stringify({ result }), {
@@ -104,7 +105,7 @@ Konteks Kemajuan: ${JSON.stringify(progressContext, null, 2)}`;
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+      status: 200, // Return 200 to ensure client receives error message
     });
   }
 });

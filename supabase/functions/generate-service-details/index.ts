@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
   if (!ANTHROPIC_API_KEY) {
     return new Response(
       JSON.stringify({ error: "Missing ANTHROPIC_API_KEY" }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   }
 
@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     if (!title) {
       return new Response(
         JSON.stringify({ error: "Title is required" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
 
@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
     console.error(error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   }
 });

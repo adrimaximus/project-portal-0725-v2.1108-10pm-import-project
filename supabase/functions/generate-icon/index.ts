@@ -23,7 +23,7 @@ const getOpenAIClient = async (supabaseAdmin) => {
     .single();
 
   if (configError || !config?.value) {
-    throw new Error("OpenAI API key is not configured by an administrator.");
+    return null;
   }
   return new OpenAI({ apiKey: config.value });
 };
@@ -43,6 +43,13 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createSupabaseAdmin();
     const openai = await getOpenAIClient(supabaseAdmin);
+    
+    if (!openai) {
+        return new Response(JSON.stringify({ error: "OpenAI API key not configured." }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+        });
+    }
 
     const userPrompt = `Title: "${title}"\n\nIcons: [${icons.join(', ')}]`;
 
@@ -63,7 +70,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+      status: 200, // Return 200 to ensure client receives error message
     });
   }
 });

@@ -1216,7 +1216,10 @@ Deno.serve(async (req) => {
 
     if (!openai && !anthropic) {
       console.error("[ai-handler] CRITICAL: No AI provider is configured. Check ANTHROPIC_API_KEY env var and OpenAI key in app_config table.");
-      throw new Error("No AI provider is configured. Please set up OpenAI or Anthropic API keys.");
+      return new Response(JSON.stringify({ error: "No AI provider is configured. Please set up OpenAI or Anthropic API keys." }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, // Return 200 to allow client-side handling without generic network errors
+      });
     }
     
     const userSupabase = createSupabaseUserClient(req);
@@ -1246,7 +1249,7 @@ Deno.serve(async (req) => {
     console.error(`[ai-handler] ERROR: Error in ai-handler for feature '${feature}':`, error.stack || error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+      status: 200, // Changed from 500 to 200 to ensure client receives the JSON error payload
     });
   }
 });
