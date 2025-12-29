@@ -20,9 +20,9 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const [comments, setComments] = useState<CommentType[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isFetching, setIsFetching] = useState(true);
+  const [replyTo, setReplyTo] = useState<CommentType | null>(null);
   const commentInputRef = useRef<CommentInputHandle>(null);
   
-  // Use local date formatting to match the calendar day exactly
   const formattedDate = format(date, 'yyyy-MM-dd');
 
   // Fetch users for mentions
@@ -52,11 +52,34 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           content,
           created_at,
           user_id,
+          attachments_jsonb,
+          reply_to_comment_id,
+          is_ticket,
           profiles (
             first_name,
             last_name,
             email,
             avatar_url
+          ),
+          goal_comment_reactions (
+            id,
+            emoji,
+            user_id,
+            profiles (
+              id,
+              first_name,
+              last_name
+            )
+          ),
+          parent:goal_comments!reply_to_comment_id (
+            id,
+            content,
+            user_id,
+            profiles (
+              first_name,
+              last_name,
+              email
+            )
           )
         `)
         .eq('goal_id', goalId)
@@ -66,21 +89,46 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       if (error) throw error;
 
       // Transform goal comments to match CommentType
-      const transformedComments: CommentType[] = (data || []).map((item: any) => ({
-        id: item.id,
-        text: item.content,
-        created_at: item.created_at,
-        author: {
-          id: item.user_id,
-          name: `${item.profiles?.first_name || ''} ${item.profiles?.last_name || ''}`.trim() || item.profiles?.email || 'Unknown',
-          avatar_url: item.profiles?.avatar_url,
-          email: item.profiles?.email,
-          initials: getInitials(`${item.profiles?.first_name || ''} ${item.profiles?.last_name || ''}`.trim() || item.profiles?.email || '')
-        },
-        reactions: [], // Goal comments don't support reactions yet
-        attachments_jsonb: [], // Goal comments don't support attachments yet
-        is_ticket: false
-      }));
+      const transformedComments: CommentType[] = (data || []).map((item: any) => {
+        // Format reactions
+        const reactions = item.goal_comment_reactions?.map((r: any) => ({
+          id: r.id,
+          emoji: r.emoji,
+          user_id: r.user_id,
+          user_name: r.profiles ? `${r.profiles.first_name || ''} ${r.profiles.last_name || ''}`.trim() : 'Unknown',
+          profiles: r.profiles
+        })) || [];
+
+        // Format parent/replied message
+        let repliedMessage = undefined;
+        if (item.parent) {
+          const parentAuthor = item.parent.profiles;
+          const parentName = `${parentAuthor?.first_name || ''} ${parentAuthor?.last_name || ''}`.trim() || parentAuthor?.email || 'Unknown';
+          repliedMessage = {
+            content: item.parent.content,
+            senderName: parentName,
+            isDeleted: false
+          };
+        }
+
+        return {
+          id: item.id,
+          text: item.content,
+          created_at: item.created_at,
+          author: {
+            id: item.user_id,
+            name: `${item.profiles?.first_name || ''} ${item.profiles?.last_name || ''}`.trim() || item.profiles?.email || 'Unknown',
+            avatar_url: item.profiles?.avatar_url,
+            email: item.profiles?.email,
+            initials: getInitials(`${item.profiles?.first_name || ''} ${item.profiles?.last_name || ''}`.trim() || item.profiles?.email || '')
+          },
+          reactions: reactions,
+          attachments_jsonb: item.attachments_jsonb || [],
+          is_ticket: item.is_ticket || false,
+          reply_to_comment_id: item.reply_to_comment_id,
+          repliedMessage: repliedMessage
+        };
+      });
 
       setComments(transformedComments);
     } catch (error) {
@@ -95,43 +143,76 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     setIsFetching(true);
     fetchComments();
     
-    const channel = supabase
-      .channel('goal-comments-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'goal_comments',
-          filter: `goal_id=eq.${goalId}`, 
-        },
-        () => {
-          fetchComments();
-        }
-      )
+    // Subscribe to both comments and reactions
+    const commentsChannel = supabase
+      .channel('goal-comments-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'goal_comments', filter: `goal_id=eq.${goalId}` }, () => fetchComments())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'goal_comment_reactions' }, () => fetchComments())
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(commentsChannel);
     };
   }, [goalId, formattedDate]);
 
-  const handleAddComment = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[]) => {
+  const uploadAttachments = async (files: File[]) => {
+    const uploadedAttachments = [];
+    
+    for (const file of files) {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+      const filePath = `goal-attachments/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('project-files') // Reusing project-files bucket for simplicity
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error('Error uploading file:', uploadError);
+        toast.error(`Failed to upload ${file.name}`);
+        continue;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('project-files')
+        .getPublicUrl(filePath);
+
+      uploadedAttachments.push({
+        name: file.name,
+        url: publicUrl,
+        type: file.type,
+        size: file.size,
+        storage_path: filePath
+      });
+    }
+    
+    return uploadedAttachments;
+  };
+
+  const handleAddComment = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null) => {
     if (!user) return;
 
-    // Note: Attachments and tickets are not supported for goal comments yet
+    let attachmentsJson = [];
+    if (attachments && attachments.length > 0) {
+      attachmentsJson = await uploadAttachments(attachments);
+    }
+
     const { error } = await supabase
       .from('goal_comments')
       .insert({
         goal_id: goalId,
         user_id: user.id,
         comment_date: formattedDate,
-        content: text.trim()
+        content: text.trim(),
+        is_ticket: isTicket,
+        reply_to_comment_id: replyToId || null,
+        attachments_jsonb: attachmentsJson
       });
 
     if (error) {
       toast.error('Failed to post comment');
     } else {
+      setReplyTo(null); // Clear reply state
       await fetchComments();
     }
   };
@@ -155,14 +236,71 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     }
   };
 
-  // No-op functions for unsupported features in goal comments
-  const handleNoOp = () => {};
-  const handleReaction = (id: string, emoji: string) => {
-    toast.info("Reactions coming soon for goals!");
+  const handleReaction = async (commentId: string, emoji: string) => {
+    if (!user) return;
+
+    // Check if reaction exists
+    const existingReaction = comments
+      .find(c => c.id === commentId)
+      ?.reactions?.find(r => r.user_id === user.id && r.emoji === emoji);
+
+    if (existingReaction) {
+      // Remove reaction
+      const { error } = await supabase
+        .from('goal_comment_reactions')
+        .delete()
+        .eq('id', existingReaction.id);
+        
+      if (error) toast.error("Failed to remove reaction");
+    } else {
+      // Add reaction
+      const { error } = await supabase
+        .from('goal_comment_reactions')
+        .insert({
+          comment_id: commentId,
+          user_id: user.id,
+          emoji: emoji
+        });
+        
+      if (error) toast.error("Failed to add reaction");
+    }
+    
+    // UI will update via realtime subscription
+  };
+
+  const handleReply = (comment: CommentType) => {
+    setReplyTo(comment);
+    commentInputRef.current?.focus();
+    commentInputRef.current?.scrollIntoView();
+  };
+
+  const handleCreateTicket = async (comment: CommentType) => {
+    const { error } = await supabase
+      .from('goal_comments')
+      .update({ is_ticket: true })
+      .eq('id', comment.id);
+
+    if (error) {
+      toast.error("Failed to convert to ticket");
+    } else {
+      toast.success("Converted to ticket");
+      // Ideally we would also create a task here, but for now we mark it visually
+    }
+  };
+
+  const handleScrollToMessage = (messageId: string) => {
+    const element = document.getElementById(`message-${messageId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('bg-primary/5');
+      setTimeout(() => element.classList.remove('bg-primary/5'), 2000);
+    } else {
+      toast.info("Message not found in this view");
+    }
   };
 
   return (
-    <div className="flex flex-col h-[450px] border-t bg-muted/10">
+    <div className="flex flex-col h-[500px] border-t bg-muted/10">
       <div className="p-3 border-b bg-background/50 backdrop-blur-sm flex justify-between items-center">
         <h4 className="text-sm font-semibold text-muted-foreground">Comments & Notes</h4>
         <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
@@ -178,6 +316,8 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           storageKey={`goal-comment-${goalId}-${formattedDate}`}
           dropUp={false}
           placeholder="Add a note... (@ to mention)"
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
         />
       </div>
       
@@ -205,13 +345,13 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
                 onEdit={() => toast.info("Editing coming soon")}
                 onDelete={(c) => handleDeleteComment(c)}
                 onToggleReaction={handleReaction}
-                onReply={() => {}}
-                onCreateTicketFromComment={() => {}}
+                onReply={handleReply}
+                onCreateTicketFromComment={handleCreateTicket}
                 newAttachments={[]}
                 removeNewAttachment={() => {}}
                 handleEditFileChange={() => {}}
                 editFileInputRef={{ current: null }}
-                onGoToReply={() => {}}
+                onGoToReply={handleScrollToMessage}
                 allUsers={allUsers}
               />
             ))
