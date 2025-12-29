@@ -3,7 +3,6 @@ import { Project, Comment as CommentType, User } from "@/types";
 import CommentInput, { CommentInputHandle } from "../CommentInput";
 import Comment from '../Comment';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ScrollArea } from '../ui/scroll-area';
 
 interface ProjectCommentsProps {
   project: Project;
@@ -66,7 +65,6 @@ const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
 }, ref) => {
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
   const lastProcessedMentionId = useRef<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (initialMention && ref && 'current' in ref && ref.current) {
@@ -92,16 +90,8 @@ const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
         }, 2500);
         return () => clearTimeout(timer);
       }
-    } else {
-        // Auto-scroll to bottom on load if no highlight
-        if (messagesEndRef.current && !isLoadingComments) {
-            // Use a small timeout to ensure rendering is complete
-            setTimeout(() => {
-                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-            }, 100);
-        }
     }
-  }, [highlightedCommentId, onHighlightComplete, isLoadingComments, comments.length]);
+  }, [highlightedCommentId, onHighlightComplete]);
 
   const handleDeleteConfirm = () => {
     if (commentToDelete) {
@@ -111,45 +101,9 @@ const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
   };
 
   return (
-    <div className="flex flex-col h-[600px] border rounded-lg bg-background">
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-6">
-            {isLoadingComments ? (
-            <p className="text-center text-muted-foreground py-10">Loading discussion...</p>
-            ) : comments.length > 0 ? (
-            comments.map((comment: CommentType) => (
-                <Comment
-                    key={comment.id}
-                    comment={comment}
-                    isEditing={editingCommentId === comment.id}
-                    editedText={editedText}
-                    setEditedText={setEditedText}
-                    handleSaveEdit={handleSaveEdit}
-                    handleCancelEdit={handleCancelEdit}
-                    onEdit={onEdit}
-                    onDelete={setCommentToDelete}
-                    onToggleReaction={onToggleCommentReaction}
-                    onReply={onReply}
-                    onCreateTicketFromComment={onCreateTicketFromComment}
-                    newAttachments={newAttachments}
-                    removeNewAttachment={removeNewAttachment}
-                    handleEditFileChange={handleEditFileChange}
-                    editFileInputRef={editFileInputRef}
-                    onGoToReply={onGoToReply}
-                    allUsers={allUsers}
-                />
-            ))
-            ) : (
-            <div className="text-center py-20 text-muted-foreground">
-                <p>No comments yet.</p>
-                <p className="text-sm">Start the conversation below!</p>
-            </div>
-            )}
-            <div ref={messagesEndRef} />
-        </div>
-      </ScrollArea>
-      
-      <div className="flex-shrink-0 p-4 border-t bg-muted/10">
+    <div className="flex flex-col h-auto max-h-[700px]">
+      <div className="flex-shrink-0 pb-4 border-b mb-4">
+        {/* Input is at the TOP here, so suggestions should drop DOWN (dropUp={false}) */}
         <CommentInput
           ref={ref}
           onAddCommentOrTicket={onAddCommentOrTicket}
@@ -157,11 +111,39 @@ const ProjectComments = forwardRef<CommentInputHandle, ProjectCommentsProps>(({
           replyTo={replyTo}
           onCancelReply={onCancelReply}
           storageKey={storageKey}
-          dropUp={true} 
-          placeholder="Type your message... (@ to mention)"
+          dropUp={false} 
         />
       </div>
-
+      <div className="overflow-y-auto pr-4 space-y-4 min-h-[100px]">
+        {isLoadingComments ? (
+          <p>Loading comments...</p>
+        ) : comments.length > 0 ? (
+          [...comments].reverse().map((comment: CommentType) => (
+            <Comment
+              key={comment.id}
+              comment={comment}
+              isEditing={editingCommentId === comment.id}
+              editedText={editedText}
+              setEditedText={setEditedText}
+              handleSaveEdit={handleSaveEdit}
+              handleCancelEdit={handleCancelEdit}
+              onEdit={onEdit}
+              onDelete={setCommentToDelete}
+              onToggleReaction={onToggleCommentReaction}
+              onReply={onReply}
+              onCreateTicketFromComment={onCreateTicketFromComment}
+              newAttachments={newAttachments}
+              removeNewAttachment={removeNewAttachment}
+              handleEditFileChange={handleEditFileChange}
+              editFileInputRef={editFileInputRef}
+              onGoToReply={onGoToReply}
+              allUsers={allUsers}
+            />
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground text-center pt-10">No comments yet. Start the discussion!</p>
+        )}
+      </div>
       <AlertDialog open={!!commentToDelete} onOpenChange={() => setCommentToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

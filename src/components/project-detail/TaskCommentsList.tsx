@@ -51,7 +51,7 @@ const TaskCommentsList: React.FC<TaskCommentsListProps> = (props) => {
 
   return (
     <div className="space-y-6">
-      {comments.map((comment) => (
+      {[...comments].reverse().map((comment) => (
         <Comment
           key={comment.id}
           comment={comment}
