@@ -148,13 +148,21 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
       const { data, error } = await supabase.functions.invoke('generate-description', {
         body: { title: formData.title, currentDescription: formData.description }
       });
-      if (error) throw error;
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
       if (data?.description) {
         handleChange('description', data.description);
         toast.success("Description generated!");
       }
     } catch (error: any) {
-      toast.error("Failed to generate description: " + error.message);
+      toast.error(error.message || "Failed to generate description");
     } finally {
       setIsGenerating(false);
     }
