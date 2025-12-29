@@ -20,7 +20,6 @@ interface CommentInputProps {
   onCancelReply?: () => void;
   storageKey: string;
   dropUp?: boolean;
-  placeholder?: string;
 }
 
 export interface CommentInputHandle {
@@ -36,8 +35,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
   replyTo, 
   onCancelReply, 
   storageKey,
-  dropUp = true,
-  placeholder
+  dropUp = true 
 }, ref) => {
   const { user } = useAuth();
   
@@ -241,7 +239,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
             <MentionsInput
               value={text}
               onChange={(event, newValue) => setText(newValue)}
-              placeholder={placeholder || "Add a comment..."}
+              placeholder="Add a comment..."
               className="mentions-input w-full"
               a11ySuggestionsListLabel={"Suggested mentions"}
               inputRef={mentionsInputRef}
