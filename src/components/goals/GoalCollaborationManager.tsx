@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreVertical, UserCog } from 'lucide-react';
+import { PlusCircle, MoreVertical, UserCog, Crown } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +37,7 @@ import { Badge } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
 import { Input } from '../ui/input';
 import { getInitials, generatePastelColor, getAvatarUrl } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface GoalCollaborationManagerProps {
   goal: Goal;
@@ -122,12 +123,12 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Collaborators</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-lg font-medium">Collaborators</CardTitle>
           {isOwner && (
             <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="h-8">
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Manage
                 </Button>
@@ -176,36 +177,68 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
             </Dialog>
           )}
         </CardHeader>
-        <CardContent className="space-y-4">
-          {goal.collaborators.map(user => (
-            <div key={user.id} className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
-                  <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium">{user.name}</p>
-                  {user.id === goal.user_id && <Badge variant="secondary">Owner</Badge>}
-                </div>
-              </div>
-              {isOwner && user.id !== currentUser.id && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => setUserToMakeOwner(user)}>
-                      <UserCog className="mr-2 h-4 w-4" />
-                      Make Owner
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-          ))}
+        <CardContent>
+          <div className="flex items-center -space-x-3 overflow-hidden p-1">
+            <TooltipProvider>
+              {goal.collaborators.map((user) => {
+                const isGoalOwner = user.id === goal.user_id;
+                const canManage = isOwner && !isGoalOwner;
+
+                const AvatarComponent = (
+                  <div
+                    className={`relative inline-block rounded-full ring-2 ${
+                      isGoalOwner ? 'ring-yellow-400 z-10' : 'ring-background hover:z-20 transition-all'
+                    }`}
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} alt={user.name} />
+                      <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
+                    </Avatar>
+                    {isGoalOwner && (
+                      <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full p-[1px] border border-background">
+                        <Crown className="h-2.5 w-2.5 text-white" fill="currentColor" />
+                      </div>
+                    )}
+                  </div>
+                );
+
+                return (
+                  <div key={user.id}>
+                    {canManage ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className="focus:outline-none cursor-pointer">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              {AvatarComponent}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{user.name} {isGoalOwner ? '(Owner)' : ''}</p>
+                              <p className="text-xs text-muted-foreground">Click to manage</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                          <DropdownMenuItem onSelect={() => setUserToMakeOwner(user)}>
+                            <UserCog className="mr-2 h-4 w-4" />
+                            Make Owner
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          {AvatarComponent}
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{user.name} {isGoalOwner ? '(Owner)' : ''}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                );
+              })}
+            </TooltipProvider>
+          </div>
         </CardContent>
       </Card>
       <AlertDialog open={!!userToMakeOwner} onOpenChange={() => setUserToMakeOwner(null)}>
