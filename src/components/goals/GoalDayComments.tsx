@@ -22,7 +22,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const [isFetching, setIsFetching] = useState(true);
   const [replyingTo, setReplyingTo] = useState<CommentType | null>(null);
   const commentInputRef = useRef<CommentInputHandle>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const formattedDate = format(date, 'yyyy-MM-dd');
 
@@ -71,7 +70,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
         `)
         .eq('goal_id', goalId)
         .eq('comment_date', formattedDate)
-        .order('created_at', { ascending: true }); // Chronological order
+        .order('created_at', { ascending: false }); // Newest first
 
       if (error) throw error;
 
@@ -186,13 +185,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       supabase.removeChannel(channel);
     };
   }, [goalId, formattedDate]);
-
-  // Auto-scroll to bottom on new comments
-  useEffect(() => {
-    if (messagesEndRef.current && !isFetching) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [comments, isFetching]);
 
   const handleAddComment = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null) => {
     if (!user) return;
@@ -420,7 +412,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
               />
             ))
           )}
-          <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
 
