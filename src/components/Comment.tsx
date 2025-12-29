@@ -250,7 +250,7 @@ const Comment: React.FC<CommentProps> = ({
                 >
                   <span className="font-semibold text-primary mb-0.5">Replying to {repliedMsg.senderName}</span>
                   <span className="line-clamp-2 text-muted-foreground/90 w-full">
-                    <MarkdownRenderer className="text-xs [&>p]:mb-0 [&>p]:leading-normal text-muted-foreground">{repliedMsg.content || ''}</MarkdownRenderer>
+                    <MarkdownRenderer className="text-xs [&>p]:!mb-0 [&>p]:!leading-normal [&>p]:!text-xs text-muted-foreground">{repliedMsg.content || ''}</MarkdownRenderer>
                   </span>
                 </button>
               )}
