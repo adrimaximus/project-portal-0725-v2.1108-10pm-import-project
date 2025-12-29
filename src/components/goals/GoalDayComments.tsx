@@ -383,7 +383,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           onAddCommentOrTicket={handleAddComment}
           allUsers={allUsers}
           storageKey={`goal-comment-${goalId}-${formattedDate}`}
-          dropUp={false}
+          dropUp={false} // Important: Set to false so suggestions drop down
           placeholder="Add a note... (@ to mention)"
           replyTo={replyingTo}
           onCancelReply={() => setReplyingTo(null)}
