@@ -25,7 +25,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   
   const formattedDate = format(date, 'yyyy-MM-dd');
 
-  // Fetch users for mentions
+  // Fetch users for mentions and mapping
   useEffect(() => {
     const fetchUsers = async () => {
       const { data } = await supabase.from('profiles').select('*');
@@ -45,21 +45,20 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
   const fetchComments = async () => {
     try {
-      // Fetch comments with author profile, reactions, and parent comment info
+      // Simplified query to avoid deep nesting issues
       const { data, error } = await supabase
         .from('goal_comments')
         .select(`
           *,
-          profiles!user_id (
+          profiles (
             id, first_name, last_name, email, avatar_url
           ),
           goal_comment_reactions (
-            id, emoji, user_id, 
-            profiles (id, first_name, last_name, email)
+            id, emoji, user_id
           ),
           replied_comment:goal_comments!reply_to_comment_id (
             content,
-            profiles!user_id (first_name, last_name, email)
+            user_id
           )
         `)
         .eq('goal_id', goalId)
@@ -68,33 +67,63 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
       if (error) throw error;
 
+      // Helper to find user details from allUsers or the profile included in the comment
+      const getUserDetails = (userId: string, profileData?: any): User => {
+        // Try to find in allUsers first (if loaded)
+        const foundUser = allUsers.find(u => u.id === userId);
+        if (foundUser) return foundUser;
+
+        // Fallback to profile data from the join
+        if (profileData) {
+          return {
+            id: profileData.id,
+            name: `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() || profileData.email || 'Unknown',
+            avatar_url: profileData.avatar_url,
+            email: profileData.email,
+            initials: getInitials(`${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() || profileData.email || '')
+          };
+        }
+
+        return {
+          id: userId,
+          name: 'Unknown User',
+          email: '',
+          initials: '??'
+        };
+      };
+
       const transformedComments: CommentType[] = (data || []).map((item: any) => {
         // Map Author
-        const author: User = {
-          id: item.user_id,
-          name: `${item.profiles?.first_name || ''} ${item.profiles?.last_name || ''}`.trim() || item.profiles?.email || 'Unknown',
-          avatar_url: item.profiles?.avatar_url,
-          email: item.profiles?.email,
-          initials: getInitials(`${item.profiles?.first_name || ''} ${item.profiles?.last_name || ''}`.trim() || item.profiles?.email || '')
-        };
+        const author = getUserDetails(item.user_id, item.profiles);
 
         // Map Reactions
-        const reactions = (item.goal_comment_reactions || []).map((r: any) => ({
-          id: r.id,
-          emoji: r.emoji,
-          user_id: r.user_id,
-          user_name: `${r.profiles?.first_name || ''} ${r.profiles?.last_name || ''}`.trim() || r.profiles?.email || 'Unknown',
-          profiles: r.profiles
-        }));
+        const reactions = (item.goal_comment_reactions || []).map((r: any) => {
+          const reactor = allUsers.find(u => u.id === r.user_id);
+          return {
+            id: r.id,
+            emoji: r.emoji,
+            user_id: r.user_id,
+            user_name: reactor ? reactor.name : 'Unknown',
+            profiles: reactor ? {
+                id: reactor.id,
+                first_name: reactor.name.split(' ')[0],
+                last_name: reactor.name.split(' ').slice(1).join(' '),
+                email: reactor.email
+            } : undefined
+          };
+        });
 
         // Map Replied Message
         let repliedMessage = null;
         if (item.replied_comment) {
-          const replyAuthorName = `${item.replied_comment.profiles?.first_name || ''} ${item.replied_comment.profiles?.last_name || ''}`.trim() || item.replied_comment.profiles?.email || 'Unknown';
+          // We try to find the author of the replied comment from our users list
+          const replyAuthor = allUsers.find(u => u.id === item.replied_comment.user_id);
+          const replyAuthorName = replyAuthor ? replyAuthor.name : 'Unknown User';
+          
           repliedMessage = {
             content: item.replied_comment.content,
             senderName: replyAuthorName,
-            isDeleted: false // Simplification
+            isDeleted: false
           };
         }
 
@@ -119,6 +148,13 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       setIsFetching(false);
     }
   };
+
+  // Re-fetch when allUsers loads to ensure names are populated correctly
+  useEffect(() => {
+    if (allUsers.length > 0) {
+      fetchComments();
+    }
+  }, [allUsers.length]); // Only re-run when users are initially loaded
 
   useEffect(() => {
     setIsFetching(true);
