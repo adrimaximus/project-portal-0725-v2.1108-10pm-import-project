@@ -75,20 +75,22 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
       // Helper to find user details
       const getUserDetails = (userId: string, profileData?: any): User => {
-        // Try to find in allUsers first (if loaded)
-        const foundUser = allUsers.find(u => u.id === userId);
-        if (foundUser) return foundUser;
+        // Handle case where profileData might be an array (if 1-many inference happens)
+        const profile = Array.isArray(profileData) ? profileData[0] : profileData;
 
-        // Fallback to profile data from the join
-        if (profileData) {
+        if (profile) {
           return {
-            id: profileData.id,
-            name: `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() || profileData.email || 'Unknown',
-            avatar_url: profileData.avatar_url,
-            email: profileData.email,
-            initials: getInitials(`${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() || profileData.email || '')
+            id: profile.id,
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown',
+            avatar_url: profile.avatar_url,
+            email: profile.email,
+            initials: getInitials(`${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || '')
           };
         }
+
+        // Try to find in allUsers if profile relation failed
+        const foundUser = allUsers.find(u => u.id === userId);
+        if (foundUser) return foundUser;
 
         return {
           id: userId,
@@ -121,22 +123,24 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
         // Map Replied Message with fallback
         let repliedMessage = null;
-        if (item.replied_comment) {
-          // Get the profile of the person who wrote the ORIGINAL comment being replied to
-          const rcProfile = item.replied_comment.profiles;
+        // Check if replied_comment exists (could be object or array)
+        const repliedCommentRaw = Array.isArray(item.replied_comment) ? item.replied_comment[0] : item.replied_comment;
+
+        if (repliedCommentRaw) {
+          const rcProfile = Array.isArray(repliedCommentRaw.profiles) ? repliedCommentRaw.profiles[0] : repliedCommentRaw.profiles;
           
           let replyAuthorName = 'Unknown User';
           
           if (rcProfile) {
              replyAuthorName = `${rcProfile.first_name || ''} ${rcProfile.last_name || ''}`.trim() || rcProfile.email || 'Unknown';
-          } else {
-             // Fallback to allUsers lookup using the user_id from the replied comment
-             const replyAuthor = allUsers.find(u => u.id === item.replied_comment.user_id);
+          } else if (repliedCommentRaw.user_id) {
+             // Fallback to allUsers lookup
+             const replyAuthor = allUsers.find(u => u.id === repliedCommentRaw.user_id);
              if (replyAuthor) replyAuthorName = replyAuthor.name;
           }
           
           repliedMessage = {
-            content: item.replied_comment.content,
+            content: repliedCommentRaw.content,
             senderName: replyAuthorName,
             isDeleted: false
           };
@@ -368,7 +372,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           storageKey={`goal-comment-${goalId}-${formattedDate}`}
           dropUp={false}
           placeholder="Add a note... (@ to mention)"
-          replyingTo={replyingTo}
+          replyTo={replyingTo}
           onCancelReply={() => setReplyingTo(null)}
         />
       </div>
