@@ -23,6 +23,22 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className
 
   return (
     <div className={cn("markdown-content text-sm leading-relaxed", className)}>
+      {replyContext && (
+        <button
+          onClick={onReplyClick}
+          className="w-full text-left flex flex-col items-start gap-0.5 text-xs p-2.5 mb-2 bg-muted/30 border-l-[3px] border-primary/50 rounded-r-md hover:bg-muted/50 transition-colors select-none"
+          disabled={!onReplyClick}
+        >
+          <span className="font-semibold text-primary mb-0.5">Replying to {replyContext.senderName}</span>
+          <span className="line-clamp-2 text-muted-foreground/90 w-full pointer-events-none">
+            {/* Recursively render reply content without a replyContext to prevent loops */}
+            <MarkdownRenderer className="text-xs [&>p]:!mb-0 [&>p]:!leading-normal [&>p]:!text-xs text-muted-foreground">
+              {replyContext.content || ''}
+            </MarkdownRenderer>
+          </span>
+        </button>
+      )}
+      
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks]}
         components={{
@@ -138,22 +154,6 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className
       >
         {processedContent}
       </ReactMarkdown>
-
-      {replyContext && (
-        <button
-          onClick={onReplyClick}
-          className="w-full text-left flex flex-col items-start gap-0.5 text-xs p-2.5 mt-2 bg-muted/30 border-l-[3px] border-primary/50 rounded-r-md hover:bg-muted/50 transition-colors select-none"
-          disabled={!onReplyClick}
-        >
-          <span className="font-semibold text-primary mb-0.5">Replying to {replyContext.senderName}</span>
-          <span className="line-clamp-2 text-muted-foreground/90 w-full pointer-events-none">
-            {/* Recursively render reply content without a replyContext to prevent loops */}
-            <MarkdownRenderer className="text-xs [&>p]:!mb-0 [&>p]:!leading-normal [&>p]:!text-xs text-muted-foreground">
-              {replyContext.content || ''}
-            </MarkdownRenderer>
-          </span>
-        </button>
-      )}
     </div>
   );
 };
