@@ -116,9 +116,14 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
         if (repliedCommentRaw) {
           const replyAuthorProfile = Array.isArray(repliedCommentRaw.author) ? repliedCommentRaw.author[0] : repliedCommentRaw.author;
-          const replyAuthorName = replyAuthorProfile
-             ? `${replyAuthorProfile.first_name || ''} ${replyAuthorProfile.last_name || ''}`.trim() || replyAuthorProfile.email
-             : 'Unknown User';
+          
+          const firstName = replyAuthorProfile?.first_name || '';
+          const lastName = replyAuthorProfile?.last_name || '';
+          const email = replyAuthorProfile?.email || '';
+          
+          const replyAuthorName = (firstName || lastName) 
+            ? `${firstName} ${lastName}`.trim() 
+            : (email || 'Unknown User');
           
           repliedMessage = {
             content: repliedCommentRaw.content,
@@ -340,7 +345,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
   const handleEditComment = (comment: CommentType) => {
     setEditingCommentId(comment.id);
-    setEditedText(comment.text);
+    setEditedText(comment.text || "");
   };
 
   const handleCancelEdit = () => {
