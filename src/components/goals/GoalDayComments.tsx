@@ -240,12 +240,10 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   };
 
   const handleReply = (comment: CommentType) => {
-    const replyContext: CommentType = {
-      ...comment,
-      repliedMessage: null,
-      reply_to_comment_id: null
-    };
-    setReplyingTo(replyContext);
+    // FIX: Pass the comment object directly. Do NOT clone or modify it.
+    // This ensures replyTo.id and other metadata are preserved correctly as the source of truth.
+    setReplyingTo(comment);
+    
     if (commentInputRef.current) {
       const mentionText = `@[${comment.author.name}](${comment.author.id}) `;
       commentInputRef.current.scrollIntoView();
