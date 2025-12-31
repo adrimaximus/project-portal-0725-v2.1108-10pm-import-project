@@ -125,26 +125,26 @@ const Comment: React.FC<CommentProps> = ({
 
   return (
     <>
-      <div id={`message-${comment.id}`} className="group flex items-start gap-3 rounded-lg p-2 hover:bg-muted/30 transition-colors">
-        <Avatar className="h-8 w-8 mt-0.5">
+      <div id={`message-${comment.id}`} className="flex items-start gap-3 transition-colors duration-500 rounded-lg p-1 -m-1">
+        <Avatar className="h-8 w-8">
           <AvatarImage src={getAvatarUrl(author.avatar_url, author.id)} />
           <AvatarFallback style={generatePastelColor(author.id)}>
             {getInitials(authorName, author.email)}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm text-foreground">{authorName}</span>
+              <span className="font-semibold text-sm">{authorName}</span>
               <span className="text-xs text-muted-foreground">
                 {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: id })}
               </span>
-              {comment.is_ticket && <Badge variant="outline" className="text-[10px] h-4 px-1">ticket</Badge>}
+              {comment.is_ticket && <Badge variant="outline">from ticket</Badge>}
             </div>
             {user && user.id === author.id && !isEditing && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button variant="ghost" size="icon" className="h-6 w-6">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -243,26 +243,23 @@ const Comment: React.FC<CommentProps> = ({
             </div>
           ) : (
             <>
-              {/* Reply Context Block */}
+              {/* Reply Context Block - Placed as sibling before content */}
               {showReplyBlock && !isEditing && (
                 <button
                   onClick={handleScrollToReply}
-                  className="w-full text-left flex flex-col items-start gap-0.5 text-xs p-2 mb-2 bg-muted/30 border-l-[3px] border-primary/30 rounded-r-sm hover:bg-muted/50 transition-colors select-none"
+                  className="w-full text-left flex flex-col items-start gap-0.5 text-xs p-2.5 mb-2 bg-muted/30 border-l-[3px] border-primary/50 rounded-r-md hover:bg-muted/50 transition-colors select-none mt-1"
                   disabled={!comment.reply_to_comment_id}
                 >
-                  <span className="font-medium text-primary mb-0.5 flex items-center gap-1">
-                    <CornerUpLeft className="h-3 w-3" />
-                    {repliedMsg.senderName}
-                  </span>
-                  <div className="w-full pointer-events-none line-clamp-1 opacity-80">
-                    <MarkdownRenderer className="text-xs [&>p]:!mb-0 [&>p]:!leading-normal">
+                  <span className="font-semibold text-primary mb-0.5">Replying to {repliedMsg.senderName}</span>
+                  <span className="line-clamp-2 text-muted-foreground/90 w-full pointer-events-none">
+                    <MarkdownRenderer className="text-xs [&>p]:!mb-0 [&>p]:!leading-normal [&>p]:!text-xs text-muted-foreground">
                       {repliedMsg.content || ''}
                     </MarkdownRenderer>
-                  </div>
+                  </span>
                 </button>
               )}
 
-              <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-0 [&_p]:text-justify text-sm">
+              <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-0 [&_p]:text-justify mt-1">
                 <MarkdownRenderer>
                   {comment.text || ''}
                 </MarkdownRenderer>
@@ -276,15 +273,15 @@ const Comment: React.FC<CommentProps> = ({
                   </Button>
                 </div>
               )}
-              <div className="mt-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="sm" className="text-muted-foreground h-6 px-2 text-xs hover:text-foreground" onClick={() => onReply(comment)}>
+              <div className="mt-1 flex items-center gap-2">
+                <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs hover:text-foreground" onClick={() => onReply(comment)}>
                   <CornerUpLeft className="h-3 w-3 mr-1" /> Reply
                 </Button>
                 <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => onToggleReaction(comment.id, emoji)} />
                 {!comment.is_ticket && (
-                  <Button variant="ghost" size="sm" className="text-muted-foreground h-6 px-2 text-xs hover:text-foreground" onClick={() => onCreateTicketFromComment(comment)}>
+                  <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs hover:text-foreground" onClick={() => onCreateTicketFromComment(comment)}>
                     <Ticket className="h-3 w-3 sm:mr-1" />
-                    <span className="hidden sm:inline">Ticket</span>
+                    <span className="hidden sm:inline">Create Ticket</span>
                   </Button>
                 )}
               </div>
