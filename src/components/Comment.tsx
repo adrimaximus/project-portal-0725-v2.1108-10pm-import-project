@@ -159,6 +159,23 @@ const Comment: React.FC<CommentProps> = ({
               </DropdownMenu>
             )}
           </div>
+
+          {/* Reply Context Block - Placed here per user request */}
+          {showReplyBlock && repliedMsg && !isEditing && (
+            <button
+              onClick={handleScrollToReply}
+              className="w-full text-left flex flex-col items-start gap-0.5 text-xs p-2.5 mb-2 bg-muted/30 border-l-[3px] border-primary/50 rounded-r-md hover:bg-muted/50 transition-colors select-none mt-1"
+              disabled={!comment.reply_to_comment_id}
+            >
+              <span className="font-semibold text-primary mb-0.5">Replying to {repliedMsg.senderName}</span>
+              <span className="line-clamp-2 text-muted-foreground/90 w-full pointer-events-none">
+                <MarkdownRenderer className="text-xs [&>p]:!mb-0 [&>p]:!leading-normal [&>p]:!text-xs text-muted-foreground">
+                  {repliedMsg.content || ''}
+                </MarkdownRenderer>
+              </span>
+            </button>
+          )}
+
           {isEditing ? (
             <div className="mt-1 space-y-2">
               <div className="border rounded-md focus-within:ring-1 focus-within:ring-ring">
@@ -243,10 +260,7 @@ const Comment: React.FC<CommentProps> = ({
           ) : (
             <>
               <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-0 [&_p]:text-justify mt-1">
-                <MarkdownRenderer 
-                  replyContext={showReplyBlock && repliedMsg ? repliedMsg : null}
-                  onReplyClick={comment.reply_to_comment_id ? handleScrollToReply : undefined}
-                >
+                <MarkdownRenderer>
                   {comment.text || ''}
                 </MarkdownRenderer>
               </div>
