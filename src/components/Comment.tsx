@@ -107,7 +107,7 @@ const Comment: React.FC<CommentProps> = ({
     return null;
   }, [comment]);
 
-  const showReplyBlock = !!repliedMsg;
+  const showReplyBlock = !!repliedMsg && !!comment.reply_to_comment_id;
 
   const handleScrollToReply = () => {
     if (onGoToReply && comment.reply_to_comment_id) {
@@ -244,7 +244,7 @@ const Comment: React.FC<CommentProps> = ({
           ) : (
             <>
               {/* Reply Context Block - Placed as sibling before content */}
-              {showReplyBlock && repliedMsg && !isEditing && (
+              {showReplyBlock && !isEditing && (
                 <button
                   onClick={handleScrollToReply}
                   className="w-full text-left flex flex-col items-start gap-0.5 text-xs p-2.5 mb-2 bg-muted/30 border-l-[3px] border-primary/50 rounded-r-md hover:bg-muted/50 transition-colors select-none mt-1"

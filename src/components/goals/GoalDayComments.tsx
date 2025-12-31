@@ -112,24 +112,27 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
         // Map Replied Message
         let repliedMessage = null;
-        const repliedCommentRaw = Array.isArray(item.replied_comment) ? item.replied_comment[0] : item.replied_comment;
+        // Check if this comment is actually a reply (has reply_to_comment_id)
+        if (item.reply_to_comment_id) {
+            const repliedCommentRaw = Array.isArray(item.replied_comment) ? item.replied_comment[0] : item.replied_comment;
 
-        if (repliedCommentRaw) {
-          const replyAuthorProfile = Array.isArray(repliedCommentRaw.author) ? repliedCommentRaw.author[0] : repliedCommentRaw.author;
-          
-          const firstName = replyAuthorProfile?.first_name || '';
-          const lastName = replyAuthorProfile?.last_name || '';
-          const email = replyAuthorProfile?.email || '';
-          
-          const replyAuthorName = (firstName || lastName) 
-            ? `${firstName} ${lastName}`.trim() 
-            : (email || 'Unknown User');
-          
-          repliedMessage = {
-            content: repliedCommentRaw.content,
-            senderName: replyAuthorName,
-            isDeleted: false
-          };
+            if (repliedCommentRaw) {
+              const replyAuthorProfile = Array.isArray(repliedCommentRaw.author) ? repliedCommentRaw.author[0] : repliedCommentRaw.author;
+              
+              const firstName = replyAuthorProfile?.first_name || '';
+              const lastName = replyAuthorProfile?.last_name || '';
+              const email = replyAuthorProfile?.email || '';
+              
+              const replyAuthorName = (firstName || lastName) 
+                ? `${firstName} ${lastName}`.trim() 
+                : (email || 'Unknown User');
+              
+              repliedMessage = {
+                content: repliedCommentRaw.content,
+                senderName: replyAuthorName,
+                isDeleted: false
+              };
+            }
         }
 
         return {
