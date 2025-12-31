@@ -242,11 +242,30 @@ const Comment: React.FC<CommentProps> = ({
             </div>
           ) : (
             <>
+              {showReplyBlock && repliedMsg && (
+                <div className="mt-0.5 mb-1">
+                    <button
+                        onClick={comment.reply_to_comment_id ? handleScrollToReply : undefined}
+                        disabled={!comment.reply_to_comment_id}
+                        className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors max-w-full group text-left w-full"
+                    >
+                        <CornerUpLeft className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground/70" />
+                        <div className="flex-1 min-w-0 bg-muted/40 border-l-[3px] border-primary/30 rounded-r-sm px-2 py-1.5 hover:bg-muted/60 hover:border-primary/50 transition-all">
+                             <div className="font-semibold text-primary text-[11px] mb-0.5 flex items-center gap-1">
+                                {repliedMsg.senderName}
+                             </div>
+                             <div className="line-clamp-1 opacity-90 break-words pointer-events-none">
+                                <MarkdownRenderer className="text-[11px] leading-tight [&>p]:!mb-0 [&>p]:!leading-tight">
+                                    {repliedMsg.content || ''}
+                                </MarkdownRenderer>
+                             </div>
+                        </div>
+                    </button>
+                </div>
+              )}
+
               <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-0 [&_p]:text-justify mt-1">
-                <MarkdownRenderer 
-                  replyContext={showReplyBlock && repliedMsg ? repliedMsg : null}
-                  onReplyClick={comment.reply_to_comment_id ? handleScrollToReply : undefined}
-                >
+                <MarkdownRenderer>
                   {comment.text || ''}
                 </MarkdownRenderer>
               </div>
