@@ -21,6 +21,11 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isFetching, setIsFetching] = useState(true);
   const [replyingTo, setReplyingTo] = useState<CommentType | null>(null);
+  
+  // Edit states
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editedText, setEditedText] = useState("");
+  
   const commentInputRef = useRef<CommentInputHandle>(null);
   
   const formattedDate = format(date, 'yyyy-MM-dd');
@@ -45,96 +50,75 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
   const fetchComments = async () => {
     try {
-      // Fetch comments including the parent message data (replied_comment)
-      // This allows us to rebuild the conversation thread context visually.
+      // Improved query using joins with aliases for cleaner data mapping
       const { data, error } = await supabase
         .from('goal_comments')
         .select(`
           *,
-          profiles (
+          author:profiles!goal_comments_user_id_fkey (
             id, first_name, last_name, email, avatar_url
           ),
-          goal_comment_reactions (
-            id, emoji, user_id
+          reactions:goal_comment_reactions (
+            id, emoji, user_id,
+            user:profiles (
+              id, first_name, last_name, email
+            )
           ),
           replied_comment:goal_comments!reply_to_comment_id (
             content,
             user_id,
-            profiles (
-              id,
-              first_name,
-              last_name,
-              email
+            author:profiles!goal_comments_user_id_fkey (
+              id, first_name, last_name, email
             )
           )
         `)
         .eq('goal_id', goalId)
         .eq('comment_date', formattedDate)
-        .order('created_at', { ascending: false }); // Newest first
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Helper to find user details
-      const getUserDetails = (userId: string, profileData?: any): User => {
-        const profile = Array.isArray(profileData) ? profileData[0] : profileData;
-
-        if (profile) {
-          return {
-            id: profile.id,
-            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown',
-            avatar_url: profile.avatar_url,
-            email: profile.email,
-            initials: getInitials(`${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || '')
-          };
-        }
-
-        const foundUser = allUsers.find(u => u.id === userId);
-        if (foundUser) return foundUser;
-
-        return {
-          id: userId,
-          name: 'Unknown User',
-          email: '',
-          initials: '??'
-        };
-      };
-
       const transformedComments: CommentType[] = (data || []).map((item: any) => {
         // Map Author
-        const author = getUserDetails(item.user_id, item.profiles);
+        const authorProfile = Array.isArray(item.author) ? item.author[0] : item.author;
+        const author: User = authorProfile ? {
+          id: authorProfile.id,
+          name: `${authorProfile.first_name || ''} ${authorProfile.last_name || ''}`.trim() || authorProfile.email || 'Unknown',
+          avatar_url: authorProfile.avatar_url,
+          email: authorProfile.email,
+          initials: getInitials(`${authorProfile.first_name || ''} ${authorProfile.last_name || ''}`.trim() || authorProfile.email || '')
+        } : { id: item.user_id, name: 'Unknown', email: '', initials: '??' };
 
         // Map Reactions
-        const reactions = (item.goal_comment_reactions || []).map((r: any) => {
-          const reactor = allUsers.find(u => u.id === r.user_id);
+        const reactions = (item.reactions || []).map((r: any) => {
+          const reactorProfile = Array.isArray(r.user) ? r.user[0] : r.user;
+          const reactorName = reactorProfile 
+            ? `${reactorProfile.first_name || ''} ${reactorProfile.last_name || ''}`.trim() || reactorProfile.email 
+            : 'Unknown';
+            
           return {
             id: r.id,
             emoji: r.emoji,
             user_id: r.user_id,
-            user_name: reactor ? reactor.name : 'Unknown',
-            profiles: reactor ? {
-                id: reactor.id,
-                first_name: reactor.name.split(' ')[0],
-                last_name: reactor.name.split(' ').slice(1).join(' '),
-                email: reactor.email
+            user_name: reactorName,
+            profiles: reactorProfile ? {
+                id: reactorProfile.id,
+                first_name: reactorProfile.first_name,
+                last_name: reactorProfile.last_name,
+                email: reactorProfile.email
             } : undefined
           };
         });
 
-        // Map Replied Message (The Context)
+        // Map Replied Message
         let repliedMessage = null;
         const repliedCommentRaw = Array.isArray(item.replied_comment) ? item.replied_comment[0] : item.replied_comment;
 
         if (repliedCommentRaw) {
-          const rcProfile = Array.isArray(repliedCommentRaw.profiles) ? repliedCommentRaw.profiles[0] : repliedCommentRaw.profiles;
-          
-          let replyAuthorName = 'Unknown User';
-          
-          if (rcProfile) {
-             replyAuthorName = `${rcProfile.first_name || ''} ${rcProfile.last_name || ''}`.trim() || rcProfile.email || 'Unknown';
-          } else if (repliedCommentRaw.user_id) {
-             const replyAuthor = allUsers.find(u => u.id === repliedCommentRaw.user_id);
-             if (replyAuthor) replyAuthorName = replyAuthor.name;
-          }
+          const replyAuthorProfile = Array.isArray(repliedCommentRaw.author) ? repliedCommentRaw.author[0] : repliedCommentRaw.author;
+          const replyAuthorName = replyAuthorProfile
+             ? `${replyAuthorProfile.first_name || ''} ${replyAuthorProfile.last_name || ''}`.trim() || replyAuthorProfile.email
+             : 'Unknown User';
           
           repliedMessage = {
             content: repliedCommentRaw.content,
@@ -164,12 +148,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       setIsFetching(false);
     }
   };
-
-  useEffect(() => {
-    if (allUsers.length > 0) {
-      fetchComments();
-    }
-  }, [allUsers.length]);
 
   useEffect(() => {
     setIsFetching(true);
@@ -221,9 +199,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       }
     }
 
-    // Determine Parent ID logic:
-    // If we are in "Replying To" mode, the parent is the ID of the message currently set in state (replyingTo.id).
-    // This creates a direct link: Child -> Parent.
     const parentCommentId = replyToId !== undefined ? replyToId : (replyingTo?.id || null);
 
     const { error } = await supabase
@@ -241,7 +216,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       toast.error('Failed to post comment');
     } else {
       await fetchComments();
-      setReplyingTo(null); // Clear context after sending
+      setReplyingTo(null);
       if (commentInputRef.current) {
         commentInputRef.current.setText('');
       }
@@ -294,15 +269,10 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   };
 
   const handleReply = (comment: CommentType) => {
-    // LOGIC FIX: When clicking reply, we set the 'replyingTo' context to the CLICKED message.
-    // We strictly strip any 'repliedMessage' (nested context) from it. 
-    // This ensures the input UI shows "Replying to [Clicked Message]" as a flat, single block.
-    // The database parent_id will be [Clicked Message].id.
-    
     const replyContext: CommentType = {
       ...comment,
-      repliedMessage: null, // Remove nested context to prevent UI nesting/cascading
-      reply_to_comment_id: null // Clear this so UI doesn't try to look up grandparents
+      repliedMessage: null,
+      reply_to_comment_id: null
     };
     
     setReplyingTo(replyContext);
@@ -368,6 +338,34 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     }
   };
 
+  const handleEditComment = (comment: CommentType) => {
+    setEditingCommentId(comment.id);
+    setEditedText(comment.text);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditedText("");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingCommentId) return;
+
+    const { error } = await supabase
+      .from('goal_comments')
+      .update({ content: editedText })
+      .eq('id', editingCommentId);
+
+    if (error) {
+      toast.error("Failed to update comment");
+    } else {
+      toast.success("Comment updated");
+      setEditingCommentId(null);
+      setEditedText("");
+      await fetchComments();
+    }
+  };
+
   return (
     <div className="flex flex-col h-[450px] border-t bg-muted/10">
       <div className="p-3 border-b bg-background/50 backdrop-blur-sm flex justify-between items-center">
@@ -406,12 +404,12 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
               <Comment
                 key={comment.id}
                 comment={comment}
-                isEditing={false}
-                editedText=""
-                setEditedText={() => {}}
-                handleSaveEdit={() => {}}
-                handleCancelEdit={() => {}}
-                onEdit={() => toast.info("Editing coming soon")}
+                isEditing={editingCommentId === comment.id}
+                editedText={editedText}
+                setEditedText={setEditedText}
+                handleSaveEdit={handleSaveEdit}
+                handleCancelEdit={handleCancelEdit}
+                onEdit={handleEditComment}
                 onDelete={(c) => handleDeleteComment(c)}
                 onToggleReaction={handleReaction}
                 onReply={handleReply}
