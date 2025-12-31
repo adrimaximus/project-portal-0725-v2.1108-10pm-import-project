@@ -9,6 +9,7 @@ import CommentInput, { CommentInputHandle } from '@/components/CommentInput';
 import Comment from '@/components/Comment';
 import { User, Comment as CommentType } from '@/types';
 import { getInitials } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface GoalDayCommentsProps {
   goalId: string;
@@ -21,6 +22,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isFetching, setIsFetching] = useState(true);
   const [replyingTo, setReplyingTo] = useState<CommentType | null>(null);
+  const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
   
   // Edit states
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -50,7 +52,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
   const fetchComments = async () => {
     try {
-      // Improved query using joins with aliases for cleaner data mapping
       const { data, error } = await supabase
         .from('goal_comments')
         .select(`
@@ -79,7 +80,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       if (error) throw error;
 
       const transformedComments: CommentType[] = (data || []).map((item: any) => {
-        // Map Author
         const authorProfile = Array.isArray(item.author) ? item.author[0] : item.author;
         const author: User = authorProfile ? {
           id: authorProfile.id,
@@ -89,18 +89,13 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           initials: getInitials(`${authorProfile.first_name || ''} ${authorProfile.last_name || ''}`.trim() || authorProfile.email || '')
         } : { id: item.user_id, name: 'Unknown', email: '', initials: '??' };
 
-        // Map Reactions
         const reactions = (item.reactions || []).map((r: any) => {
           const reactorProfile = Array.isArray(r.user) ? r.user[0] : r.user;
-          const reactorName = reactorProfile 
-            ? `${reactorProfile.first_name || ''} ${reactorProfile.last_name || ''}`.trim() || reactorProfile.email 
-            : 'Unknown';
-            
           return {
             id: r.id,
             emoji: r.emoji,
             user_id: r.user_id,
-            user_name: reactorName,
+            user_name: reactorProfile ? `${reactorProfile.first_name || ''} ${reactorProfile.last_name || ''}`.trim() || reactorProfile.email : 'Unknown',
             profiles: reactorProfile ? {
                 id: reactorProfile.id,
                 first_name: reactorProfile.first_name,
@@ -110,22 +105,15 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           };
         });
 
-        // Map Replied Message
         let repliedMessage = null;
-        // Check if this comment is actually a reply (has reply_to_comment_id)
         if (item.reply_to_comment_id) {
             const repliedCommentRaw = Array.isArray(item.replied_comment) ? item.replied_comment[0] : item.replied_comment;
 
             if (repliedCommentRaw) {
               const replyAuthorProfile = Array.isArray(repliedCommentRaw.author) ? repliedCommentRaw.author[0] : repliedCommentRaw.author;
-              
-              const firstName = replyAuthorProfile?.first_name || '';
-              const lastName = replyAuthorProfile?.last_name || '';
-              const email = replyAuthorProfile?.email || '';
-              
-              const replyAuthorName = (firstName || lastName) 
-                ? `${firstName} ${lastName}`.trim() 
-                : (email || 'Unknown User');
+              const replyAuthorName = replyAuthorProfile
+                 ? `${replyAuthorProfile.first_name || ''} ${replyAuthorProfile.last_name || ''}`.trim() || replyAuthorProfile.email
+                 : 'Unknown User';
               
               repliedMessage = {
                 content: repliedCommentRaw.content,
@@ -176,24 +164,15 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     if (!user) return;
 
     let uploadedAttachments: any[] = [];
-
     if (attachments && attachments.length > 0) {
       for (const file of attachments) {
         try {
           const fileExt = file.name.split('.').pop();
           const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
           const filePath = `comments/${goalId}/${fileName}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from('goal_attachments')
-            .upload(filePath, file);
-
+          const { error: uploadError } = await supabase.storage.from('goal_attachments').upload(filePath, file);
           if (uploadError) throw uploadError;
-
-          const { data: { publicUrl } } = supabase.storage
-            .from('goal_attachments')
-            .getPublicUrl(filePath);
-
+          const { data: { publicUrl } } = supabase.storage.from('goal_attachments').getPublicUrl(filePath);
           uploadedAttachments.push({
             type: file.type.startsWith('image/') ? 'image' : 'file',
             url: publicUrl,
@@ -201,7 +180,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
             size: file.size
           });
         } catch (error) {
-          console.error('Error uploading file:', error);
           toast.error(`Failed to upload ${file.name}`);
         }
       }
@@ -209,16 +187,14 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
     const parentCommentId = replyToId !== undefined ? replyToId : (replyingTo?.id || null);
 
-    const { error } = await supabase
-      .from('goal_comments')
-      .insert({
-        goal_id: goalId,
-        user_id: user.id,
-        comment_date: formattedDate,
-        content: text.trim(),
-        attachments_jsonb: uploadedAttachments,
-        reply_to_comment_id: parentCommentId
-      });
+    const { error } = await supabase.from('goal_comments').insert({
+      goal_id: goalId,
+      user_id: user.id,
+      comment_date: formattedDate,
+      content: text.trim(),
+      attachments_jsonb: uploadedAttachments,
+      reply_to_comment_id: parentCommentId
+    });
 
     if (error) {
       toast.error('Failed to post comment');
@@ -231,47 +207,34 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     }
   };
 
-  const handleDeleteComment = async (comment: CommentType) => {
-    if (comment.author.id !== user?.id) {
+  const handleDeleteComment = async () => {
+    if (!commentToDelete || !user) return;
+    if (commentToDelete.author.id !== user.id) {
       toast.error("You can only delete your own comments");
+      setCommentToDelete(null);
       return;
     }
 
-    const { error } = await supabase
-      .from('goal_comments')
-      .delete()
-      .eq('id', comment.id);
-
+    const { error } = await supabase.from('goal_comments').delete().eq('id', commentToDelete.id);
     if (error) {
       toast.error('Failed to delete comment');
     } else {
       toast.success('Comment deleted');
       await fetchComments();
     }
+    setCommentToDelete(null);
   };
 
   const handleReaction = async (commentId: string, emoji: string) => {
     if (!user) return;
-
     const currentComment = comments.find(c => c.id === commentId);
     const existingReaction = currentComment?.reactions?.find(r => r.user_id === user.id && r.emoji === emoji);
 
     if (existingReaction) {
-      const { error } = await supabase
-        .from('goal_comment_reactions')
-        .delete()
-        .eq('id', existingReaction.id);
-      
+      const { error } = await supabase.from('goal_comment_reactions').delete().eq('id', existingReaction.id);
       if (error) toast.error('Failed to remove reaction');
     } else {
-      const { error } = await supabase
-        .from('goal_comment_reactions')
-        .insert({
-          comment_id: commentId,
-          user_id: user.id,
-          emoji: emoji
-        });
-      
+      const { error } = await supabase.from('goal_comment_reactions').insert({ comment_id: commentId, user_id: user.id, emoji: emoji });
       if (error) toast.error('Failed to add reaction');
     }
   };
@@ -282,9 +245,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       repliedMessage: null,
       reply_to_comment_id: null
     };
-    
     setReplyingTo(replyContext);
-    
     if (commentInputRef.current) {
       const mentionText = `@[${comment.author.name}](${comment.author.id}) `;
       commentInputRef.current.scrollIntoView();
@@ -299,13 +260,9 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
   const handleCreateTicket = async (comment: CommentType) => {
     if (!user) return;
-    
     try {
       const { data: projectId, error: projectError } = await supabase.rpc('get_personal_project_id');
-      
-      if (projectError || !projectId) {
-        throw new Error('Could not find personal project');
-      }
+      if (projectError || !projectId) throw new Error('Could not find personal project');
 
       const { error: taskError } = await supabase.from('tasks').insert({
         project_id: projectId,
@@ -316,21 +273,14 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
         status: 'To do',
         priority: 'Normal'
       });
-
       if (taskError) throw taskError;
 
-      const { error: updateError } = await supabase
-        .from('goal_comments')
-        .update({ is_ticket: true })
-        .eq('id', comment.id);
-
+      const { error: updateError } = await supabase.from('goal_comments').update({ is_ticket: true }).eq('id', comment.id);
       if (updateError) throw updateError;
 
       toast.success('Ticket created in your personal project');
       await fetchComments();
-
     } catch (error) {
-      console.error('Error creating ticket:', error);
       toast.error('Failed to create ticket');
     }
   };
@@ -358,12 +308,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
   const handleSaveEdit = async () => {
     if (!editingCommentId) return;
-
-    const { error } = await supabase
-      .from('goal_comments')
-      .update({ content: editedText })
-      .eq('id', editingCommentId);
-
+    const { error } = await supabase.from('goal_comments').update({ content: editedText }).eq('id', editingCommentId);
     if (error) {
       toast.error("Failed to update comment");
     } else {
@@ -389,7 +334,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           onAddCommentOrTicket={handleAddComment}
           allUsers={allUsers}
           storageKey={`goal-comment-${goalId}-${formattedDate}`}
-          dropUp={false} // Important: Set to false so suggestions drop down
+          dropUp={false}
           placeholder="Add a note... (@ to mention)"
           replyTo={replyingTo}
           onCancelReply={() => setReplyingTo(null)}
@@ -418,7 +363,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
                 handleSaveEdit={handleSaveEdit}
                 handleCancelEdit={handleCancelEdit}
                 onEdit={handleEditComment}
-                onDelete={(c) => handleDeleteComment(c)}
+                onDelete={setCommentToDelete}
                 onToggleReaction={handleReaction}
                 onReply={handleReply}
                 onCreateTicketFromComment={handleCreateTicket}
@@ -433,6 +378,20 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           )}
         </div>
       </ScrollArea>
+      <AlertDialog open={!!commentToDelete} onOpenChange={() => setCommentToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the comment. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={handleDeleteComment}>Delete</AlertDialogAction>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
