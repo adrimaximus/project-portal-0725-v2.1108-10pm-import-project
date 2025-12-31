@@ -240,8 +240,8 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   };
 
   const handleReply = (comment: CommentType) => {
-    // FIX: Pass the comment object directly. Do NOT clone or modify it.
-    // This ensures replyTo.id and other metadata are preserved correctly as the source of truth.
+    // FIX: Use original object to ensure all metadata (like id) is preserved correctly as source of truth.
+    // Do NOT clone and nullify properties.
     setReplyingTo(comment);
     
     if (commentInputRef.current) {

@@ -79,19 +79,15 @@ const Comment: React.FC<CommentProps> = ({
     }))
   ], [allUsers]);
 
-  // Normalize replied message data to handle both 'repliedMessage' (Project comments) 
-  // and 'replied_comment' (Goal comments from raw Supabase join)
   const repliedMsg = useMemo(() => {
     if (comment.repliedMessage) return comment.repliedMessage;
     
     const rawReply = (comment as any).replied_comment;
     if (rawReply) {
-      // Handle potential array from Supabase join
       const reply = Array.isArray(rawReply) ? rawReply[0] : rawReply;
       if (!reply) return null;
       
       const replyAuthor = Array.isArray(reply.author) ? reply.author[0] : reply.profiles || reply.author;
-      // Handle profiles array from join if necessary or single object
       const authorProfile = Array.isArray(replyAuthor) ? replyAuthor[0] : replyAuthor;
       
       const senderName = authorProfile 
@@ -107,13 +103,13 @@ const Comment: React.FC<CommentProps> = ({
     return null;
   }, [comment]);
 
+  // showReplyBlock should be true only if there is both content and a link ID
   const showReplyBlock = !!repliedMsg && !!comment.reply_to_comment_id;
 
   const handleScrollToReply = () => {
     if (onGoToReply && comment.reply_to_comment_id) {
         onGoToReply(comment.reply_to_comment_id);
     } else if (comment.reply_to_comment_id) {
-        // Fallback smooth scroll if onGoToReply not provided
         const element = document.getElementById(`message-${comment.reply_to_comment_id}`);
         if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -243,7 +239,7 @@ const Comment: React.FC<CommentProps> = ({
             </div>
           ) : (
             <>
-              {/* Reply Context Block - Placed as sibling before content */}
+              {/* Reply Context Block */}
               {showReplyBlock && !isEditing && (
                 <button
                   onClick={handleScrollToReply}
