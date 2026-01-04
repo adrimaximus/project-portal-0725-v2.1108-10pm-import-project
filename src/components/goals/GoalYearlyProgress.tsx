@@ -6,13 +6,21 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Check, X, FileText, Paperclip, Eye, Trash2, Send } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, X, FileText, Paperclip, Eye, Trash2, Send, MoreHorizontal, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import AiCoachInsight from './AiCoachInsight';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useAuth } from '@/contexts/AuthContext';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface GoalYearlyProgressProps {
   goal: Goal;
@@ -22,6 +30,7 @@ interface GoalYearlyProgressProps {
 
 const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: GoalYearlyProgressProps) => {
   const { completions: rawCompletions, color, specific_days: specificDays } = goal;
+  const { user } = useAuth();
   
   // Map completions, ensuring we catch 'notes' from DB and map it to 'note' for internal use
   const completions = rawCompletions.map(c => ({ 
@@ -180,6 +189,11 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
           onToggleCompletion(dayToConfirm);
           setDayToConfirm(null);
       }
+  };
+
+  const handleEditNote = () => {
+    setNote(savedNote);
+    setSavedNote("");
   };
 
   return (
@@ -396,17 +410,29 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                       {savedNote && (
                         <div className="space-y-1.5">
                             <Label className="text-sm font-medium text-muted-foreground ml-1">Posted Note</Label>
-                            <div className="p-3 rounded-xl border bg-muted/30 text-sm text-foreground break-words relative group">
-                                {savedNote}
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute top-1 right-1 h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => setSavedNote("")}
-                                    title="Remove note"
-                                >
-                                    <X className="h-3 w-3" />
-                                </Button>
+                            <div className="flex gap-3 items-start p-3 rounded-xl border bg-muted/30 relative group">
+                                <Avatar className="h-8 w-8 shrink-0">
+                                    <AvatarImage src={user?.user_metadata?.avatar_url} />
+                                    <AvatarFallback>{user?.email?.substring(0, 2).toUpperCase() || 'U'}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 text-sm text-foreground break-words pt-1 min-w-0">
+                                    {savedNote}
+                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0 -mt-1 -mr-1">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={handleEditNote}>
+                                            <Pencil className="mr-2 h-4 w-4" /> Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setSavedNote("")}>
+                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
                         </div>
                       )}
