@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Check, X, FileText, Paperclip, Eye, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, X, FileText, Paperclip, Eye, Trash2, Send } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -388,13 +388,24 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                   {/* Note Section */}
                   <div className="space-y-3">
                       <Label htmlFor="note" className="text-sm font-medium text-muted-foreground ml-1">Note</Label>
-                      <Textarea 
-                        id="note"
-                        placeholder="Add a note..." 
-                        value={note} 
-                        onChange={(e) => setNote(e.target.value)} 
-                        className="resize-none min-h-[100px]"
-                      />
+                      <div className="relative">
+                        <Textarea 
+                          id="note"
+                          placeholder="Add a note..." 
+                          value={note} 
+                          onChange={(e) => setNote(e.target.value)} 
+                          className="resize-none min-h-[100px] pr-12"
+                        />
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="absolute bottom-3 right-3 h-8 w-8 text-muted-foreground hover:text-primary transition-colors"
+                          onClick={handleSaveDay}
+                          title="Save note"
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </div>
                   </div>
               </div>
 
