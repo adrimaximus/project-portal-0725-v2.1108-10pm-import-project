@@ -7,23 +7,43 @@ import { cn } from '@/lib/utils';
 interface MarkdownRendererProps {
   children: string;
   className?: string;
+  inline?: boolean;
 }
 
-const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className }) => {
+const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className, inline = false }) => {
   // Pre-process mentions: @[Name](id) -> [@Name](mention:id)
   const processedContent = children.replace(/@\[(.*?)\]\((.*?)\)/g, '[@$1](mention:$2)');
+  const Wrapper = inline ? 'span' : 'div';
 
   return (
-    <div className={cn("markdown-content text-sm leading-relaxed", className)}>
+    <Wrapper className={cn("markdown-content leading-relaxed", !inline && "text-sm", className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks]}
         components={{
-          h1: ({node, ...props}) => <h1 className="text-2xl font-bold mt-6 mb-3 border-b pb-1" {...props} />,
-          h2: ({node, ...props}) => <h2 className="text-xl font-bold mt-5 mb-2" {...props} />,
-          h3: ({node, ...props}) => <h3 className="text-lg font-bold mt-4 mb-2" {...props} />,
-          h4: ({node, ...props}) => <h4 className="text-base font-bold mt-3 mb-1" {...props} />,
-          h5: ({node, ...props}) => <h5 className="text-sm font-bold mt-2 mb-1 uppercase text-muted-foreground" {...props} />,
-          h6: ({node, ...props}) => <h6 className="text-xs font-bold mt-2 mb-1 text-muted-foreground" {...props} />,
+          h1: ({node, ...props}) => {
+            if (inline) return <span className="font-bold" {...props} />;
+            return <h1 className="text-2xl font-bold mt-6 mb-3 border-b pb-1" {...props} />;
+          },
+          h2: ({node, ...props}) => {
+            if (inline) return <span className="font-bold" {...props} />;
+            return <h2 className="text-xl font-bold mt-5 mb-2" {...props} />;
+          },
+          h3: ({node, ...props}) => {
+            if (inline) return <span className="font-bold" {...props} />;
+            return <h3 className="text-lg font-bold mt-4 mb-2" {...props} />;
+          },
+          h4: ({node, ...props}) => {
+            if (inline) return <span className="font-bold" {...props} />;
+            return <h4 className="text-base font-bold mt-3 mb-1" {...props} />;
+          },
+          h5: ({node, ...props}) => {
+            if (inline) return <span className="font-bold text-muted-foreground" {...props} />;
+            return <h5 className="text-sm font-bold mt-2 mb-1 uppercase text-muted-foreground" {...props} />;
+          },
+          h6: ({node, ...props}) => {
+            if (inline) return <span className="font-bold text-muted-foreground" {...props} />;
+            return <h6 className="text-xs font-bold mt-2 mb-1 text-muted-foreground" {...props} />;
+          },
           
           a: ({ node, href, children, ...props }) => {
             if (href?.startsWith('mention:')) {
@@ -46,22 +66,35 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className
             );
           },
           
-          p: ({node, children, ...props}) => <p {...props} className="mb-2 last:mb-0">{children}</p>,
+          p: ({node, children, ...props}) => {
+            if (inline) return <span className="inline" {...props}>{children}</span>;
+            return <p {...props} className="mb-2 last:mb-0">{children}</p>;
+          },
           
-          ul: ({node, ...props}) => <ul className="list-disc list-outside ml-5 mb-2 space-y-1" {...props} />,
-          ol: ({node, ...props}) => <ol className="list-decimal list-outside ml-5 mb-2 space-y-1" {...props} />,
-          li: ({node, ...props}) => <li className="pl-1" {...props} />,
+          ul: ({node, ...props}) => {
+            if (inline) return <span {...props} />;
+            return <ul className="list-disc list-outside ml-5 mb-2 space-y-1" {...props} />;
+          },
+          ol: ({node, ...props}) => {
+            if (inline) return <span {...props} />;
+            return <ol className="list-decimal list-outside ml-5 mb-2 space-y-1" {...props} />;
+          },
+          li: ({node, ...props}) => {
+            if (inline) return <span className="mr-1" {...props} />;
+            return <li className="pl-1" {...props} />;
+          },
           
-          blockquote: ({node, ...props}) => (
-            <blockquote className="border-l-4 border-primary/40 pl-4 py-1 my-3 bg-muted/30 italic rounded-r-sm text-muted-foreground" {...props} />
-          ),
+          blockquote: ({node, ...props}) => {
+            if (inline) return <span className="italic text-muted-foreground" {...props} />;
+            return <blockquote className="border-l-4 border-primary/40 pl-4 py-1 my-3 bg-muted/30 italic rounded-r-sm text-muted-foreground" {...props} />;
+          },
           
           code: ({node, className, children, ...props}: any) => {
             // Detect if it's an inline code block or multiline
             const match = /language-(\w+)/.exec(className || '');
             const isMultiLine = String(children).includes('\n');
             
-            if (!isMultiLine && !match) {
+            if (inline || (!isMultiLine && !match)) {
               return (
                 <code className="bg-muted px-1.5 py-0.5 rounded text-[0.9em] font-mono text-foreground border border-border" {...props}>
                   {children}
@@ -83,24 +116,30 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className
             );
           },
           
-          pre: ({node, ...props}) => <div {...(props as any)} />, 
+          pre: ({node, ...props}) => inline ? <span {...props} /> : <div {...(props as any)} />, 
           
-          img: ({node, ...props}) => (
-            <img 
-              className="max-w-full h-auto rounded-lg my-3 border shadow-sm" 
-              loading="lazy" 
-              {...props} 
-              alt={props.alt || 'Image'} 
-            />
-          ),
+          img: ({node, ...props}) => {
+            if (inline) return <span className="text-xs text-muted-foreground">[Image: {props.alt || 'Image'}]</span>;
+            return (
+              <img 
+                className="max-w-full h-auto rounded-lg my-3 border shadow-sm" 
+                loading="lazy" 
+                {...props} 
+                alt={props.alt || 'Image'} 
+              />
+            );
+          },
           
-          hr: ({node, ...props}) => <hr className="my-6 border-t border-border" {...props} />,
+          hr: ({node, ...props}) => inline ? <span className="mx-1 text-muted-foreground">|</span> : <hr className="my-6 border-t border-border" {...props} />,
           
-          table: ({node, ...props}) => (
-            <div className="my-4 w-full overflow-x-auto rounded-lg border border-border">
-              <table className="w-full border-collapse text-sm" {...props} />
-            </div>
-          ),
+          table: ({node, ...props}) => {
+            if (inline) return <span className="text-xs text-muted-foreground">[Table]</span>;
+            return (
+              <div className="my-4 w-full overflow-x-auto rounded-lg border border-border">
+                <table className="w-full border-collapse text-sm" {...props} />
+              </div>
+            );
+          },
           thead: ({node, ...props}) => <thead className="bg-muted/50" {...props} />,
           tbody: ({node, ...props}) => <tbody className="bg-background" {...props} />,
           tr: ({node, ...props}) => <tr className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors" {...props} />,
@@ -130,7 +169,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className
       >
         {processedContent}
       </ReactMarkdown>
-    </div>
+    </Wrapper>
   );
 };
 

@@ -277,7 +277,7 @@ const Comment: React.FC<CommentProps> = ({
                         <span className="font-medium">Replying to {repliedMsg.senderName}</span>
                     </div>
                     <div className="text-xs text-muted-foreground/80 line-clamp-1">
-                        <MarkdownRenderer className="text-xs [&>p]:!mb-0 [&>p]:!inline [&>p]:!text-muted-foreground/80">
+                        <MarkdownRenderer inline className="text-xs text-muted-foreground/80">
                             {repliedMsg.content || ''}
                         </MarkdownRenderer>
                     </div>
