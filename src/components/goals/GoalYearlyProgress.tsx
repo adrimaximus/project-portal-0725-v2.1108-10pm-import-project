@@ -39,6 +39,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const [isCompleted, setIsCompleted] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [note, setNote] = useState("");
+  const [savedNote, setSavedNote] = useState(""); // State for the existing note
   const [existingAttachment, setExistingAttachment] = useState<{ url: string, name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dayToConfirm, setDayToConfirm] = useState<Date | null>(null);
@@ -138,8 +139,9 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     
     setSelectedDay(day.date);
     setIsCompleted(!!day.isCompleted);
-    // Explicitly set the note from the day object, defaulting to empty string
-    setNote(day.note || "");
+    // Separate saved note from input note
+    setSavedNote(day.note || ""); 
+    setNote(""); // Input starts empty
     setFile(null);
     if (day.attachmentUrl) {
       setExistingAttachment({ url: day.attachmentUrl, name: day.attachmentName || 'Attachment' });
@@ -150,15 +152,19 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
 
   const handleSaveDay = () => {
     if (selectedDay) {
-        // Pass the note to the update function
-        onUpdateCompletion(selectedDay, isCompleted ? 1 : 0, file, false, note);
+        // Use new note if typed, otherwise keep savedNote. 
+        // If savedNote was cleared by user (via X button), it is empty string here.
+        const noteToSend = note.trim() !== "" ? note : savedNote;
+        onUpdateCompletion(selectedDay, isCompleted ? 1 : 0, file, false, noteToSend);
     }
     setSelectedDay(null);
   };
 
   const handleRemoveExistingAttachment = () => {
     if (selectedDay) {
-        onUpdateCompletion(selectedDay, isCompleted ? 1 : 0, null, true, note);
+        // Also preserve note when removing attachment
+        const noteToSend = note.trim() !== "" ? note : savedNote;
+        onUpdateCompletion(selectedDay, isCompleted ? 1 : 0, null, true, noteToSend);
         setExistingAttachment(null);
     }
   };
@@ -387,7 +393,27 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
 
                   {/* Note Section */}
                   <div className="space-y-3">
-                      <Label htmlFor="note" className="text-sm font-medium text-muted-foreground ml-1">Note</Label>
+                      {savedNote && (
+                        <div className="space-y-1.5">
+                            <Label className="text-sm font-medium text-muted-foreground ml-1">Posted Note</Label>
+                            <div className="p-3 rounded-xl border bg-muted/30 text-sm text-foreground break-words relative group">
+                                {savedNote}
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute top-1 right-1 h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => setSavedNote("")}
+                                    title="Remove note"
+                                >
+                                    <X className="h-3 w-3" />
+                                </Button>
+                            </div>
+                        </div>
+                      )}
+
+                      <Label htmlFor="note" className="text-sm font-medium text-muted-foreground ml-1">
+                        {savedNote ? "Update Note" : "Note"}
+                      </Label>
                       <div className="relative">
                         <Textarea 
                           id="note"
