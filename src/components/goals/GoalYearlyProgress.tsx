@@ -10,13 +10,14 @@ import { ChevronLeft, ChevronRight, Check, X, FileText, Paperclip, Eye, Trash2 }
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import AiCoachInsight from './AiCoachInsight';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface GoalYearlyProgressProps {
   goal: Goal;
   onToggleCompletion: (date: Date) => void;
-  onUpdateCompletion: (date: Date, value: number, file?: File | null, removeAttachment?: boolean) => void;
+  onUpdateCompletion: (date: Date, value: number, file?: File | null, removeAttachment?: boolean, note?: string) => void;
 }
 
 const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: GoalYearlyProgressProps) => {
@@ -25,7 +26,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     date: c.date, 
     completed: c.value === 1,
     attachmentUrl: (c as any).attachment_url,
-    attachmentName: (c as any).attachment_name
+    attachmentName: (c as any).attachment_name,
+    note: (c as any).notes
   }));
 
   const today = new Date();
@@ -34,6 +36,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [note, setNote] = useState("");
   const [existingAttachment, setExistingAttachment] = useState<{ url: string, name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dayToConfirm, setDayToConfirm] = useState<Date | null>(null);
@@ -71,10 +74,10 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     const monthEnd = endOfMonth(monthDate);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
     
-    const completionMap = new Map<string, { completed: boolean; attachmentUrl?: string; attachmentName?: string }>(
+    const completionMap = new Map<string, { completed: boolean; attachmentUrl?: string; attachmentName?: string; note?: string }>(
       relevantCompletions.map(c => [
         format(parseISO(c.date), 'yyyy-MM-dd'), 
-        { completed: c.completed, attachmentUrl: c.attachmentUrl, attachmentName: c.attachmentName }
+        { completed: c.completed, attachmentUrl: c.attachmentUrl, attachmentName: c.attachmentName, note: c.note }
       ])
     );
 
@@ -86,17 +89,19 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
         let isCompleted: boolean | undefined;
         let attachmentUrl: string | undefined;
         let attachmentName: string | undefined;
+        let note: string | undefined;
 
         if (completionData) {
             isCompleted = completionData.completed;
             attachmentUrl = completionData.attachmentUrl;
             attachmentName = completionData.attachmentName;
+            note = completionData.note;
         }
         
         if (isCompleted === undefined && isValid && isBefore(day, todayStart)) {
             isCompleted = false;
         }
-        return { date: day, isCompleted, isValid, attachmentUrl, attachmentName };
+        return { date: day, isCompleted, isValid, attachmentUrl, attachmentName, note };
     });
 
     const possibleDaysInPast = daysWithStatus.filter(d => d.isValid && isBefore(d.date, todayStart));
@@ -114,7 +119,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
             date: d.date, 
             isCompleted: d.isCompleted, 
             attachmentUrl: d.attachmentUrl,
-            attachmentName: d.attachmentName
+            attachmentName: d.attachmentName,
+            note: d.note
         }))
     };
   });
@@ -124,11 +130,12 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     month?: { name: string; percentage: number; completedCount: number; possibleCount: number; };
   }>({ yearly: { percentage: overallPercentage } });
 
-  const handleDayClick = (day: { date: Date; isCompleted?: boolean; attachmentUrl?: string; attachmentName?: string }) => {
+  const handleDayClick = (day: { date: Date; isCompleted?: boolean; attachmentUrl?: string; attachmentName?: string; note?: string }) => {
     if (isAfter(day.date, todayStart)) return;
     
     setSelectedDay(day.date);
     setIsCompleted(!!day.isCompleted);
+    setNote(day.note || "");
     setFile(null);
     if (day.attachmentUrl) {
       setExistingAttachment({ url: day.attachmentUrl, name: day.attachmentName || 'Attachment' });
@@ -139,14 +146,14 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
 
   const handleSaveDay = () => {
     if (selectedDay) {
-        onUpdateCompletion(selectedDay, isCompleted ? 1 : 0, file);
+        onUpdateCompletion(selectedDay, isCompleted ? 1 : 0, file, false, note);
     }
     setSelectedDay(null);
   };
 
   const handleRemoveExistingAttachment = () => {
     if (selectedDay) {
-        onUpdateCompletion(selectedDay, isCompleted ? 1 : 0, null, true);
+        onUpdateCompletion(selectedDay, isCompleted ? 1 : 0, null, true, note);
         setExistingAttachment(null);
     }
   };
@@ -241,7 +248,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                               className={buttonClasses}
                               style={buttonStyle}
                             >
-                              {day.attachmentUrl && (
+                              {(day.attachmentUrl || day.note) && (
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                   <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_2px_rgba(0,0,0,0.5)]" />
                                 </div>
@@ -256,6 +263,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                 <>
                                   <p>{day.isCompleted ? 'Completed' : 'Not completed'}</p>
                                   {day.attachmentUrl && <div className="flex items-center gap-1 mt-1 text-xs text-primary"><FileText className="h-3 w-3" /> Report attached</div>}
+                                  {day.note && <div className="mt-1 text-xs italic opacity-80 line-clamp-2 max-w-[150px]">"{day.note}"</div>}
                                 </>
                              ) : <p>Click to update</p>}
                           </TooltipContent>
@@ -370,6 +378,18 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                           </div>
                       )}
                       <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
+                  </div>
+
+                  {/* Note Section */}
+                  <div className="space-y-3">
+                      <Label htmlFor="note" className="text-sm font-medium text-muted-foreground ml-1">Note</Label>
+                      <Textarea 
+                        id="note"
+                        placeholder="Add a note..." 
+                        value={note} 
+                        onChange={(e) => setNote(e.target.value)} 
+                        className="resize-none"
+                      />
                   </div>
               </div>
 
