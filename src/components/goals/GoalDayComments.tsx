@@ -1,14 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { format } from 'date-fns';
-import { Loader2, MessageSquare, FileText, AlertCircle, Trophy } from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
+import { Loader2, MessageSquare, FileText, AlertCircle, Trophy, MoreHorizontal, Trash2, Edit, Paperclip, Reply } from 'lucide-react';
 import { toast } from 'sonner';
 import CommentInput, { CommentInputHandle } from '@/components/CommentInput';
-import Comment from '@/components/Comment';
 import { User, Comment as CommentType } from '@/types';
-import { getInitials, cn } from '@/lib/utils';
+import { getInitials, cn, getAvatarUrl, generatePastelColor } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import MarkdownRenderer from '@/components/MarkdownRenderer';
+import { MentionsInput, Mention } from 'react-mentions';
+import '@/styles/mentions.css';
 
 interface GoalDayCommentsProps {
   goalId: string;
@@ -239,20 +244,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     setCommentToDelete(null);
   };
 
-  const handleReaction = async (commentId: string, emoji: string) => {
-    if (!user) return;
-    const currentComment = comments.find(c => c.id === commentId);
-    const existingReaction = currentComment?.reactions?.find(r => r.user_id === user.id && r.emoji === emoji);
-
-    if (existingReaction) {
-      const { error } = await supabase.from('goal_comment_reactions').delete().eq('id', existingReaction.id);
-      if (error) toast.error('Failed to remove reaction');
-    } else {
-      const { error } = await supabase.from('goal_comment_reactions').insert({ comment_id: commentId, user_id: user.id, emoji: emoji });
-      if (error) toast.error('Failed to add reaction');
-    }
-  };
-
   const handleReply = (comment: CommentType) => {
     setReplyingTo(comment);
     
@@ -265,44 +256,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
           commentInputRef.current.focus();
         }
       }, 100);
-    }
-  };
-
-  const handleCreateTicket = async (comment: CommentType) => {
-    if (!user) return;
-    try {
-      const { data: projectId, error: projectError } = await supabase.rpc('get_personal_project_id');
-      if (projectError || !projectId) throw new Error('Could not find personal project');
-
-      const { error: taskError } = await supabase.from('tasks').insert({
-        project_id: projectId,
-        title: 'Ticket: ' + (comment.text ? (comment.text.length > 50 ? comment.text.substring(0, 50) + '...' : comment.text) : 'New Ticket'),
-        description: `Source Goal Comment: ${window.location.origin}/goals\n\n${comment.text}`,
-        origin_ticket_id: comment.id,
-        created_by: user.id,
-        status: 'To do',
-        priority: 'Normal'
-      });
-      if (taskError) throw taskError;
-
-      const { error: updateError } = await supabase.from('goal_comments').update({ is_ticket: true }).eq('id', comment.id);
-      if (updateError) throw updateError;
-
-      toast.success('Ticket created in your personal project');
-      await fetchComments();
-    } catch (error) {
-      toast.error('Failed to create ticket');
-    }
-  };
-
-  const handleGoToReply = (messageId: string) => {
-    const element = document.getElementById(`message-${messageId}`);
-    if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        element.classList.add('bg-accent/20');
-        setTimeout(() => element.classList.remove('bg-accent/20'), 2000);
-    } else {
-        toast.info("Original comment not found in current view");
     }
   };
 
@@ -327,6 +280,18 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       setEditedText("");
       await fetchComments();
     }
+  };
+
+  // Helper to parse feedback type and content
+  const parseFeedback = (text: string) => {
+    const match = text?.match(/^\*\*\[(Comment|Update|Issue|Celebration)\]\*\*\s*(.*)/s);
+    if (match) {
+        const typeLabel = match[1];
+        const cleanContent = match[2];
+        const type = feedbackTypes.find(t => t.label === typeLabel) || feedbackTypes[0];
+        return { type, content: cleanContent };
+    }
+    return { type: feedbackTypes[0], content: text };
   };
 
   return (
@@ -387,28 +352,111 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
               No notes yet for this day. <br/> Add a reason for missing it, or a celebration for completing it!
             </div>
           ) : (
-            comments.map((comment) => (
-              <Comment
-                key={comment.id}
-                comment={comment}
-                isEditing={editingCommentId === comment.id}
-                editedText={editedText}
-                setEditedText={setEditedText}
-                handleSaveEdit={handleSaveEdit}
-                handleCancelEdit={handleCancelEdit}
-                onEdit={handleEditComment}
-                onDelete={setCommentToDelete}
-                onToggleReaction={handleReaction}
-                onReply={handleReply}
-                onCreateTicketFromComment={handleCreateTicket}
-                newAttachments={[]}
-                removeNewAttachment={() => {}}
-                handleEditFileChange={() => {}}
-                editFileInputRef={{ current: null }}
-                onGoToReply={handleGoToReply}
-                allUsers={allUsers}
-              />
-            ))
+            comments.map((comment) => {
+              const { type: feedbackTypeObj, content: displayContent } = parseFeedback(comment.text || '');
+              const author = comment.author as User;
+              const isOwner = user?.id === author.id;
+              const Icon = feedbackTypeObj.icon;
+
+              return (
+                <div key={comment.id} className={cn("group relative flex gap-3 rounded-lg p-3 border shadow-sm transition-all hover:shadow-md", feedbackTypeObj.color.replace('text-', ''))}>
+                  <Avatar className="h-8 w-8 flex-shrink-0 border bg-background">
+                    <AvatarImage src={getAvatarUrl(author.avatar_url, author.id)} />
+                    <AvatarFallback style={generatePastelColor(author.id)}>
+                        {getInitials(author.name, author.email)}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-foreground">{author.name}</span>
+                            <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}</span>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleReply(comment)}>
+                                <Reply className="h-3.5 w-3.5" />
+                            </Button>
+                            {isOwner && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                                            <MoreHorizontal className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => handleEditComment(comment)}>
+                                            <Edit className="h-3.5 w-3.5 mr-2" /> Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setCommentToDelete(comment)} className="text-destructive">
+                                            <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+                        </div>
+                    </div>
+
+                    {editingCommentId === comment.id ? (
+                        <div className="space-y-2">
+                            <MentionsInput
+                                value={editedText}
+                                onChange={(e, newValue) => setEditedText(newValue)}
+                                className="mentions-input min-h-[60px] text-sm bg-background border rounded-md p-2"
+                                placeholder="Edit your comment..."
+                            >
+                                <Mention
+                                    trigger="@"
+                                    data={allUsers.map(u => ({ id: u.id, display: u.name }))}
+                                    markup="@[__display__](__id__)"
+                                />
+                            </MentionsInput>
+                            <div className="flex justify-end gap-2">
+                                <Button size="sm" variant="ghost" onClick={handleCancelEdit}>Cancel</Button>
+                                <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {comment.repliedMessage && (
+                                <div className="mb-2 pl-3 py-1 border-l-2 border-primary/30 bg-background/50 rounded-r text-xs text-muted-foreground">
+                                    <div className="font-medium flex items-center gap-1">
+                                        <Reply className="h-3 w-3" />
+                                        Replying to {comment.repliedMessage.senderName}
+                                    </div>
+                                    <div className="line-clamp-1 opacity-80">{comment.repliedMessage.content}</div>
+                                </div>
+                            )}
+                            <div className="text-sm leading-relaxed text-foreground/90">
+                                <div className="flex items-start gap-2">
+                                    <Icon className={cn("w-4 h-4 mt-0.5 flex-shrink-0 opacity-70", feedbackTypeObj.id !== 'comment' ? "text-current" : "hidden")} />
+                                    <div className="flex-1">
+                                        <MarkdownRenderer>{displayContent}</MarkdownRenderer>
+                                    </div>
+                                </div>
+                            </div>
+                            {comment.attachments_jsonb && Array.isArray(comment.attachments_jsonb) && comment.attachments_jsonb.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {comment.attachments_jsonb.map((file: any, idx: number) => (
+                                        <a 
+                                            key={idx} 
+                                            href={file.url} 
+                                            target="_blank" 
+                                            rel="noreferrer"
+                                            className="flex items-center gap-1.5 px-2 py-1 bg-background border rounded text-xs text-muted-foreground hover:bg-muted transition-colors"
+                                        >
+                                            <Paperclip className="h-3 w-3" />
+                                            <span className="truncate max-w-[150px]">{file.name}</span>
+                                        </a>
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    )}
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       </div>
