@@ -5,7 +5,7 @@ import { id } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { getAvatarUrl, generatePastelColor, getInitials, cn } from '@/lib/utils';
 import { Button } from './ui/button';
-import { MoreHorizontal, Edit, Trash2, Ticket, CornerUpLeft, Paperclip, X, FileText, MessageSquare, AlertCircle, Trophy, Reply } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Ticket, CornerUpLeft, Paperclip, X, FileText } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from './ui/badge';
@@ -35,13 +35,6 @@ interface CommentProps {
   onGoToReply?: (messageId: string) => void;
   allUsers: User[];
 }
-
-const feedbackTypes = {
-    'Comment': { icon: MessageSquare, color: 'text-muted-foreground bg-muted/50 border-transparent' },
-    'Update': { icon: FileText, color: 'text-blue-600 bg-blue-50 border-blue-200' },
-    'Issue': { icon: AlertCircle, color: 'text-red-600 bg-red-50 border-red-200' },
-    'Celebration': { icon: Trophy, color: 'text-amber-600 bg-amber-50 border-amber-200' },
-};
 
 const Comment: React.FC<CommentProps> = ({
   comment,
@@ -86,86 +79,29 @@ const Comment: React.FC<CommentProps> = ({
     }))
   ], [allUsers]);
 
-  const repliedMsg = useMemo(() => {
-    if (comment.repliedMessage) return comment.repliedMessage;
-    
-    const rawReply = (comment as any).replied_comment;
-    if (rawReply) {
-      const reply = Array.isArray(rawReply) ? rawReply[0] : rawReply;
-      if (!reply) return null;
-      
-      const replyAuthor = Array.isArray(reply.author) ? reply.author[0] : reply.profiles || reply.author;
-      const authorProfile = Array.isArray(replyAuthor) ? replyAuthor[0] : replyAuthor;
-      
-      const senderName = authorProfile 
-          ? ([authorProfile.first_name, authorProfile.last_name].filter(Boolean).join(' ') || authorProfile.email) 
-          : 'Unknown User';
-          
-      return {
-          content: reply.content,
-          senderName,
-          isDeleted: false
-      };
-    }
-    return null;
-  }, [comment]);
-
-  const { parsedType, parsedContent } = useMemo(() => {
-      const match = comment.text?.match(/^\*\*\[(Comment|Update|Issue|Celebration)\]\*\*\s*(.*)/s);
-      if (match) {
-          return { parsedType: match[1] as keyof typeof feedbackTypes, parsedContent: match[2] };
-      }
-      return { parsedType: null, parsedContent: comment.text };
-  }, [comment.text]);
-
-  const FeedbackIcon = parsedType ? feedbackTypes[parsedType].icon : null;
-  const feedbackStyle = parsedType ? feedbackTypes[parsedType].color : '';
-
-  // showReplyBlock should be true only if there is both content and a link ID
-  const showReplyBlock = !!repliedMsg && !!comment.reply_to_comment_id;
-
-  const handleScrollToReply = () => {
-    if (onGoToReply && comment.reply_to_comment_id) {
-        onGoToReply(comment.reply_to_comment_id);
-    } else if (comment.reply_to_comment_id) {
-        const element = document.getElementById(`message-${comment.reply_to_comment_id}`);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            element.classList.add('bg-accent/20');
-            setTimeout(() => element.classList.remove('bg-accent/20'), 2000);
-        }
-    }
-  };
-
   return (
     <>
-      <div id={`message-${comment.id}`} className="flex items-start gap-3 transition-colors duration-500 rounded-lg p-1 -m-1 group/message">
-        <Avatar className="h-8 w-8 mt-0.5">
+      <div id={`message-${comment.id}`} className="flex items-start gap-3">
+        <Avatar className="h-8 w-8">
           <AvatarImage src={getAvatarUrl(author.avatar_url, author.id)} />
           <AvatarFallback style={generatePastelColor(author.id)}>
             {getInitials(authorName, author.email)}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between leading-none mb-1.5">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="font-semibold text-sm">{authorName}</span>
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: id })}
               </span>
-              {comment.is_ticket && <Badge variant="outline" className="text-[10px] h-4 px-1">ticket</Badge>}
-              {parsedType && parsedType !== 'Comment' && (
-                  <Badge variant="secondary" className={cn("text-[10px] h-4 px-1.5 gap-1 font-medium border bg-transparent", feedbackStyle)}>
-                      {FeedbackIcon && <FeedbackIcon className="w-3 h-3" />}
-                      {parsedType}
-                  </Badge>
-              )}
+              {comment.is_ticket && <Badge variant="outline">from ticket</Badge>}
             </div>
             {user && user.id === author.id && !isEditing && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover/message:opacity-100 transition-opacity">
-                    <MoreHorizontal className="h-3.5 w-3.5" />
+                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -179,7 +115,6 @@ const Comment: React.FC<CommentProps> = ({
               </DropdownMenu>
             )}
           </div>
-
           {isEditing ? (
             <div className="mt-1 space-y-2">
               <div className="border rounded-md focus-within:ring-1 focus-within:ring-ring">
@@ -263,63 +198,40 @@ const Comment: React.FC<CommentProps> = ({
             </div>
           ) : (
             <>
-              {/* Reply Context Block */}
-              {showReplyBlock && !isEditing && (
-                <div className="relative pl-3 mb-2 mt-1 group">
-                  <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-border group-hover:bg-primary/40 transition-colors rounded-full" />
-                  <button
-                    onClick={handleScrollToReply}
-                    className="text-left w-full block"
-                    disabled={!comment.reply_to_comment_id}
-                  >
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-0.5">
-                        <CornerUpLeft className="h-3 w-3" />
-                        <span className="font-medium">Replying to {repliedMsg.senderName}</span>
+              {comment.repliedMessage && (
+                <button
+                  onClick={() => onGoToReply && comment.reply_to_comment_id && onGoToReply(comment.reply_to_comment_id)}
+                  className="w-full text-left flex items-start gap-2 text-xs p-2 mb-2 bg-muted rounded-md hover:bg-muted/80 transition-colors"
+                  disabled={!onGoToReply || !comment.reply_to_comment_id}
+                >
+                  <div className="w-0.5 bg-primary rounded-full self-stretch"></div>
+                  <div className="flex-1 overflow-hidden">
+                    <p className="font-semibold text-primary">Replying to {comment.repliedMessage.senderName}</p>
+                    <div className="italic line-clamp-3 prose prose-sm dark:prose-invert max-w-none text-muted-foreground [&_p]:m-0 [&_p]:inline">
+                      <MarkdownRenderer>{comment.repliedMessage.content || ''}</MarkdownRenderer>
                     </div>
-                    <div className="text-xs text-muted-foreground/80 line-clamp-1">
-                        <MarkdownRenderer inline className="text-xs text-muted-foreground/80">
-                            {repliedMsg.content || ''}
-                        </MarkdownRenderer>
-                    </div>
-                  </button>
-                </div>
+                  </div>
+                </button>
               )}
-
-              <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-0 [&_p]:text-justify text-foreground/90">
-                <MarkdownRenderer>
-                  {parsedContent || ''}
-                </MarkdownRenderer>
+              <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-0 [&_p]:text-justify">
+                <MarkdownRenderer>{comment.text || ''}</MarkdownRenderer>
               </div>
-
               {attachments.length > 0 && (
                 <div className="mt-2">
-                  <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setIsAttachmentModalOpen(true)}>
-                    <Paperclip className="h-3.5 w-3.5 mr-2" />
+                  <Button variant="outline" size="sm" onClick={() => setIsAttachmentModalOpen(true)}>
+                    <Paperclip className="h-4 w-4 mr-2" />
                     {attachments.length} Attachment{attachments.length > 1 ? 's' : ''}
                   </Button>
                 </div>
               )}
-              
-              <div className="mt-2 flex items-center gap-3">
-                <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-full" 
-                    onClick={() => onReply(comment)}
-                >
-                  <MessageSquare className="h-3.5 w-3.5 mr-1.5" /> Reply
+              <div className="mt-1 flex items-center gap-2">
+                <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs" onClick={() => onReply(comment)}>
+                  <CornerUpLeft className="h-3 w-3 mr-1" /> Reply
                 </Button>
-                
                 <CommentReactions reactions={comment.reactions || []} onToggleReaction={(emoji) => onToggleReaction(comment.id, emoji)} />
-                
                 {!comment.is_ticket && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-full ml-auto sm:ml-0" 
-                    onClick={() => onCreateTicketFromComment(comment)}
-                  >
-                    <Ticket className="h-3.5 w-3.5 sm:mr-1.5" />
+                  <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-1 text-xs" onClick={() => onCreateTicketFromComment(comment)}>
+                    <Ticket className="h-3 w-3 sm:mr-1" />
                     <span className="hidden sm:inline">Create Ticket</span>
                   </Button>
                 )}

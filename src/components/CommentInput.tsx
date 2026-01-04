@@ -2,8 +2,8 @@ import { useState, useRef, forwardRef, useImperativeHandle, useEffect, useMemo }
 import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Ticket, Paperclip, X, Users, UploadCloud, CornerUpLeft } from "lucide-react";
-import { getInitials, generatePastelColor, getAvatarUrl, cn } from '@/lib/utils';
+import { Ticket, Paperclip, X, Users, UploadCloud } from "lucide-react";
+import { getInitials, generatePastelColor, getAvatarUrl, cn } from "@/lib/utils";
 import { MentionsInput, Mention } from 'react-mentions';
 import '@/styles/mentions.css';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,7 +20,6 @@ interface CommentInputProps {
   onCancelReply?: () => void;
   storageKey: string;
   dropUp?: boolean;
-  placeholder?: string;
 }
 
 export interface CommentInputHandle {
@@ -36,8 +35,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
   replyTo, 
   onCancelReply, 
   storageKey,
-  dropUp = true,
-  placeholder = "Add a comment..."
+  dropUp = true 
 }, ref) => {
   const { user } = useAuth();
   
@@ -140,14 +138,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
     }
 
     const mentionedUserIds = parseMentions(finalText);
-    
-    // If we are replying to "Unknown User", treat it as a root comment
-    let finalReplyToId = replyTo?.id;
-    if (replyTo && (replyTo.author.name === 'Unknown User' || replyTo.author.name === 'Unknown')) {
-      finalReplyToId = undefined;
-    }
-
-    onAddCommentOrTicket(finalText, isTicket, attachments, mentionedUserIds, finalReplyToId);
+    onAddCommentOrTicket(finalText, isTicket, attachments, mentionedUserIds, replyTo?.id);
     setText('');
     setIsTicket(false);
     setAttachments([]);
@@ -195,8 +186,6 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
         marginTop: '8px',
       };
 
-  const showReplyBanner = replyTo && replyTo.author.name !== 'Unknown User' && replyTo.author.name !== 'Unknown';
-
   return (
     <div ref={containerRef} className="flex items-end space-x-3 w-full">
       <Avatar className="w-8 h-8 shrink-0 mb-1 hidden sm:block">
@@ -206,6 +195,19 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
         </AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1 w-full">
+        {replyTo && (
+          <div className="p-1.5 mb-1.5 bg-muted/60 rounded-md flex justify-between items-center text-xs">
+            <div className="border-l-2 border-primary pl-2 overflow-hidden w-full">
+              <p className="font-semibold text-primary">Replying to {replyTo.author.name}</p>
+              <div className="text-muted-foreground line-clamp-1">
+                <InteractiveText text={replyTo.text || ''} members={allUsers} />
+              </div>
+            </div>
+            <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-6 w-6 flex-shrink-0 ml-1">
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
         <div 
           className={cn(
             "border rounded-xl focus-within:ring-1 focus-within:ring-ring relative transition-colors bg-background",
@@ -215,29 +217,6 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          {showReplyBanner && (
-            <div className="mx-3 mt-3 mb-1 flex justify-between items-start gap-2 group animate-in fade-in slide-in-from-bottom-1 duration-200">
-              <div className="relative pl-3 w-full">
-                <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary/50 rounded-full" />
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium mb-0.5">
-                  <CornerUpLeft className="h-3 w-3" />
-                  <span>Replying to {replyTo!.author.name}</span>
-                </div>
-                <div className="text-xs text-muted-foreground line-clamp-1 opacity-90">
-                  <InteractiveText text={replyTo!.text || ''} members={allUsers} />
-                </div>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={onCancelReply} 
-                className="h-5 w-5 flex-shrink-0 -mt-0.5 hover:bg-destructive/10 hover:text-destructive transition-colors rounded-full"
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-
           {isDragging && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-[1px] z-50 rounded-lg pointer-events-none">
               <div className="text-primary font-medium flex items-center gap-2 bg-background p-3 rounded-lg shadow-sm border animate-in fade-in zoom-in-95 duration-200">
@@ -251,7 +230,7 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
             <MentionsInput
               value={text}
               onChange={(event, newValue) => setText(newValue)}
-              placeholder={placeholder}
+              placeholder="Add a comment..."
               className="mentions-input w-full"
               a11ySuggestionsListLabel={"Suggested mentions"}
               inputRef={mentionsInputRef}

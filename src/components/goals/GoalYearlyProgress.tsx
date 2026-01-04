@@ -12,7 +12,6 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import AiCoachInsight from './AiCoachInsight';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import GoalDayComments from './GoalDayComments';
 
 interface GoalYearlyProgressProps {
   goal: Goal;
@@ -272,7 +271,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
       </Card>
       
       <Dialog open={!!selectedDay} onOpenChange={(open) => !open && setSelectedDay(null)}>
-          <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none shadow-xl flex flex-col max-h-[90vh]">
+          <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-none shadow-xl flex flex-col max-h-[90vh]">
               {/* Header Section */}
               <div className="px-6 py-6 bg-muted/20 border-b shrink-0">
                   <DialogHeader className="p-0 space-y-1 text-left">
@@ -373,10 +372,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                       <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
                   </div>
               </div>
-
-              {selectedDay && (
-                <GoalDayComments goalId={goal.id} date={selectedDay} />
-              )}
 
               {/* Footer Section */}
               <DialogFooter className="p-6 pt-0 shrink-0">
