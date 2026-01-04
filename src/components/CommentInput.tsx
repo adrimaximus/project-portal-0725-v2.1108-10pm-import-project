@@ -2,8 +2,8 @@ import { useState, useRef, forwardRef, useImperativeHandle, useEffect, useMemo }
 import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Ticket, Paperclip, X, Users, UploadCloud } from "lucide-react";
-import { getInitials, generatePastelColor, getAvatarUrl, cn } from "@/lib/utils";
+import { Ticket, Paperclip, X, Users, UploadCloud, CornerUpLeft } from "lucide-react";
+import { getInitials, generatePastelColor, getAvatarUrl, cn } from '@/lib/utils';
 import { MentionsInput, Mention } from 'react-mentions';
 import '@/styles/mentions.css';
 import { useAuth } from '@/contexts/AuthContext';
@@ -216,14 +216,23 @@ const CommentInput = forwardRef<CommentInputHandle, CommentInputProps>(({
           onDrop={handleDrop}
         >
           {showReplyBanner && (
-            <div className="mx-2 mt-2 p-2 bg-muted/50 rounded-md border-l-4 border-primary flex justify-between items-start gap-2">
-              <div className="overflow-hidden w-full text-xs">
-                <p className="font-semibold text-primary mb-0.5">Replying to {replyTo!.author.name}</p>
-                <div className="text-muted-foreground line-clamp-1">
+            <div className="mx-3 mt-3 mb-1 flex justify-between items-start gap-2 group animate-in fade-in slide-in-from-bottom-1 duration-200">
+              <div className="relative pl-3 w-full">
+                <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary/50 rounded-full" />
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium mb-0.5">
+                  <CornerUpLeft className="h-3 w-3" />
+                  <span>Replying to {replyTo!.author.name}</span>
+                </div>
+                <div className="text-xs text-muted-foreground line-clamp-1 opacity-90">
                   <InteractiveText text={replyTo!.text || ''} members={allUsers} />
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={onCancelReply} className="h-5 w-5 flex-shrink-0 -mt-1 -mr-1 hover:bg-background/50">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={onCancelReply} 
+                className="h-5 w-5 flex-shrink-0 -mt-0.5 hover:bg-destructive/10 hover:text-destructive transition-colors rounded-full"
+              >
                 <X className="h-3 w-3" />
               </Button>
             </div>
