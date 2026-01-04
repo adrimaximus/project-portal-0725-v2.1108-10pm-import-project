@@ -22,12 +22,14 @@ interface GoalYearlyProgressProps {
 
 const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: GoalYearlyProgressProps) => {
   const { completions: rawCompletions, color, specific_days: specificDays } = goal;
+  
+  // Map completions, ensuring we catch 'notes' from DB and map it to 'note' for internal use
   const completions = rawCompletions.map(c => ({ 
     date: c.date, 
     completed: c.value === 1,
     attachmentUrl: (c as any).attachment_url,
     attachmentName: (c as any).attachment_name,
-    note: (c as any).notes
+    note: (c as any).notes || (c as any).note // Handle both 'notes' (DB column) and 'note' keys
   }));
 
   const today = new Date();
@@ -74,6 +76,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     const monthEnd = endOfMonth(monthDate);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
     
+    // Create a map for fast lookup of completions by date string
     const completionMap = new Map<string, { completed: boolean; attachmentUrl?: string; attachmentName?: string; note?: string }>(
       relevantCompletions.map(c => [
         format(parseISO(c.date), 'yyyy-MM-dd'), 
@@ -135,6 +138,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     
     setSelectedDay(day.date);
     setIsCompleted(!!day.isCompleted);
+    // Explicitly set the note from the day object, defaulting to empty string
     setNote(day.note || "");
     setFile(null);
     if (day.attachmentUrl) {
@@ -146,6 +150,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
 
   const handleSaveDay = () => {
     if (selectedDay) {
+        // Pass the note to the update function
         onUpdateCompletion(selectedDay, isCompleted ? 1 : 0, file, false, note);
     }
     setSelectedDay(null);
@@ -388,7 +393,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                         placeholder="Add a note..." 
                         value={note} 
                         onChange={(e) => setNote(e.target.value)} 
-                        className="resize-none"
+                        className="resize-none min-h-[100px]"
                       />
                   </div>
               </div>
