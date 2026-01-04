@@ -3,18 +3,25 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MessageSquare, FileText, AlertCircle, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 import CommentInput, { CommentInputHandle } from '@/components/CommentInput';
 import Comment from '@/components/Comment';
 import { User, Comment as CommentType } from '@/types';
-import { getInitials } from '@/lib/utils';
+import { getInitials, cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface GoalDayCommentsProps {
   goalId: string;
   date: Date;
 }
+
+const feedbackTypes = [
+    { id: 'comment', label: 'Comment', icon: MessageSquare, color: 'text-muted-foreground bg-muted/50 border-transparent ring-1 ring-border' },
+    { id: 'report', label: 'Update', icon: FileText, color: 'text-blue-600 bg-blue-50 border-blue-200 ring-1 ring-blue-200' },
+    { id: 'issue', label: 'Issue', icon: AlertCircle, color: 'text-red-600 bg-red-50 border-red-200 ring-1 ring-red-200' },
+    { id: 'celebration', label: 'Celebration', icon: Trophy, color: 'text-amber-600 bg-amber-50 border-amber-200 ring-1 ring-amber-200' },
+] as const;
 
 const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const { user } = useAuth();
@@ -23,6 +30,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const [isFetching, setIsFetching] = useState(true);
   const [replyingTo, setReplyingTo] = useState<CommentType | null>(null);
   const [commentToDelete, setCommentToDelete] = useState<CommentType | null>(null);
+  const [feedbackType, setFeedbackType] = useState<'comment' | 'report' | 'issue' | 'celebration'>('comment');
   
   // Edit states
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -163,6 +171,12 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   const handleAddComment = async (text: string, isTicket: boolean, attachments: File[] | null, mentionedUserIds: string[], replyToId?: string | null) => {
     if (!user) return;
 
+    let finalContent = text.trim();
+    if (!replyToId && feedbackType !== 'comment') {
+        const typeLabel = feedbackTypes.find(t => t.id === feedbackType)?.label;
+        finalContent = `**[${typeLabel}]** ${finalContent}`;
+    }
+
     let uploadedAttachments: any[] = [];
     if (attachments && attachments.length > 0) {
       for (const file of attachments) {
@@ -191,7 +205,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
       goal_id: goalId,
       user_id: user.id,
       comment_date: formattedDate,
-      content: text.trim(),
+      content: finalContent,
       attachments_jsonb: uploadedAttachments,
       reply_to_comment_id: parentCommentId
     });
@@ -201,6 +215,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
     } else {
       await fetchComments();
       setReplyingTo(null);
+      setFeedbackType('comment');
       if (commentInputRef.current) {
         commentInputRef.current.setText('');
       }
@@ -240,8 +255,6 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
   };
 
   const handleReply = (comment: CommentType) => {
-    // FIX: Use original object to ensure all metadata (like id) is preserved correctly as source of truth.
-    // Do NOT clone and nullify properties.
     setReplyingTo(comment);
     
     if (commentInputRef.current) {
@@ -326,14 +339,38 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
         </span>
       </div>
 
-      <div className="flex-shrink-0 p-3 border-b bg-background">
+      <div className="flex-shrink-0 border-b bg-background flex flex-col gap-2 p-3">
+        {!replyingTo && (
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                {feedbackTypes.map((type) => (
+                    <button
+                        key={type.id}
+                        onClick={() => setFeedbackType(type.id as any)}
+                        className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap",
+                            feedbackType === type.id 
+                                ? type.color
+                                : "bg-background border-border text-muted-foreground hover:bg-muted"
+                        )}
+                    >
+                        <type.icon className="w-3.5 h-3.5" />
+                        {type.label}
+                    </button>
+                ))}
+            </div>
+        )}
         <CommentInput
           ref={commentInputRef}
           onAddCommentOrTicket={handleAddComment}
           allUsers={allUsers}
           storageKey={`goal-comment-${goalId}-${formattedDate}`}
           dropUp={false}
-          placeholder="Add a note... (@ to mention)"
+          placeholder={
+              feedbackType === 'report' ? "Share your progress update..." :
+              feedbackType === 'issue' ? "What's blocking you?" :
+              feedbackType === 'celebration' ? "Share the win!" :
+              "Add a note... (@ to mention)"
+          }
           replyTo={replyingTo}
           onCancelReply={() => setReplyingTo(null)}
         />
