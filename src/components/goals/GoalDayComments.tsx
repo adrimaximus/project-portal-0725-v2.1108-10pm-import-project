@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { Loader2, MessageSquare, FileText, AlertCircle, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
@@ -376,7 +375,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
         />
       </div>
 
-      <ScrollArea className="flex-1 p-4">
+      <div className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-4">
           {isFetching ? (
             <div className="flex justify-center items-center py-8 text-muted-foreground">
@@ -412,7 +411,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
             ))
           )}
         </div>
-      </ScrollArea>
+      </div>
       <AlertDialog open={!!commentToDelete} onOpenChange={() => setCommentToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
