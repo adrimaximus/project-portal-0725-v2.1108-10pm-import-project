@@ -21,10 +21,10 @@ interface GoalDayCommentsProps {
 }
 
 const feedbackTypes = [
-    { id: 'comment', label: 'Comment', icon: MessageSquare, color: 'text-muted-foreground bg-muted/50 border-transparent ring-1 ring-border' },
-    { id: 'report', label: 'Update', icon: FileText, color: 'text-blue-600 bg-blue-50 border-blue-200 ring-1 ring-blue-200' },
-    { id: 'issue', label: 'Issue', icon: AlertCircle, color: 'text-red-600 bg-red-50 border-red-200 ring-1 ring-red-200' },
-    { id: 'celebration', label: 'Celebration', icon: Trophy, color: 'text-amber-600 bg-amber-50 border-amber-200 ring-1 ring-amber-200' },
+    { value: 'comment', label: 'Comment', icon: MessageSquare, containerClass: 'bg-background border-border', iconClass: 'text-muted-foreground' },
+    { value: 'report', label: 'Update', icon: FileText, containerClass: 'bg-blue-50/60 border-blue-100', iconClass: 'text-blue-600' },
+    { value: 'issue', label: 'Issue', icon: AlertCircle, containerClass: 'bg-red-50/60 border-red-100', iconClass: 'text-red-600' },
+    { value: 'celebration', label: 'Celebration', icon: Trophy, containerClass: 'bg-amber-50/60 border-amber-100', iconClass: 'text-amber-600' },
 ] as const;
 
 const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
@@ -177,7 +177,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
 
     let finalContent = text.trim();
     if (!replyToId && feedbackType !== 'comment') {
-        const typeLabel = feedbackTypes.find(t => t.id === feedbackType)?.label;
+        const typeLabel = feedbackTypes.find(t => t.value === feedbackType)?.label;
         finalContent = `**[${typeLabel}]** ${finalContent}`;
     }
 
@@ -308,12 +308,12 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
                 {feedbackTypes.map((type) => (
                     <button
-                        key={type.id}
-                        onClick={() => setFeedbackType(type.id as any)}
+                        key={type.value}
+                        onClick={() => setFeedbackType(type.value as any)}
                         className={cn(
                             "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap",
-                            feedbackType === type.id 
-                                ? type.color
+                            feedbackType === type.value
+                                ? cn(type.containerClass, type.iconClass)
                                 : "bg-background border-border text-muted-foreground hover:bg-muted"
                         )}
                     >
@@ -359,7 +359,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
               const Icon = feedbackTypeObj.icon;
 
               return (
-                <div key={comment.id} className={cn("group relative flex gap-3 rounded-lg p-3 border shadow-sm transition-all hover:shadow-md", feedbackTypeObj.color.replace('text-', ''))}>
+                <div key={comment.id} className={cn("group relative flex gap-3 rounded-lg p-3 border shadow-sm transition-all hover:shadow-md", feedbackTypeObj.containerClass)}>
                   <Avatar className="h-8 w-8 flex-shrink-0 border bg-background">
                     <AvatarImage src={getAvatarUrl(author.avatar_url, author.id)} />
                     <AvatarFallback style={generatePastelColor(author.id)}>
@@ -429,7 +429,7 @@ const GoalDayComments = ({ goalId, date }: GoalDayCommentsProps) => {
                             )}
                             <div className="text-sm leading-relaxed text-foreground/90">
                                 <div className="flex items-start gap-2">
-                                    <Icon className={cn("w-4 h-4 mt-0.5 flex-shrink-0 opacity-70", feedbackTypeObj.id !== 'comment' ? "text-current" : "hidden")} />
+                                    <Icon className={cn("w-4 h-4 mt-0.5 flex-shrink-0 opacity-70", feedbackTypeObj.value !== 'comment' ? feedbackTypeObj.iconClass : "hidden")} />
                                     <div className="flex-1">
                                         <MarkdownRenderer>{displayContent}</MarkdownRenderer>
                                     </div>
