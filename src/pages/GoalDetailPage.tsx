@@ -79,7 +79,7 @@ const GoalDetailPage = () => {
     };
   };
 
-  const handleUpdateCompletion = async (date: Date, value: number, file?: File | null, removeAttachment: boolean = false) => {
+  const handleUpdateCompletion = async (date: Date, value: number, file?: File | null, removeAttachment: boolean = false, note?: string) => {
     if (!goal || !currentUser) return;
     
     let attachmentData = null;
@@ -107,6 +107,7 @@ const GoalDetailPage = () => {
             user_id: currentUser.id,
             date: date.toISOString(),
             value: newValue,
+            notes: note, // Include notes in the update payload
         };
 
         if (existing) upsertData.id = existing.id;
@@ -136,6 +137,7 @@ const GoalDetailPage = () => {
             user_id: currentUser.id,
             date: date.toISOString(),
             value: value,
+            notes: note, // Include notes in insert payload
         };
         
         if (attachmentData) {
@@ -272,9 +274,9 @@ const GoalDetailPage = () => {
           <div className="space-y-6">
             <GoalProgressChart goal={goal} />
             {goal.type === 'quantity' ? (
-              <GoalQuantityTracker goal={goal} onLogProgress={(date, val, file) => handleUpdateCompletion(date, val, file)} />
+              <GoalQuantityTracker goal={goal} onLogProgress={(date, val, file, remove, note) => handleUpdateCompletion(date, val, file, remove, note)} />
             ) : (
-              <GoalValueTracker goal={goal} onLogValue={(date, val, file) => handleUpdateCompletion(date, val, file)} />
+              <GoalValueTracker goal={goal} onLogValue={(date, val, file, remove, note) => handleUpdateCompletion(date, val, file, remove, note)} />
             )}
           </div>
         )}
