@@ -8,8 +8,8 @@ import { formatValue } from '@/lib/formatting';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Eye, FileText, MoreHorizontal, Pencil, Trash2, Upload } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Eye, FileText, MoreHorizontal, Pencil, Trash2, Upload, Save, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 interface GoalLogTableProps {
   logs: GoalCompletion[];
@@ -30,6 +32,9 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
   const [userMap, setUserMap] = useState<Map<string, User>>(new Map());
   const [selectedLog, setSelectedLog] = useState<GoalCompletion | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -66,6 +71,12 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
     };
     fetchUsers();
   }, [logs]);
+
+  useEffect(() => {
+    if (selectedLog) {
+        setNote((selectedLog as any).notes || "");
+    }
+  }, [selectedLog]);
 
   // Determine type based on extension if not provided
   const getFileType = (name: string) => {
@@ -146,6 +157,30 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
     }
   };
 
+  const handleSaveNote = async () => {
+    if (!selectedLog) return;
+    setIsSaving(true);
+    try {
+        const { error } = await supabase
+            .from('goal_completions')
+            .update({ notes: note })
+            .eq('id', selectedLog.id);
+
+        if (error) throw error;
+
+        toast.success("Note updated successfully");
+        queryClient.invalidateQueries({ queryKey: ['goal'] });
+        
+        // Update local selected log so UI reflects saved state if we don't close
+        setSelectedLog(prev => prev ? { ...prev, notes: note } : null);
+        
+    } catch (error: any) {
+        toast.error("Failed to save note", { description: error.message });
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
   const selectedAchiever = selectedLog?.userId ? userMap.get(selectedLog.userId) : null;
   const selectedAttachmentUrl = (selectedLog as any)?.attachment_url;
   const selectedAttachmentName = (selectedLog as any)?.attachment_name || 'Attachment';
@@ -155,7 +190,7 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
   const isGoalOwner = currentUserId && goalOwnerId === currentUserId;
   
   // Permissions logic:
-  // - Edit: Only the log owner can edit their upload file.
+  // - Edit: Only the log owner can edit their upload file or note.
   // - Delete: Goal owner can delete any log. Log owner can delete their own log.
   const canEdit = isLogOwner;
   const canDelete = isGoalOwner || isLogOwner;
@@ -190,6 +225,7 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
             {sortedLogs.map((log, index) => {
               const achiever = log.userId ? userMap.get(log.userId) : null;
               const attachmentUrl = (log as any).attachment_url;
+              const hasNote = !!(log as any).notes;
 
               return (
                 <TableRow 
@@ -214,14 +250,11 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
                     )}
                   </TableCell>
                   <TableCell>
-                    {attachmentUrl ? (
-                      <div className="flex items-center gap-2 text-primary">
-                        <FileText className="h-4 w-4" />
-                        <span className="text-xs">View</span>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">-</span>
-                    )}
+                    <div className="flex gap-2">
+                        {attachmentUrl && <FileText className="h-4 w-4 text-primary" />}
+                        {hasNote && <MoreHorizontal className="h-4 w-4 text-muted-foreground" />}
+                        {!attachmentUrl && !hasNote && <span className="text-xs text-muted-foreground">-</span>}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right font-medium">
                     {formatValue(log.value, unit)}
@@ -268,6 +301,9 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
                 )}
               </div>
             </div>
+            <DialogDescription className="sr-only">
+                View or edit details for this goal log entry.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="flex-1 flex flex-col overflow-hidden">
@@ -296,14 +332,27 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
                 </div>
               </div>
               
-              {selectedLog?.notes && (
-                <div className="space-y-2">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Notes</span>
-                  <div className="text-sm text-foreground/90 bg-muted/30 p-3 rounded-lg border border-border/50 leading-relaxed">
-                    {selectedLog.notes}
-                  </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                    <Label htmlFor="log-note" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Note</Label>
+                    {canEdit && note !== ((selectedLog as any)?.notes || '') && (
+                         <span className="text-[10px] text-amber-600 font-medium animate-pulse">Unsaved changes</span>
+                    )}
                 </div>
-              )}
+                {canEdit ? (
+                    <Textarea 
+                        id="log-note"
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        placeholder="Add a note..."
+                        className="resize-none min-h-[80px] text-sm"
+                    />
+                ) : (
+                    <div className="text-sm text-foreground/90 bg-muted/30 p-3 rounded-lg border border-border/50 leading-relaxed min-h-[60px]">
+                        {note || <span className="text-muted-foreground italic">No note provided.</span>}
+                    </div>
+                )}
+              </div>
             </div>
 
             <div className="flex-1 bg-muted/20 relative overflow-hidden flex flex-col border-t border-border/50">
@@ -339,14 +388,29 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
             </div>
           </div>
 
-          <div className="p-4 border-t flex justify-end gap-3 flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            {selectedAttachmentUrl && (
-              <Button variant="outline" size="sm" className="gap-2" onClick={() => window.open(selectedAttachmentUrl, '_blank')}>
-                  <Eye className="h-4 w-4" />
-                  Open Original
-              </Button>
-            )}
-            <Button size="sm" onClick={() => setSelectedLog(null)}>Close</Button>
+          <div className="p-4 border-t flex justify-between gap-3 flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div>
+                 {canEdit && (
+                    <Button 
+                        size="sm" 
+                        onClick={handleSaveNote} 
+                        disabled={isSaving || note === ((selectedLog as any)?.notes || '')}
+                        variant={note !== ((selectedLog as any)?.notes || '') ? "default" : "secondary"}
+                    >
+                        {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                        Save Note
+                    </Button>
+                 )}
+            </div>
+            <div className="flex gap-2">
+                {selectedAttachmentUrl && (
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => window.open(selectedAttachmentUrl, '_blank')}>
+                    <Eye className="h-4 w-4" />
+                    Open Original
+                </Button>
+                )}
+                <Button size="sm" variant="outline" onClick={() => setSelectedLog(null)}>Close</Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

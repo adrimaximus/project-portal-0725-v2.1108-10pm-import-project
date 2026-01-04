@@ -8,16 +8,20 @@ import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, par
 import { toast } from 'sonner';
 import { formatNumber } from '@/lib/formatting';
 import GoalLogTable from './GoalLogTable';
-import { Paperclip, X } from 'lucide-react';
+import { Paperclip, X, StickyNote } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface GoalQuantityTrackerProps {
   goal: Goal;
-  onLogProgress: (date: Date, value: number, file?: File | null) => void;
+  onLogProgress: (date: Date, value: number, file?: File | null, removeAttachment?: boolean, note?: string) => void;
 }
 
 const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) => {
   const [logValue, setLogValue] = useState<number | ''>('');
   const [file, setFile] = useState<File | null>(null);
+  const [note, setNote] = useState('');
+  const [isNoteOpen, setIsNoteOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { currentPeriodTotal, periodProgress, periodName, logsInPeriod, daysRemaining, quantityToGo } = useMemo(() => {
@@ -51,10 +55,12 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
   const handleLog = () => {
     const value = Number(logValue);
     if (value > 0) {
-      onLogProgress(new Date(), value, file);
+      onLogProgress(new Date(), value, file, false, note);
       toast.success(`Logged ${formatNumber(value)} for "${goal.title}"`);
       setLogValue('');
       setFile(null);
+      setNote('');
+      setIsNoteOpen(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     } else {
       toast.error("Please enter a valid number.");
@@ -118,7 +124,10 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
                     onKeyPress={(e) => e.key === 'Enter' && handleLog()}
                     className="flex-1"
                 />
-                <Button variant="outline" size="icon" onClick={() => fileInputRef.current?.click()}>
+                <Button variant={isNoteOpen ? "secondary" : "outline"} size="icon" onClick={() => setIsNoteOpen(!isNoteOpen)} title="Add Note">
+                    <StickyNote className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} title="Attach File">
                     <Paperclip className="h-4 w-4" />
                 </Button>
                 <input 
@@ -129,6 +138,18 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
                 />
                 <Button onClick={handleLog}>Log</Button>
             </div>
+            
+            <Collapsible open={isNoteOpen} onOpenChange={setIsNoteOpen}>
+                <CollapsibleContent className="space-y-2">
+                    <Textarea 
+                        placeholder="Add a note (optional)..." 
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        className="text-sm min-h-[60px]"
+                    />
+                </CollapsibleContent>
+            </Collapsible>
+
             {file && (
                 <div className="flex items-center gap-2 text-sm bg-muted p-2 rounded-md">
                     <Paperclip className="h-3 w-3" />
@@ -139,7 +160,7 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
                 </div>
             )}
         </div>
-        <GoalLogTable logs={logsInPeriod} goalType={goal.type} />
+        <GoalLogTable logs={logsInPeriod} goalType={goal.type} goalOwnerId={goal.user_id} />
       </CardContent>
     </Card>
   );
