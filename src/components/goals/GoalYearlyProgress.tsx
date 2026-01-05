@@ -38,6 +38,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import { getAvatarUrl, generatePastelColor } from '@/lib/utils';
+import AttachmentViewerModal from '@/components/AttachmentViewerModal';
 
 interface GoalYearlyProgressProps {
   goal: Goal;
@@ -74,6 +75,11 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const [commentFiles, setCommentFiles] = useState<File[]>([]);
   const commentFileInputRef = useRef<HTMLInputElement>(null);
   const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Attachment Viewer State
+  const [viewerAttachments, setViewerAttachments] = useState<any[]>([]);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [viewerCommentId, setViewerCommentId] = useState("");
 
   // Mention state
   const [mentionOpen, setMentionOpen] = useState(false);
@@ -259,8 +265,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                 name: file.name,
                 url: publicUrl,
                 type: file.type,
-                size: file.size,
-                storagePath: fileName // Keep path for future deletion
+                size: file.size
             };
         });
 
@@ -555,6 +560,12 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     }
     return parts.length > 0 ? parts : content;
   };
+  
+  const handleViewAttachments = (attachments: any[], commentId: string) => {
+    setViewerAttachments(attachments);
+    setViewerCommentId(commentId);
+    setIsViewerOpen(true);
+  };
 
   return (
     <>
@@ -770,7 +781,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                       <div className="flex justify-between items-center">
                           <Label htmlFor="note" className="text-sm font-medium text-muted-foreground ml-1">Note (Optional)</Label>
                           {savedNote && note === "" && (
-                              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => { setSavedNote(""); setNote(""); }}>
+                              <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => { setSavedNote(""); setNote(""); }}>
                                   Clear Note
                               </Button>
                           )}
@@ -923,14 +934,18 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                                 <div key={idx} className="w-[50px] relative">
                                                                     {att.type?.startsWith('image/') ? (
                                                                         <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-background hover:opacity-90 transition-opacity relative">
-                                                                            <a href={att.url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center">
+                                                                            <button 
+                                                                                onClick={() => handleViewAttachments(comment.attachments_jsonb, comment.id)} 
+                                                                                className="w-full h-full flex items-center justify-center cursor-pointer"
+                                                                                type="button"
+                                                                            >
                                                                                 <img 
                                                                                   src={att.url} 
                                                                                   alt={att.name} 
                                                                                   className="w-full h-full object-cover" 
                                                                                   loading="lazy"
                                                                                 />
-                                                                            </a>
+                                                                            </button>
                                                                             {isOverlay && (
                                                                                 <div className="absolute inset-0 flex items-center justify-center bg-black/60 pointer-events-none rounded-md">
                                                                                     <span className="text-xs font-medium text-white">+{extraCount}</span>
@@ -939,7 +954,11 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                                         </div>
                                                                     ) : (
                                                                         <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-muted/30 hover:opacity-90 transition-opacity relative">
-                                                                            <a href={att.url} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center w-full h-full p-1 text-center">
+                                                                            <button 
+                                                                                onClick={() => handleViewAttachments(comment.attachments_jsonb, comment.id)}
+                                                                                className="flex flex-col items-center justify-center w-full h-full p-1 text-center cursor-pointer"
+                                                                                type="button"
+                                                                            >
                                                                                 {att.type === 'application/pdf' ? (
                                                                                     <FileText className="h-6 w-6 text-red-500 mb-0.5" />
                                                                                 ) : (
@@ -948,7 +967,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                                                 <span className="text-[8px] text-muted-foreground w-full truncate px-0.5">
                                                                                     {att.name}
                                                                                 </span>
-                                                                            </a>
+                                                                            </button>
                                                                             {isOverlay && (
                                                                                 <div className="absolute inset-0 flex items-center justify-center bg-black/60 pointer-events-none rounded-md">
                                                                                     <span className="text-xs font-medium text-white">+{extraCount}</span>
@@ -1142,6 +1161,13 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <AttachmentViewerModal
+        open={isViewerOpen}
+        onOpenChange={setIsViewerOpen}
+        attachments={viewerAttachments}
+        commentId={viewerCommentId}
+      />
     </>
   );
 };
