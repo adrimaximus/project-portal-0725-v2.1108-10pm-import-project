@@ -10,7 +10,23 @@ import { formatNumber } from '@/lib/formatting';
 import GoalLogTable from './GoalLogTable';
 import { Paperclip, X, StickyNote } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 
 interface GoalQuantityTrackerProps {
   goal: Goal;
@@ -23,6 +39,26 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
   const [note, setNote] = useState('');
   const [isNoteOpen, setIsNoteOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const noteTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Mention state
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [cursorPos, setCursorPos] = useState(0);
+
+  const { data: profiles } = useQuery({
+    queryKey: ['profiles_for_mention'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, avatar_url')
+        .eq('status', 'active')
+        .limit(20);
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
 
   const { currentPeriodTotal, periodProgress, periodName, logsInPeriod, daysRemaining, quantityToGo } = useMemo(() => {
     const today = new Date();
@@ -88,6 +124,53 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
     }
   };
 
+  const handleNoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    const newCursorPos = e.target.selectionStart;
+    setNote(text);
+    setCursorPos(newCursorPos);
+
+    const textBeforeCursor = text.slice(0, newCursorPos);
+    // Regex matches @ followed by non-@ and non-newline characters until the end
+    const mentionMatch = textBeforeCursor.match(/@([^@\n]*)$/);
+
+    if (mentionMatch) {
+      setMentionOpen(true);
+      setMentionQuery(mentionMatch[1]);
+    } else {
+      setMentionOpen(false);
+    }
+  };
+
+  const insertMention = (profile: any) => {
+    const textBeforeCursor = note.slice(0, cursorPos);
+    const textAfterCursor = note.slice(cursorPos);
+    
+    // Replace the part starting with @ until cursor with the mention syntax
+    const newTextBefore = textBeforeCursor.replace(/@([^@\n]*)$/, `@[${profile.first_name || 'User'}]( ${profile.id}) `);
+    
+    const newText = newTextBefore + textAfterCursor;
+    setNote(newText);
+    setMentionOpen(false);
+
+    // Refocus the textarea
+    setTimeout(() => {
+        if (noteTextareaRef.current) {
+            noteTextareaRef.current.focus();
+            const newCursorPosition = newTextBefore.length;
+            noteTextareaRef.current.setSelectionRange(newCursorPosition, newCursorPosition);
+        }
+    }, 0);
+  };
+
+  const filteredProfiles = profiles?.filter(p => {
+    if (!mentionQuery) return true;
+    const fullName = `${p.first_name || ''} ${p.last_name || ''}`.toLowerCase();
+    const email = (p.email || '').toLowerCase();
+    const query = mentionQuery.toLowerCase();
+    return fullName.includes(query) || email.includes(query);
+  });
+
   return (
     <Card>
       <CardHeader>
@@ -141,12 +224,55 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
             
             <Collapsible open={isNoteOpen} onOpenChange={setIsNoteOpen}>
                 <CollapsibleContent className="space-y-2">
-                    <Textarea 
-                        placeholder="Add a note (optional)..." 
-                        value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                        className="text-sm min-h-[60px]"
-                    />
+                    <div className="relative">
+                        <Popover open={mentionOpen} onOpenChange={setMentionOpen}>
+                            <PopoverTrigger asChild>
+                                <div className="w-full">
+                                    <Textarea 
+                                        ref={noteTextareaRef}
+                                        placeholder="Add a note (type @ to mention)..." 
+                                        value={note}
+                                        onChange={handleNoteChange}
+                                        className="text-sm min-h-[60px]"
+                                    />
+                                </div>
+                            </PopoverTrigger>
+                            <PopoverContent 
+                                className="p-0 w-[250px]" 
+                                align="start" 
+                                side="top"
+                                onOpenAutoFocus={(e) => e.preventDefault()}
+                                onCloseAutoFocus={(e) => e.preventDefault()}
+                            >
+                                <Command shouldFilter={false}>
+                                    <CommandList>
+                                        <CommandEmpty>No person found.</CommandEmpty>
+                                        <CommandGroup>
+                                            {filteredProfiles?.map((profile) => (
+                                                <CommandItem
+                                                    key={profile.id}
+                                                    value={`${profile.first_name} ${profile.last_name} ${profile.email}`}
+                                                    onSelect={() => insertMention(profile)}
+                                                    className="text-xs cursor-pointer"
+                                                >
+                                                    <Avatar className="h-6 w-6 mr-2">
+                                                        <AvatarImage src={getAvatarUrl(profile.avatar_url, profile.id)} />
+                                                        <AvatarFallback style={generatePastelColor(profile.id)}>
+                                                            {profile.first_name?.[0]}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="flex flex-col overflow-hidden">
+                                                        <span className="font-medium truncate">{profile.first_name} {profile.last_name}</span>
+                                                        <span className="text-[10px] text-muted-foreground truncate">{profile.email}</span>
+                                                    </div>
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
                 </CollapsibleContent>
             </Collapsible>
 
