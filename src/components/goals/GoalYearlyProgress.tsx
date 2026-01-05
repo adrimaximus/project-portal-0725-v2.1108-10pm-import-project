@@ -699,8 +699,10 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                         </div>
                                     </PopoverTrigger>
                                     <PopoverContent className="p-0 w-[200px]" align="start" side="top">
-                                        <Command>
-                                            <CommandInput placeholder="Search people..." value={mentionQuery} onValueChange={setMentionQuery} className="h-8 text-xs" />
+                                        <Command shouldFilter={false}>
+                                            <div className="hidden">
+                                                <CommandInput placeholder="Search people..." value={mentionQuery} onValueChange={setMentionQuery} />
+                                            </div>
                                             <CommandList>
                                                 <CommandEmpty>No person found.</CommandEmpty>
                                                 <CommandGroup>
