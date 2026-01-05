@@ -31,9 +31,11 @@ import { generatePastelColor, getAvatarUrl } from "@/lib/utils";
 interface GoalQuantityTrackerProps {
   goal: Goal;
   onLogProgress: (date: Date, value: number, file?: File | null, removeAttachment?: boolean, note?: string) => void;
+  selectedYear: string;
+  onYearChange: (year: string) => void;
 }
 
-const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) => {
+const GoalQuantityTracker = ({ goal, onLogProgress, selectedYear, onYearChange }: GoalQuantityTrackerProps) => {
   const [logValue, setLogValue] = useState<number | ''>('');
   const [file, setFile] = useState<File | null>(null);
   const [note, setNote] = useState('');
@@ -286,7 +288,13 @@ const GoalQuantityTracker = ({ goal, onLogProgress }: GoalQuantityTrackerProps) 
                 </div>
             )}
         </div>
-        <GoalLogTable logs={logsInPeriod} goalType={goal.type} goalOwnerId={goal.user_id} />
+        <GoalLogTable 
+            logs={logsInPeriod} 
+            goalType={goal.type} 
+            goalOwnerId={goal.user_id} 
+            selectedYear={selectedYear}
+            onYearChange={onYearChange}
+        />
       </CardContent>
     </Card>
   );

@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, getYear } from 'date-fns';
 import GoalFormDialog from '@/components/goals/GoalFormDialog';
 import GoalQuantityTracker from '@/components/goals/GoalQuantityTracker';
 import GoalValueTracker from '@/components/goals/GoalValueTracker';
@@ -56,6 +56,10 @@ const GoalDetailPage = () => {
   const queryClient = useQueryClient();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
+  // Shared year state for syncing charts and logs
+  const currentYear = getYear(new Date());
+  const [selectedYear, setSelectedYear] = useState(currentYear.toString());
 
   const { data: goal, isLoading, error: queryError } = useQuery({
     queryKey: ['goal', slug],
@@ -298,11 +302,25 @@ const GoalDetailPage = () => {
 
         {(goal.type === 'quantity' || goal.type === 'value') && (
           <div className="space-y-6">
-            <GoalProgressChart goal={goal} />
+            <GoalProgressChart 
+              goal={goal} 
+              selectedYear={selectedYear}
+              onYearChange={setSelectedYear}
+            />
             {goal.type === 'quantity' ? (
-              <GoalQuantityTracker goal={goal} onLogProgress={(date, val, file, remove, note) => handleUpdateCompletion(date, val, file, remove, note)} />
+              <GoalQuantityTracker 
+                goal={goal} 
+                onLogProgress={(date, val, file, remove, note) => handleUpdateCompletion(date, val, file, remove, note)}
+                selectedYear={selectedYear}
+                onYearChange={setSelectedYear}
+              />
             ) : (
-              <GoalValueTracker goal={goal} onLogValue={(date, val, file, remove, note) => handleUpdateCompletion(date, val, file, remove, note)} />
+              <GoalValueTracker 
+                goal={goal} 
+                onLogValue={(date, val, file, remove, note) => handleUpdateCompletion(date, val, file, remove, note)}
+                selectedYear={selectedYear}
+                onYearChange={setSelectedYear}
+              />
             )}
           </div>
         )}

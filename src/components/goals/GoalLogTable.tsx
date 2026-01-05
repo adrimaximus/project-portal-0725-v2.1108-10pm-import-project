@@ -27,9 +27,11 @@ interface GoalLogTableProps {
   unit?: string;
   goalType: Goal['type'];
   goalOwnerId?: string;
+  selectedYear?: string;
+  onYearChange?: (year: string) => void;
 }
 
-const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) => {
+const GoalLogTable = ({ logs, unit, goalType, goalOwnerId, selectedYear: propYear, onYearChange }: GoalLogTableProps) => {
   const [userMap, setUserMap] = useState<Map<string, User>>(new Map());
   const [selectedLog, setSelectedLog] = useState<GoalCompletion | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -37,7 +39,11 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
   const [isSaving, setIsSaving] = useState(false);
   
   const currentYear = getYear(new Date());
-  const [selectedYear, setSelectedYear] = useState(currentYear.toString());
+  // Internal state is used only if props are not provided
+  const [internalYear, setInternalYear] = useState(currentYear.toString());
+  
+  const selectedYear = propYear || internalYear;
+  const setSelectedYear = onYearChange || setInternalYear;
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
@@ -209,10 +215,6 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
   
   const canEdit = isLogOwner;
   const canDelete = isGoalOwner || isLogOwner;
-
-  if (logs.length === 0) {
-    return <p className="text-sm text-muted-foreground text-center py-4">No logs yet.</p>;
-  }
 
   return (
     <>

@@ -31,9 +31,11 @@ import { supabase } from '@/integrations/supabase/client';
 interface GoalValueTrackerProps {
   goal: Goal;
   onLogValue: (date: Date, value: number, file?: File | null, removeAttachment?: boolean, note?: string) => void;
+  selectedYear: string;
+  onYearChange: (year: string) => void;
 }
 
-const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
+const GoalValueTracker = ({ goal, onLogValue, selectedYear, onYearChange }: GoalValueTrackerProps) => {
   const [logValue, setLogValue] = useState<number | ''>('');
   const [file, setFile] = useState<File | null>(null);
   const [note, setNote] = useState('');
@@ -326,7 +328,14 @@ const GoalValueTracker = ({ goal, onLogValue }: GoalValueTrackerProps) => {
             </div>
         )}
 
-        <GoalLogTable logs={logsInPeriod} unit={goal.unit} goalType={goal.type} goalOwnerId={goal.user_id} />
+        <GoalLogTable 
+            logs={logsInPeriod} 
+            unit={goal.unit} 
+            goalType={goal.type} 
+            goalOwnerId={goal.user_id} 
+            selectedYear={selectedYear}
+            onYearChange={onYearChange}
+        />
       </CardContent>
     </Card>
   );

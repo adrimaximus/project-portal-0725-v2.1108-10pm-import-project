@@ -39,6 +39,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import { getAvatarUrl, generatePastelColor } from '@/lib/utils';
 import AttachmentViewerModal from '@/components/AttachmentViewerModal';
+import GoalLogTable from './GoalLogTable';
 
 interface GoalYearlyProgressProps {
   goal: Goal;
@@ -579,105 +580,125 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
             monthlyProgress={null} 
           />
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {monthlyData.map(month => {
-            return (
-              <div 
-                key={month.name} 
-                className="p-3 border rounded-lg transition-all hover:bg-muted/20"
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <p className="font-semibold text-sm">{month.name}</p>
-                  <p className="text-sm font-bold">{month.percentage}%</p>
-                </div>
-                <div className="grid grid-cols-7 gap-1">
-                  {Array.from({ length: (month.days[0].date.getDay() + 6) % 7 }).map((_, i) => <div key={`empty-${i}`} />)}
-                  {month.days.map(day => {
-                    const isFutureDay = isAfter(day.date, todayStart);
-                    const isValidDay = isDayValidForGoal(day.date);
-                    const isDisabled = isFutureDay || !isValidDay;
-                    const isMissed = isValidDay && day.isCompleted === false;
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {monthlyData.map(month => {
+              return (
+                <div 
+                  key={month.name} 
+                  className="p-3 border rounded-lg transition-all hover:bg-muted/20"
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <p className="font-semibold text-sm">{month.name}</p>
+                    <p className="text-sm font-bold">{month.percentage}%</p>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: (month.days[0].date.getDay() + 6) % 7 }).map((_, i) => <div key={`empty-${i}`} />)}
+                    {month.days.map(day => {
+                      const isFutureDay = isAfter(day.date, todayStart);
+                      const isValidDay = isDayValidForGoal(day.date);
+                      const isDisabled = isFutureDay || !isValidDay;
+                      const isMissed = isValidDay && day.isCompleted === false;
 
-                    const buttonStyle: React.CSSProperties = {};
-                    let buttonClasses = "w-full h-3 rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed relative";
+                      const buttonStyle: React.CSSProperties = {};
+                      let buttonClasses = "w-full h-3 rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed relative";
 
-                    if (isMissed) {
-                      buttonStyle.backgroundColor = 'transparent';
-                      buttonStyle.border = `1px solid ${color}80`;
-                      buttonClasses += ' box-border';
-                    } else {
-                      let bgColor = '#E5E7EB';
-                      if (isValidDay && day.isCompleted === true) {
-                        bgColor = color;
+                      if (isMissed) {
+                        buttonStyle.backgroundColor = 'transparent';
+                        buttonStyle.border = `1px solid ${color}80`;
+                        buttonClasses += ' box-border';
+                      } else {
+                        let bgColor = '#E5E7EB';
+                        if (isValidDay && day.isCompleted === true) {
+                          bgColor = color;
+                        }
+                        buttonStyle.backgroundColor = bgColor;
                       }
-                      buttonStyle.backgroundColor = bgColor;
-                    }
 
-                    if (isFutureDay) {
-                      buttonStyle.opacity = 0.2;
-                    }
+                      if (isFutureDay) {
+                        buttonStyle.opacity = 0.2;
+                      }
 
-                    const hasIndicators = day.attachmentUrl || day.note || day.hasComments;
+                      const hasIndicators = day.attachmentUrl || day.note || day.hasComments;
 
-                    return (
-                      <TooltipProvider key={day.date.toString()} delayDuration={100}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDayClick(day); }}
-                              disabled={isDisabled}
-                              className={buttonClasses}
-                              style={buttonStyle}
-                            >
-                              {hasIndicators && (
-                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                  <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_2px_rgba(0,0,0,0.5)]" />
-                                </div>
-                              )}
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent className="text-xs max-w-[200px]">
-                            <p className="font-semibold mb-1">{format(day.date, 'PPP', { locale: enUS })}</p>
-                            {isFutureDay ? <p className="text-muted-foreground">Future date</p> : 
-                             !isValidDay ? <p className="text-muted-foreground">Not a scheduled day</p> :
-                             day.isCompleted !== undefined ? (
-                                <div className="space-y-2">
-                                  <p className={day.isCompleted ? "text-green-600 font-medium" : "text-red-500 font-medium"}>
-                                    {day.isCompleted ? 'Completed' : 'Missed'}
-                                  </p>
-                                  {hasIndicators && (
-                                    <div className="pt-1 border-t border-border space-y-1">
-                                        {day.attachmentUrl && (
-                                            <div className="flex items-center gap-1.5 text-primary">
-                                                <Paperclip className="h-3 w-3" /> 
-                                                <span>Attachment</span>
-                                            </div>
-                                        )}
-                                        {day.note && (
-                                            <div className="flex items-start gap-1.5 text-muted-foreground">
-                                                <MessageSquare className="h-3 w-3 mt-0.5 shrink-0" />
-                                                <span className="italic line-clamp-3">"{day.note}"</span>
-                                            </div>
-                                        )}
-                                        {day.hasComments && (
-                                            <div className="flex items-center gap-1.5 text-blue-500">
-                                                <MessageCircle className="h-3 w-3" />
-                                                <span>Discussion</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                  )}
-                                </div>
-                             ) : <p className="text-muted-foreground">Click to update</p>}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    );
-                  })}
+                      return (
+                        <TooltipProvider key={day.date.toString()} delayDuration={100}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDayClick(day); }}
+                                disabled={isDisabled}
+                                className={buttonClasses}
+                                style={buttonStyle}
+                              >
+                                {hasIndicators && (
+                                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_2px_rgba(0,0,0,0.5)]" />
+                                  </div>
+                                )}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent className="text-xs max-w-[200px]">
+                              <p className="font-semibold mb-1">{format(day.date, 'PPP', { locale: enUS })}</p>
+                              {isFutureDay ? <p className="text-muted-foreground">Future date</p> : 
+                              !isValidDay ? <p className="text-muted-foreground">Not a scheduled day</p> :
+                              day.isCompleted !== undefined ? (
+                                  <div className="space-y-2">
+                                    <p className={day.isCompleted ? "text-green-600 font-medium" : "text-red-500 font-medium"}>
+                                      {day.isCompleted ? 'Completed' : 'Missed'}
+                                    </p>
+                                    {hasIndicators && (
+                                      <div className="pt-1 border-t border-border space-y-1">
+                                          {day.attachmentUrl && (
+                                              <div className="flex items-center gap-1.5 text-primary">
+                                                  <Paperclip className="h-3 w-3" /> 
+                                                  <span>Attachment</span>
+                                              </div>
+                                          )}
+                                          {day.note && (
+                                              <div className="flex items-start gap-1.5 text-muted-foreground">
+                                                  <MessageSquare className="h-3 w-3 mt-0.5 shrink-0" />
+                                                  <span className="italic line-clamp-3">"{day.note}"</span>
+                                              </div>
+                                          )}
+                                          {day.hasComments && (
+                                              <div className="flex items-center gap-1.5 text-blue-500">
+                                                  <MessageCircle className="h-3 w-3" />
+                                                  <span>Discussion</span>
+                                              </div>
+                                          )}
+                                      </div>
+                                    )}
+                                  </div>
+                              ) : <p className="text-muted-foreground">Click to update</p>}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
+          <div className="border-t pt-6">
+            <h4 className="text-lg font-semibold mb-4">Log History</h4>
+            <GoalLogTable 
+              logs={relevantCompletions.map(c => ({
+                id: c.date, // Using date as ID for mapped completions, though GoalLogTable expects real IDs.
+                date: c.date,
+                value: c.completed ? 1 : 0,
+                userId: goal.user_id, // Simplified assumption
+                attachment_url: c.attachmentUrl,
+                attachment_name: c.attachmentName,
+                notes: c.note,
+              } as GoalCompletion))}
+              goalType={goal.type}
+              goalOwnerId={goal.user_id}
+              selectedYear={displayYear.toString()}
+              onYearChange={(y) => setDisplayYear(parseInt(y))}
+            />
+          </div>
         </CardContent>
       </Card>
       

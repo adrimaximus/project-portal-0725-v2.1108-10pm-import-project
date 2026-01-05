@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Goal } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, ReferenceLine, Label } from 'recharts';
@@ -9,18 +9,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 interface GoalProgressChartProps {
   goal: Goal;
+  selectedYear: string;
+  onYearChange: (year: string) => void;
 }
 
-const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
+const GoalProgressChart = ({ goal, selectedYear, onYearChange }: GoalProgressChartProps) => {
   const currentYear = getYear(new Date());
-  const [selectedYear, setSelectedYear] = useState(currentYear.toString());
-
+  
   // Generate list of available years based on completion data or default to current year
   const years = useMemo(() => {
     const dataYears = goal.completions.map(c => getYear(parseISO(c.date)));
     const uniqueYears = Array.from(new Set([currentYear, ...dataYears])).sort((a, b) => b - a);
     return uniqueYears.map(String);
   }, [goal.completions, currentYear]);
+
+  // Ensure selected year is in the list, or fallback to current
+  useEffect(() => {
+    if (!years.includes(selectedYear)) {
+      onYearChange(currentYear.toString());
+    }
+  }, [years, selectedYear, currentYear, onYearChange]);
 
   const { chartData, total, target, percentage, unit } = useMemo(() => {
     const yearToView = parseInt(selectedYear, 10);
@@ -76,7 +84,7 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
             </p>
           )}
         </div>
-        <Select value={selectedYear} onValueChange={setSelectedYear}>
+        <Select value={selectedYear} onValueChange={onYearChange}>
           <SelectTrigger className="w-[100px] h-8">
             <SelectValue placeholder="Year" />
           </SelectTrigger>
