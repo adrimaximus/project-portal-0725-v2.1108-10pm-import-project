@@ -191,6 +191,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
           id,
           content,
           created_at,
+          updated_at,
           user_id,
           attachments_jsonb,
           profiles:user_id (
@@ -329,7 +330,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
         .from('goal_comments')
         .update({ 
             content,
-            attachments_jsonb: updatedAttachments
+            attachments_jsonb: updatedAttachments,
+            updated_at: new Date().toISOString()
         })
         .eq('id', id);
       
@@ -748,7 +750,9 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                   {comment.profiles?.first_name} {comment.profiles?.last_name}
                                               </span>
                                               <span className="text-[10px] text-muted-foreground">
-                                                  {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                                                  {comment.updated_at && comment.updated_at !== comment.created_at 
+                                                    ? `Edited ${formatDistanceToNow(new Date(comment.updated_at), { addSuffix: true })}` 
+                                                    : formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                                               </span>
                                           </div>
                                           {editingCommentId === comment.id ? (
@@ -849,7 +853,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                               <div className="p-2 bg-muted/50 rounded-lg text-xs break-words relative group">
                                                   {renderCommentContent(comment.content)}
                                                   {comment.attachments_jsonb && comment.attachments_jsonb.length > 0 && (
-                                                      <div className="mt-2 space-y-1 pt-1 border-t border-border/50 grid grid-cols-3 gap-2">
+                                                      <div className="mt-2 space-y-1 pt-1 border-t border-border/50 grid grid-cols-4 gap-2">
                                                           {comment.attachments_jsonb.map((att: any, idx: number) => (
                                                               <div key={idx}>
                                                                   {att.type?.startsWith('image/') ? (
