@@ -797,7 +797,7 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId, selectedYear: propYea
                                 </div>
                             )}
                             <div className="relative">
-                                <Popover open={mentionOpen} onOpenChange={setMentionOpen}>
+                                <Popover open={mentionOpen && !!filteredProfiles && filteredProfiles.length > 0} onOpenChange={setMentionOpen}>
                                   <PopoverTrigger asChild>
                                       <div className="w-full">
                                           <Textarea
@@ -819,7 +819,6 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId, selectedYear: propYea
                                   >
                                       <Command shouldFilter={false}>
                                           <CommandList>
-                                              <CommandEmpty>No collaborator found.</CommandEmpty>
                                               <CommandGroup>
                                                   {filteredProfiles?.map((profile) => (
                                                       <CommandItem
