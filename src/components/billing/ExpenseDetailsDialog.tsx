@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Expense } from "@/types";
 import { format } from "date-fns";
@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl, generatePastelColor, cn } from "@/lib/utils";
-import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2, Copy, Download, Edit, Paperclip, X, Tag, MoreVertical, Calculator, Receipt } from "lucide-react";
+import { CalendarIcon, CreditCard, User, Building2, FileText, Wallet, Eye, AlertCircle, MessageCircle, Reply, Loader2, Copy, Download, Edit, Paperclip, X, Tag, MoreVertical, Calculator, Receipt, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,9 +33,9 @@ interface ExpenseDetailsDialogProps {
   expense: Expense | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onStatusChange?: (invoiceId: string, newStatus: any) => void;
-  onEdit?: (invoice: Invoice) => void;
-  onDelete?: (invoice: Invoice) => void;
+  onStatusChange?: (id: string, newStatus: any) => void;
+  onEdit?: (expense: Expense) => void;
+  onDelete?: (expense: Expense) => void;
 }
 
 const formatFileSize = (bytes: number) => {
@@ -46,7 +46,7 @@ const formatFileSize = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange }: ExpenseDetailsDialogProps) => {
+const ExpenseDetailsDialog = ({ expense: propExpense, open, onOpenChange, onStatusChange, onEdit, onDelete }: ExpenseDetailsDialogProps) => {
   const queryClient = useQueryClient();
   const isDesktop = useMediaQuery("(min-width: 768px)");
   // Use an object to track which specific feedback type is being replied to/edited
@@ -860,6 +860,7 @@ Account Name: ${bankDetails.name || '-'}
     return (
       <>
         <Dialog open={open} onOpenChange={onOpenChange}>
+          {/* Hide default close button with [&>button]:hidden and add custom header controls */}
           <DialogContent className="sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto [&>button]:hidden">
             <div className="absolute right-4 top-4 flex items-center gap-1">
               <DropdownMenu>
