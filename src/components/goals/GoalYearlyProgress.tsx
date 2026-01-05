@@ -86,7 +86,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const [editContent, setEditContent] = useState("");
   const [editNewFiles, setEditNewFiles] = useState<File[]>([]);
   const [editAttachments, setEditAttachments] = useState<any[]>([]);
-  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const todayStart = startOfDay(today);
 
@@ -809,28 +808,24 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
 
                                                   <div className="flex gap-2 justify-between items-center">
                                                       <div className="flex items-center">
-                                                          <Button
-                                                              size="icon"
-                                                              variant="ghost"
-                                                              className="h-6 w-6 text-muted-foreground hover:text-primary"
-                                                              onClick={() => editFileInputRef.current?.click()}
+                                                          <label 
+                                                              htmlFor={`edit-file-input-${comment.id}`}
+                                                              className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-input bg-transparent text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground cursor-pointer text-muted-foreground hover:text-primary"
                                                               title="Attach file"
                                                           >
                                                               <Paperclip className="h-3.5 w-3.5" />
-                                                          </Button>
+                                                          </label>
                                                           <input 
+                                                              id={`edit-file-input-${comment.id}`}
                                                               type="file" 
-                                                              ref={editFileInputRef} 
                                                               className="hidden" 
                                                               multiple
                                                               onChange={(e) => {
                                                                   if (e.target.files && e.target.files.length > 0) {
                                                                       setEditNewFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
                                                                   }
-                                                                  // Clear input to allow selecting the same file again if needed
-                                                                  if (editFileInputRef.current) {
-                                                                      editFileInputRef.current.value = '';
-                                                                  }
+                                                                  // Reset value to allow re-selection
+                                                                  e.target.value = '';
                                                               }} 
                                                           />
                                                       </div>
@@ -854,11 +849,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                   {renderCommentContent(comment.content)}
                                                   {comment.attachments_jsonb && comment.attachments_jsonb.length > 0 && (
                                                       <div className="mt-2 pt-1 border-t border-border/50 grid grid-cols-4 gap-2">
-                                                          {/* Viewing logic: Limit to 5 items, show +N if more */}
-                                                          {(comment.attachments_jsonb.length > 5 
-                                                              ? comment.attachments_jsonb.slice(0, 4) 
-                                                              : comment.attachments_jsonb
-                                                          ).map((att: any, idx: number) => (
+                                                          {/* Viewing logic: Show all items to avoid confusion about missing uploads */}
+                                                          {comment.attachments_jsonb.map((att: any, idx: number) => (
                                                               <div key={idx}>
                                                                   {att.type?.startsWith('image/') ? (
                                                                       <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-background hover:opacity-90 transition-opacity">
@@ -887,16 +879,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                                   )}
                                                               </div>
                                                           ))}
-                                                          {comment.attachments_jsonb.length > 5 && (
-                                                              <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-muted/50 hover:bg-muted transition-colors cursor-pointer" onClick={() => window.open(comment.attachments_jsonb[4].url, '_blank')}>
-                                                                  <div className="flex flex-col items-center justify-center w-full h-full">
-                                                                      <span className="text-sm font-semibold text-muted-foreground">
-                                                                          +{comment.attachments_jsonb.length - 4}
-                                                                      </span>
-                                                                      <span className="text-[9px] text-muted-foreground">more</span>
-                                                                  </div>
-                                                              </div>
-                                                          )}
                                                       </div>
                                                   )}
                                                   {user?.id === comment.user_id && (
