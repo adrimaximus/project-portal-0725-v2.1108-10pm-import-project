@@ -1,4 +1,3 @@
-5 files in view mode">
 import { useState, useEffect, useRef } from 'react';
 import { Goal } from '@/types';
 import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay, getDay, formatDistanceToNow } from 'date-fns';
