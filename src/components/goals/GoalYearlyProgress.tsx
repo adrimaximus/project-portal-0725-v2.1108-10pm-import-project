@@ -1,3 +1,4 @@
+5 files in view mode">
 import { useState, useEffect, useRef } from 'react';
 import { Goal } from '@/types';
 import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay, getDay, formatDistanceToNow } from 'date-fns';
@@ -761,16 +762,16 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                   
                                                   {/* List existing/current attachments */}
                                                   {(editAttachments.length > 0 || editNewFiles.length > 0) && (
-                                                      <div className="flex flex-wrap gap-2">
+                                                      <div className="grid grid-cols-4 gap-2">
                                                           {/* Existing attachments */}
                                                           {editAttachments.map((att: any, idx: number) => (
-                                                              <div key={`existing-${idx}`} className="relative group/attachment border rounded-md overflow-hidden bg-background">
+                                                              <div key={`existing-${idx}`} className="relative group/attachment border rounded-md overflow-hidden bg-background aspect-square">
                                                                   {att.type?.startsWith('image/') ? (
-                                                                      <div className="w-12 h-12">
+                                                                      <div className="w-full h-full">
                                                                           <img src={att.url} alt={att.name} className="w-full h-full object-cover" />
                                                                       </div>
                                                                   ) : (
-                                                                      <div className="w-12 h-12 flex items-center justify-center">
+                                                                      <div className="w-full h-full flex items-center justify-center">
                                                                           <Paperclip className="h-5 w-5 text-muted-foreground" />
                                                                       </div>
                                                                   )}
@@ -785,13 +786,13 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                           ))}
                                                           {/* New attachments pending upload */}
                                                           {editNewFiles.map((file, idx) => (
-                                                              <div key={`new-${idx}`} className="relative group/attachment border rounded-md overflow-hidden bg-background">
+                                                              <div key={`new-${idx}`} className="relative group/attachment border rounded-md overflow-hidden bg-background aspect-square">
                                                                   {file.type?.startsWith('image/') ? (
-                                                                      <div className="w-12 h-12">
+                                                                      <div className="w-full h-full">
                                                                           <img src={URL.createObjectURL(file)} alt={file.name} className="w-full h-full object-cover" />
                                                                       </div>
                                                                   ) : (
-                                                                      <div className="w-12 h-12 flex items-center justify-center">
+                                                                      <div className="w-full h-full flex items-center justify-center">
                                                                           <Paperclip className="h-5 w-5 text-muted-foreground" />
                                                                       </div>
                                                                   )}
@@ -849,8 +850,12 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                               <div className="p-2 bg-muted/50 rounded-lg text-xs break-words relative group">
                                                   {renderCommentContent(comment.content)}
                                                   {comment.attachments_jsonb && comment.attachments_jsonb.length > 0 && (
-                                                      <div className="mt-2 space-y-1 pt-1 border-t border-border/50 grid grid-cols-3 gap-2">
-                                                          {comment.attachments_jsonb.map((att: any, idx: number) => (
+                                                      <div className="mt-2 space-y-1 pt-1 border-t border-border/50 grid grid-cols-4 gap-2">
+                                                          {/* Viewing logic: Limit to 5 items, show +N if more */}
+                                                          {(comment.attachments_jsonb.length > 5 
+                                                              ? comment.attachments_jsonb.slice(0, 4) 
+                                                              : comment.attachments_jsonb
+                                                          ).map((att: any, idx: number) => (
                                                               <div key={idx}>
                                                                   {att.type?.startsWith('image/') ? (
                                                                       <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-background hover:opacity-90 transition-opacity">
@@ -879,6 +884,16 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                                   )}
                                                               </div>
                                                           ))}
+                                                          {comment.attachments_jsonb.length > 5 && (
+                                                              <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-muted/50 hover:bg-muted transition-colors cursor-pointer" onClick={() => window.open(comment.attachments_jsonb[4].url, '_blank')}>
+                                                                  <div className="flex flex-col items-center justify-center w-full h-full">
+                                                                      <span className="text-sm font-semibold text-muted-foreground">
+                                                                          +{comment.attachments_jsonb.length - 4}
+                                                                      </span>
+                                                                      <span className="text-[9px] text-muted-foreground">more</span>
+                                                                  </div>
+                                                              </div>
+                                                          )}
                                                       </div>
                                                   )}
                                                   {user?.id === comment.user_id && (
