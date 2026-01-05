@@ -259,8 +259,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                 name: file.name,
                 url: publicUrl,
                 type: file.type,
-                size: file.size,
-                storagePath: fileName // Keep path for future deletion
+                size: file.size
             };
         });
 
@@ -721,6 +720,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                   <Button
                                       variant="ghost"
                                       size="icon"
+                                      type="button"
                                       className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
                                       onClick={handleRemoveExistingAttachment}
                                   >
@@ -741,6 +741,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                 <Button
                                     variant="ghost"
                                     size="icon"
+                                    type="button"
                                     className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
                                     onClick={() => { setFile(null); if(fileInputRef.current) fileInputRef.current.value=''; }}
                                 >
@@ -770,7 +771,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                       <div className="flex justify-between items-center">
                           <Label htmlFor="note" className="text-sm font-medium text-muted-foreground ml-1">Note (Optional)</Label>
                           {savedNote && note === "" && (
-                              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => { setSavedNote(""); setNote(""); }}>
+                              <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => { setSavedNote(""); setNote(""); }}>
                                   Clear Note
                               </Button>
                           )}
@@ -912,36 +913,50 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                   {renderCommentContent(comment.content)}
                                                   {comment.attachments_jsonb && comment.attachments_jsonb.length > 0 && (
                                                       <div className="mt-2 pt-1 border-t border-border/50 flex flex-wrap gap-2">
-                                                          {/* Viewing logic: Show all items to avoid confusion about missing uploads */}
-                                                          {comment.attachments_jsonb.map((att: any, idx: number) => (
-                                                              <div key={idx} className="w-[70px]">
-                                                                  {att.type?.startsWith('image/') ? (
-                                                                      <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-background hover:opacity-90 transition-opacity">
-                                                                          <a href={att.url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center">
-                                                                              <img 
-                                                                                src={att.url} 
-                                                                                alt={att.name} 
-                                                                                className="w-full h-full object-cover" 
-                                                                                loading="lazy"
-                                                                              />
-                                                                          </a>
-                                                                      </div>
-                                                                  ) : (
-                                                                      <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-muted/30 hover:opacity-90 transition-opacity">
-                                                                          <a href={att.url} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center w-full h-full p-2 text-center">
-                                                                              {att.type === 'application/pdf' ? (
-                                                                                  <FileText className="h-8 w-8 text-red-500 mb-1" />
-                                                                              ) : (
-                                                                                  <Paperclip className="h-8 w-8 text-muted-foreground mb-1" />
-                                                                              )}
-                                                                              <span className="text-[9px] text-muted-foreground w-full truncate px-1">
-                                                                                  {att.name}
-                                                                              </span>
-                                                                          </a>
-                                                                      </div>
-                                                                  )}
-                                                              </div>
-                                                          ))}
+                                                          {comment.attachments_jsonb.slice(0, 4).map((att: any, idx: number) => {
+                                                            const extraCount = comment.attachments_jsonb.length - 3;
+                                                            const isOverlay = idx === 3 && comment.attachments_jsonb.length > 4;
+                                                            
+                                                            return (
+                                                                <div key={idx} className="w-[70px] relative">
+                                                                    {att.type?.startsWith('image/') ? (
+                                                                        <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-background hover:opacity-90 transition-opacity relative">
+                                                                            <a href={att.url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center">
+                                                                                <img 
+                                                                                  src={att.url} 
+                                                                                  alt={att.name} 
+                                                                                  className="w-full h-full object-cover" 
+                                                                                  loading="lazy"
+                                                                                />
+                                                                            </a>
+                                                                            {isOverlay && (
+                                                                                <div className="absolute inset-0 flex items-center justify-center bg-black/60 pointer-events-none rounded-md">
+                                                                                    <span className="text-xs font-medium text-white">+{extraCount}</span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-muted/30 hover:opacity-90 transition-opacity relative">
+                                                                            <a href={att.url} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center w-full h-full p-2 text-center">
+                                                                                {att.type === 'application/pdf' ? (
+                                                                                    <FileText className="h-8 w-8 text-red-500 mb-1" />
+                                                                                ) : (
+                                                                                    <Paperclip className="h-8 w-8 text-muted-foreground mb-1" />
+                                                                                )}
+                                                                                <span className="text-[9px] text-muted-foreground w-full truncate px-1">
+                                                                                    {att.name}
+                                                                                </span>
+                                                                            </a>
+                                                                            {isOverlay && (
+                                                                                <div className="absolute inset-0 flex items-center justify-center bg-black/60 pointer-events-none rounded-md">
+                                                                                    <span className="text-xs font-medium text-white">+{extraCount}</span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                          })}
                                                       </div>
                                                   )}
                                                   {user?.id === comment.user_id && (
@@ -991,6 +1006,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                               <button 
                                                   onClick={() => setCommentFiles(prev => prev.filter((_, i) => i !== index))} 
                                                   className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                                                  type="button"
                                               >
                                                   <X className="h-3.5 w-3.5" />
                                               </button>
