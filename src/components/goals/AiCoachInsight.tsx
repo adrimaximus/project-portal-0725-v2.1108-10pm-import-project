@@ -45,6 +45,7 @@ const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsigh
       const context: { 
         yearly?: { percentage: number }; 
         month?: { name: string; percentage: number; completedCount: number; possibleCount: number; };
+        constraints?: string;
       } = {};
 
       if (monthlyProgress) {
@@ -56,6 +57,9 @@ const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsigh
         return;
       }
       
+      // Add formatting instructions to limit character count
+      context.constraints = "Berikan ringkasan dalam total maksimal 545 karakter. Hitung dulu estimasi karakter agar kalimatnya lengkap dan tidak terpotong.";
+
       const newInsight = await generateAiInsight(goal, context);
       setInsight(newInsight);
     } catch (error: any) {
