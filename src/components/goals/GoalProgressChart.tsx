@@ -1,27 +1,38 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Goal } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, ReferenceLine, Label } from 'recharts';
 import { getYear, parseISO, format } from 'date-fns';
 import { formatValue } from '@/lib/formatting';
 import AiCoachInsight from './AiCoachInsight';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface GoalProgressChartProps {
   goal: Goal;
 }
 
 const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
+  const currentYear = getYear(new Date());
+  const [selectedYear, setSelectedYear] = useState(currentYear.toString());
+
+  // Generate list of available years based on completion data or default to current year
+  const years = useMemo(() => {
+    const dataYears = goal.completions.map(c => getYear(parseISO(c.date)));
+    const uniqueYears = Array.from(new Set([currentYear, ...dataYears])).sort((a, b) => b - a);
+    return uniqueYears.map(String);
+  }, [goal.completions, currentYear]);
+
   const { chartData, total, target, percentage, unit } = useMemo(() => {
-    const currentYear = getYear(new Date());
+    const yearToView = parseInt(selectedYear, 10);
     const monthlyData: { [key: string]: number } = {};
 
     for (let i = 0; i < 12; i++) {
-      const monthName = format(new Date(currentYear, i, 1), 'MMM');
+      const monthName = format(new Date(yearToView, i, 1), 'MMM');
       monthlyData[monthName] = 0;
     }
 
     goal.completions
-      .filter(c => getYear(parseISO(c.date)) === currentYear)
+      .filter(c => getYear(parseISO(c.date)) === yearToView)
       .forEach(c => {
         const monthName = format(parseISO(c.date), 'MMM');
         if (monthlyData.hasOwnProperty(monthName)) {
@@ -36,7 +47,7 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
     const percentage = target ? Math.min(Math.round((total / target) * 100), 100) : 0;
 
     return { chartData, total, target, percentage, unit: goal.unit };
-  }, [goal]);
+  }, [goal, selectedYear]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -56,13 +67,27 @@ const GoalProgressChart = ({ goal }: GoalProgressChartProps) => {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Monthly Progress Overview</CardTitle>
-        {target > 0 && (
-          <p className="text-sm text-muted-foreground pt-1">
-            {formatValue(total, unit)} / {formatValue(target, unit)}
-          </p>
-        )}
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Monthly Progress Overview</CardTitle>
+          {target > 0 && (
+            <p className="text-sm text-muted-foreground pt-1">
+              {formatValue(total, unit)} / {formatValue(target, unit)}
+            </p>
+          )}
+        </div>
+        <Select value={selectedYear} onValueChange={setSelectedYear}>
+          <SelectTrigger className="w-[100px] h-8">
+            <SelectValue placeholder="Year" />
+          </SelectTrigger>
+          <SelectContent>
+            {years.map((year) => (
+              <SelectItem key={year} value={year}>
+                {year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </CardHeader>
       <CardContent>
         <div className="h-64 w-full">
