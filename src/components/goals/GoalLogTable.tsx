@@ -1,9 +1,9 @@
 import { Goal, GoalCompletion } from '@/types';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
+import { format, getYear, parseISO } from 'date-fns';
 import { formatValue } from '@/lib/formatting';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { generatePastelColor, getAvatarUrl } from '@/lib/utils';
@@ -20,6 +20,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface GoalLogTableProps {
   logs: GoalCompletion[];
@@ -34,6 +35,9 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  
+  const currentYear = getYear(new Date());
+  const [selectedYear, setSelectedYear] = useState(currentYear.toString());
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
@@ -181,6 +185,20 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
     }
   };
 
+  // Derive years for selector
+  const years = useMemo(() => {
+    const dataYears = logs.map(log => getYear(parseISO(log.date)));
+    const uniqueYears = Array.from(new Set([currentYear, ...dataYears])).sort((a, b) => b - a);
+    return uniqueYears.map(String);
+  }, [logs, currentYear]);
+
+  // Filter logs by selected year
+  const filteredLogs = useMemo(() => {
+    return logs.filter(log => getYear(parseISO(log.date)).toString() === selectedYear);
+  }, [logs, selectedYear]);
+
+  const sortedLogs = [...filteredLogs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
   const selectedAchiever = selectedLog?.userId ? userMap.get(selectedLog.userId) : null;
   const selectedAttachmentUrl = (selectedLog as any)?.attachment_url;
   const selectedAttachmentName = (selectedLog as any)?.attachment_name || 'Attachment';
@@ -189,17 +207,12 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
   const isLogOwner = currentUserId && selectedLog?.userId === currentUserId;
   const isGoalOwner = currentUserId && goalOwnerId === currentUserId;
   
-  // Permissions logic:
-  // - Edit: Only the log owner can edit their upload file or note.
-  // - Delete: Goal owner can delete any log. Log owner can delete their own log.
   const canEdit = isLogOwner;
   const canDelete = isGoalOwner || isLogOwner;
 
   if (logs.length === 0) {
     return <p className="text-sm text-muted-foreground text-center py-4">No logs yet.</p>;
   }
-
-  const sortedLogs = [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
     <>
@@ -209,61 +222,83 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId }: GoalLogTableProps) 
         className="hidden" 
         onChange={handleFileChange}
       />
-      <div className="border rounded-md mt-4">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date & Time</TableHead>
-              <TableHead>Achiever</TableHead>
-              <TableHead>Report</TableHead>
-              <TableHead className="text-right">
-                {goalType === 'quantity' ? 'Quantity' : 'Value'}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedLogs.map((log, index) => {
-              const achiever = log.userId ? userMap.get(log.userId) : null;
-              const attachmentUrl = (log as any).attachment_url;
-              const hasNote = !!(log as any).notes;
+      
+      <div className="flex items-center justify-end mt-4 mb-2">
+        <Select value={selectedYear} onValueChange={setSelectedYear}>
+          <SelectTrigger className="w-[100px] h-8">
+            <SelectValue placeholder="Year" />
+          </SelectTrigger>
+          <SelectContent>
+            {years.map((year) => (
+              <SelectItem key={year} value={year}>
+                {year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-              return (
-                <TableRow 
-                  key={index} 
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => setSelectedLog(log)}
-                >
-                  <TableCell className="text-muted-foreground text-xs">
-                    {format(new Date(log.date), 'MMM dd, yyyy, hh:mm a')}
-                  </TableCell>
-                  <TableCell>
-                    {achiever ? (
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={getAvatarUrl(achiever.avatar_url, achiever.id)} />
-                          <AvatarFallback style={generatePastelColor(achiever.id)}>{achiever.initials}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm font-medium">{achiever.name}</span>
+      <div className="border rounded-md">
+        {sortedLogs.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date & Time</TableHead>
+                <TableHead>Achiever</TableHead>
+                <TableHead>Report</TableHead>
+                <TableHead className="text-right">
+                  {goalType === 'quantity' ? 'Quantity' : 'Value'}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedLogs.map((log, index) => {
+                const achiever = log.userId ? userMap.get(log.userId) : null;
+                const attachmentUrl = (log as any).attachment_url;
+                const hasNote = !!(log as any).notes;
+
+                return (
+                  <TableRow 
+                    key={index} 
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => setSelectedLog(log)}
+                  >
+                    <TableCell className="text-muted-foreground text-xs">
+                      {format(new Date(log.date), 'MMM dd, yyyy, hh:mm a')}
+                    </TableCell>
+                    <TableCell>
+                      {achiever ? (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={getAvatarUrl(achiever.avatar_url, achiever.id)} />
+                            <AvatarFallback style={generatePastelColor(achiever.id)}>{achiever.initials}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">{achiever.name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                          {attachmentUrl && <FileText className="h-4 w-4 text-primary" />}
+                          {hasNote && <MoreHorizontal className="h-4 w-4 text-muted-foreground" />}
+                          {!attachmentUrl && !hasNote && <span className="text-xs text-muted-foreground">-</span>}
                       </div>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                        {attachmentUrl && <FileText className="h-4 w-4 text-primary" />}
-                        {hasNote && <MoreHorizontal className="h-4 w-4 text-muted-foreground" />}
-                        {!attachmentUrl && !hasNote && <span className="text-xs text-muted-foreground">-</span>}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    {formatValue(log.value, unit)}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {formatValue(log.value, unit)}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="text-center py-8 text-sm text-muted-foreground">
+            No logs recorded in {selectedYear}.
+          </div>
+        )}
       </div>
 
       <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
