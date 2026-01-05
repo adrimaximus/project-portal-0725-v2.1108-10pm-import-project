@@ -194,11 +194,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     };
   });
 
-  const [aiContext, setAiContext] = useState<{
-    yearly?: { percentage: number };
-    month?: { name: string; percentage: number; completedCount: number; possibleCount: number; };
-  }>({ yearly: { percentage: overallPercentage } });
-
   // Query for comments of selected day
   const { data: comments, isLoading: isLoadingComments } = useQuery({
     queryKey: ['goal_comments', goal.id, selectedDay ? format(selectedDay, 'yyyy-MM-dd') : null],
@@ -580,8 +575,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
           </div>
           <AiCoachInsight 
             goal={goal} 
-            yearlyProgress={aiContext.yearly}
-            monthlyProgress={aiContext.month}
+            yearlyProgress={{ percentage: overallPercentage }}
+            monthlyProgress={null} 
           />
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
