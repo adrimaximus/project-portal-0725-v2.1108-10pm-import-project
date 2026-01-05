@@ -84,7 +84,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   // Edit comment state
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
-  const [editFile, setEditFile] = useState<File | null>(null);
+  const [editNewFiles, setEditNewFiles] = useState<File[]>([]);
   const [editAttachments, setEditAttachments] = useState<any[]>([]);
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -297,27 +297,32 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
 
   // Mutation to update comment
   const updateCommentMutation = useMutation({
-    mutationFn: async ({ id, content, file, existingAttachments }: { id: string, content: string, file: File | null, existingAttachments: any[] }) => {
+    mutationFn: async ({ id, content, newFiles, existingAttachments }: { id: string, content: string, newFiles: File[], existingAttachments: any[] }) => {
       let updatedAttachments = [...(existingAttachments || [])];
 
-      if (file) {
-        const fileName = `${goal.id}/${Date.now()}-${file.name.replace(/[^\x00-\x7F]/g, "")}`;
-        const { error: uploadError } = await supabase.storage
-            .from('goal-attachments')
-            .upload(fileName, file);
-        
-        if (uploadError) throw uploadError;
-        
-        const { data: { publicUrl } } = supabase.storage
-            .from('goal-attachments')
-            .getPublicUrl(fileName);
+      if (newFiles && newFiles.length > 0) {
+        const uploadPromises = newFiles.map(async (file) => {
+            const fileName = `${goal.id}/${Date.now()}-${file.name.replace(/[^\x00-\x7F]/g, "")}`;
+            const { error: uploadError } = await supabase.storage
+                .from('goal-attachments')
+                .upload(fileName, file);
             
-        updatedAttachments.push({
-            name: file.name,
-            url: publicUrl,
-            type: file.type,
-            size: file.size
+            if (uploadError) throw uploadError;
+            
+            const { data: { publicUrl } } = supabase.storage
+                .from('goal-attachments')
+                .getPublicUrl(fileName);
+                
+            return {
+                name: file.name,
+                url: publicUrl,
+                type: file.type,
+                size: file.size
+            };
         });
+
+        const newAttachments = await Promise.all(uploadPromises);
+        updatedAttachments = [...updatedAttachments, ...newAttachments];
       }
 
       const { error } = await supabase
@@ -334,7 +339,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
       queryClient.invalidateQueries({ queryKey: ['goal_comments', goal.id, selectedDay ? format(selectedDay, 'yyyy-MM-dd') : null] });
       setEditingCommentId(null);
       setEditContent("");
-      setEditFile(null);
+      setEditNewFiles([]);
       setEditAttachments([]);
       toast.success("Comment updated");
     },
@@ -755,10 +760,11 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                   />
                                                   
                                                   {/* List existing/current attachments */}
-                                                  {editAttachments.length > 0 && (
+                                                  {(editAttachments.length > 0 || editNewFiles.length > 0) && (
                                                       <div className="flex flex-wrap gap-2">
+                                                          {/* Existing attachments */}
                                                           {editAttachments.map((att: any, idx: number) => (
-                                                              <div key={idx} className="relative group/attachment border rounded-md overflow-hidden bg-background">
+                                                              <div key={`existing-${idx}`} className="relative group/attachment border rounded-md overflow-hidden bg-background">
                                                                   {att.type?.startsWith('image/') ? (
                                                                       <div className="w-12 h-12">
                                                                           <img src={att.url} alt={att.name} className="w-full h-full object-cover" />
@@ -777,18 +783,30 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                                   </button>
                                                               </div>
                                                           ))}
+                                                          {/* New attachments pending upload */}
+                                                          {editNewFiles.map((file, idx) => (
+                                                              <div key={`new-${idx}`} className="relative group/attachment border rounded-md overflow-hidden bg-background">
+                                                                  {file.type?.startsWith('image/') ? (
+                                                                      <div className="w-12 h-12">
+                                                                          <img src={URL.createObjectURL(file)} alt={file.name} className="w-full h-full object-cover" />
+                                                                      </div>
+                                                                  ) : (
+                                                                      <div className="w-12 h-12 flex items-center justify-center">
+                                                                          <Paperclip className="h-5 w-5 text-muted-foreground" />
+                                                                      </div>
+                                                                  )}
+                                                                  <button
+                                                                      onClick={() => setEditNewFiles(prev => prev.filter((_, i) => i !== idx))}
+                                                                      className="absolute top-0 right-0 bg-black/50 hover:bg-destructive text-white p-0.5 rounded-bl-md opacity-0 group-hover/attachment:opacity-100 transition-opacity"
+                                                                      title="Remove file"
+                                                                  >
+                                                                      <X className="h-3 w-3" />
+                                                                  </button>
+                                                              </div>
+                                                          ))}
                                                       </div>
                                                   )}
 
-                                                  {editFile && (
-                                                      <div className="flex items-center gap-2 p-2 bg-muted rounded-md text-xs border">
-                                                          <Paperclip className="h-3 w-3 text-primary" />
-                                                          <span className="truncate flex-1 max-w-[200px]">{editFile.name}</span>
-                                                          <button onClick={() => setEditFile(null)} className="text-muted-foreground hover:text-destructive transition-colors">
-                                                              <X className="h-3.5 w-3.5" />
-                                                          </button>
-                                                      </div>
-                                                  )}
                                                   <div className="flex gap-2 justify-between items-center">
                                                       <div className="flex items-center">
                                                           <Button
@@ -804,20 +822,25 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                               type="file" 
                                                               ref={editFileInputRef} 
                                                               className="hidden" 
-                                                              onChange={(e) => e.target.files && setEditFile(e.target.files[0])} 
+                                                              multiple
+                                                              onChange={(e) => {
+                                                                  if (e.target.files) {
+                                                                      setEditNewFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
+                                                                  }
+                                                              }} 
                                                           />
                                                       </div>
                                                       <div className="flex gap-2">
                                                           <Button size="sm" variant="outline" onClick={() => {
                                                               setEditingCommentId(null);
-                                                              setEditFile(null);
+                                                              setEditNewFiles([]);
                                                               setEditAttachments([]);
                                                           }}>Cancel</Button>
                                                           <Button size="sm" onClick={() => updateCommentMutation.mutate({ 
                                                               id: comment.id, 
                                                               content: editContent,
-                                                              file: editFile,
-                                                              attachments: editAttachments 
+                                                              newFiles: editNewFiles,
+                                                              existingAttachments: editAttachments 
                                                           })}>Save</Button>
                                                       </div>
                                                   </div>
@@ -826,25 +849,23 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                               <div className="p-2 bg-muted/50 rounded-lg text-xs break-words relative group">
                                                   {renderCommentContent(comment.content)}
                                                   {comment.attachments_jsonb && comment.attachments_jsonb.length > 0 && (
-                                                      <div className="mt-2 pt-2 border-t border-border/50 grid grid-cols-3 gap-2">
+                                                      <div className="mt-2 space-y-1 pt-1 border-t border-border/50 grid grid-cols-3 gap-2">
                                                           {comment.attachments_jsonb.map((att: any, idx: number) => (
-                                                              <div key={idx} className="aspect-square rounded-md overflow-hidden border border-border/50 bg-background hover:opacity-90 transition-opacity">
-                                                                  <a 
-                                                                    href={att.url} 
-                                                                    target="_blank" 
-                                                                    rel="noopener noreferrer"
-                                                                    className="flex items-center justify-center w-full h-full"
-                                                                    title={att.name}
-                                                                  >
-                                                                      {att.type?.startsWith('image/') ? (
-                                                                          <img 
-                                                                            src={att.url} 
-                                                                            alt={att.name} 
-                                                                            className="w-full h-full object-cover" 
-                                                                            loading="lazy"
-                                                                          />
-                                                                      ) : (
-                                                                          <div className="flex flex-col items-center justify-center p-2 text-center w-full h-full bg-muted/30">
+                                                              <div key={idx}>
+                                                                  {att.type?.startsWith('image/') ? (
+                                                                      <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-background hover:opacity-90 transition-opacity">
+                                                                          <a href={att.url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center">
+                                                                              <img 
+                                                                                src={att.url} 
+                                                                                alt={att.name} 
+                                                                                className="w-full h-full object-cover" 
+                                                                                loading="lazy"
+                                                                              />
+                                                                          </a>
+                                                                      </div>
+                                                                  ) : (
+                                                                      <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-muted/30 hover:opacity-90 transition-opacity">
+                                                                          <a href={att.url} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center w-full h-full p-2 text-center">
                                                                               {att.type === 'application/pdf' ? (
                                                                                   <FileText className="h-8 w-8 text-red-500 mb-1" />
                                                                               ) : (
@@ -853,9 +874,9 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                                               <span className="text-[9px] text-muted-foreground w-full truncate px-1">
                                                                                   {att.name}
                                                                               </span>
-                                                                          </div>
-                                                                      )}
-                                                                  </a>
+                                                                          </a>
+                                                                      </div>
+                                                                  )}
                                                               </div>
                                                           ))}
                                                       </div>
@@ -873,7 +894,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                                       setEditingCommentId(comment.id);
                                                                       setEditContent(comment.content);
                                                                       setEditAttachments(comment.attachments_jsonb || []);
-                                                                      setEditFile(null);
+                                                                      setEditNewFiles([]);
                                                                   }}>
                                                                       <Pencil className="h-3 w-3 mr-2" /> Edit
                                                                   </DropdownMenuItem>
