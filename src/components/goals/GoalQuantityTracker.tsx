@@ -62,7 +62,7 @@ const GoalQuantityTracker = ({ goal, onLogProgress, selectedYear, onYearChange }
     staleTime: 1000 * 60 * 5,
   });
 
-  const { currentPeriodTotal, periodProgress, periodName, logsInPeriod, daysRemaining, quantityToGo } = useMemo(() => {
+  const { currentPeriodTotal, periodProgress, periodName, daysRemaining, quantityToGo } = useMemo(() => {
     const today = new Date();
     let periodStart, periodEnd, periodName;
 
@@ -87,7 +87,7 @@ const GoalQuantityTracker = ({ goal, onLogProgress, selectedYear, onYearChange }
     const periodProgress = goal.target_quantity ? Math.round((currentPeriodTotal / goal.target_quantity) * 100) : 0;
     const quantityToGo = Math.max(0, (goal.target_quantity || 0) - currentPeriodTotal);
     
-    return { currentPeriodTotal, periodProgress, periodName, logsInPeriod, daysRemaining, quantityToGo };
+    return { currentPeriodTotal, periodProgress, periodName, daysRemaining, quantityToGo };
   }, [goal]);
 
   const handleLog = () => {
@@ -289,7 +289,7 @@ const GoalQuantityTracker = ({ goal, onLogProgress, selectedYear, onYearChange }
             )}
         </div>
         <GoalLogTable 
-            logs={logsInPeriod} 
+            logs={goal.completions} 
             goalType={goal.type} 
             goalOwnerId={goal.user_id} 
             selectedYear={selectedYear}

@@ -329,7 +329,7 @@ const GoalValueTracker = ({ goal, onLogValue, selectedYear, onYearChange }: Goal
         )}
 
         <GoalLogTable 
-            logs={logsInPeriod} 
+            logs={goal.completions} 
             unit={goal.unit} 
             goalType={goal.type} 
             goalOwnerId={goal.user_id} 
