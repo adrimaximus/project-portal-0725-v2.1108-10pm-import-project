@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Check, X, FileText, Paperclip, Eye, Trash2, Send, MoreHorizontal, Pencil, Loader2, MessageSquare } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, X, FileText, Paperclip, Eye, Trash2, Send, MoreHorizontal, Pencil, Loader2, MessageSquare, MessageCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -51,13 +51,13 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
-  // Map completions, ensuring we catch 'notes' from DB and map it to 'note' for internal use
+  // Map completions
   const completions = rawCompletions.map(c => ({ 
     date: c.date, 
     completed: c.value === 1,
     attachmentUrl: (c as any).attachment_url,
     attachmentName: (c as any).attachment_name,
-    note: (c as any).notes || (c as any).note // Handle both 'notes' (DB column) and 'note' keys
+    note: (c as any).notes || (c as any).note
   }));
 
   const today = new Date();
@@ -67,7 +67,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const [isCompleted, setIsCompleted] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [note, setNote] = useState("");
-  const [savedNote, setSavedNote] = useState(""); // State for the existing note
+  const [savedNote, setSavedNote] = useState("");
   const [existingAttachment, setExistingAttachment] = useState<{ url: string, name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dayToConfirm, setDayToConfirm] = useState<Date | null>(null);
@@ -85,7 +85,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const [mentionOpen, setMentionOpen] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [cursorPos, setCursorPos] = useState(0);
-  // Store mapped mentions to convert back to UUIDs before sending: { "@John Doe": "uuid" }
   const [mentionMap, setMentionMap] = useState<Record<string, string>>({});
 
   // Edit comment state
@@ -93,8 +92,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const [editContent, setEditContent] = useState("");
   const [editNewFiles, setEditNewFiles] = useState<File[]>([]);
   const [editAttachments, setEditAttachments] = useState<any[]>([]);
-  const editFileInputRef = useRef<HTMLInputElement>(null);
-
+  
   const todayStart = startOfDay(today);
 
   const handlePrevYear = () => setDisplayYear(prev => prev - 1);
@@ -102,6 +100,21 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
 
   const yearStartDate = startOfYear(new Date(displayYear, 0, 1));
   const yearEndDate = endOfYear(new Date(displayYear, 0, 1));
+
+  // Fetch all comment dates for this goal to show indicators
+  const { data: allCommentDates = [] } = useQuery({
+    queryKey: ['goal_all_comment_dates', goal.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('goal_comments')
+        .select('comment_date')
+        .eq('goal_id', goal.id);
+      if (error) throw error;
+      return data.map(d => d.comment_date);
+    }
+  });
+
+  const commentDatesSet = new Set(allCommentDates);
 
   const relevantCompletions = completions.filter(c => {
     const completionDate = parseISO(c.date);
@@ -128,7 +141,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     const monthEnd = endOfMonth(monthDate);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
     
-    // Create a map for fast lookup of completions by date string
     const completionMap = new Map<string, { completed: boolean; attachmentUrl?: string; attachmentName?: string; note?: string }>(
       relevantCompletions.map(c => [
         format(parseISO(c.date), 'yyyy-MM-dd'), 
@@ -140,6 +152,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
         const dayStr = format(day, 'yyyy-MM-dd');
         const isValid = isDayValidForGoal(day);
         const completionData = completionMap.get(dayStr);
+        const hasComments = commentDatesSet.has(dayStr);
         
         let isCompleted: boolean | undefined;
         let attachmentUrl: string | undefined;
@@ -156,7 +169,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
         if (isCompleted === undefined && isValid && isBefore(day, todayStart)) {
             isCompleted = false;
         }
-        return { date: day, isCompleted, isValid, attachmentUrl, attachmentName, note };
+        return { date: day, isCompleted, isValid, attachmentUrl, attachmentName, note, hasComments };
     });
 
     const possibleDaysInPast = daysWithStatus.filter(d => d.isValid && isBefore(d.date, todayStart));
@@ -175,7 +188,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
             isCompleted: d.isCompleted, 
             attachmentUrl: d.attachmentUrl,
             attachmentName: d.attachmentName,
-            note: d.note
+            note: d.note,
+            hasComments: d.hasComments
         }))
     };
   });
@@ -185,7 +199,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     month?: { name: string; percentage: number; completedCount: number; possibleCount: number; };
   }>({ yearly: { percentage: overallPercentage } });
 
-  // Query for comments
+  // Query for comments of selected day
   const { data: comments, isLoading: isLoadingComments } = useQuery({
     queryKey: ['goal_comments', goal.id, selectedDay ? format(selectedDay, 'yyyy-MM-dd') : null],
     queryFn: async () => {
@@ -220,7 +234,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   // Get collaborator IDs to filter mentions
   const collaboratorIds = (goal.collaborators || []).map((c: any) => c.id);
 
-  // Query for profiles (for mentions) - Limited to collaborators
+  // Query for profiles (for mentions)
   const { data: profiles } = useQuery({
     queryKey: ['profiles_for_mention', goal.id],
     queryFn: async () => {
@@ -236,10 +250,9 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
       return data;
     },
     enabled: collaboratorIds.length > 0,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5, 
   });
 
-  // Mutation to add comment
   const addCommentMutation = useMutation({
     mutationFn: async ({ content, files }: { content: string, files: File[] }) => {
       if (!selectedDay || !user) throw new Error("No day selected or user not logged in");
@@ -248,7 +261,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
       let attachments: any[] = [];
 
       if (files && files.length > 0) {
-        // Upload all files
         const uploadPromises = files.map(async (file) => {
             const fileName = `${goal.id}/${Date.now()}-${file.name.replace(/[^\x00-\x7F]/g, "")}`;
             const { error: uploadError } = await supabase.storage
@@ -266,14 +278,13 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                 url: publicUrl,
                 type: file.type,
                 size: file.size,
-                storagePath: fileName // Keep path for future deletion
+                storagePath: fileName
             };
         });
 
         attachments = await Promise.all(uploadPromises);
       }
 
-      // Convert friendly mentions (@Name) back to raw format (@[Name](uuid)) using the map
       let finalContent = content;
       Object.entries(mentionMap).forEach(([name, uuid]) => {
         const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -294,6 +305,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goal_comments', goal.id, selectedDay ? format(selectedDay, 'yyyy-MM-dd') : null] });
+      queryClient.invalidateQueries({ queryKey: ['goal_all_comment_dates', goal.id] });
       setCommentText("");
       setCommentFiles([]);
       setMentionMap({});
@@ -303,11 +315,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     }
   });
 
-  // Mutation to update comment with storage cleanup logic
   const updateCommentMutation = useMutation({
     mutationFn: async ({ id, content, newFiles, existingAttachments }: { id: string, content: string, newFiles: File[], existingAttachments: any[] }) => {
-      
-      // 1. Fetch current comment to find what was removed
       const { data: currentComment, error: fetchError } = await supabase
         .from('goal_comments')
         .select('attachments_jsonb')
@@ -317,12 +326,9 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
       if (fetchError) throw fetchError;
 
       const oldAttachments = (currentComment.attachments_jsonb as any[]) || [];
-      
-      // 2. Identify removed files
       const newAttachmentUrls = new Set(existingAttachments.map(a => a.url));
       const filesToDelete = oldAttachments.filter(oldAtt => !newAttachmentUrls.has(oldAtt.url));
 
-      // 3. Delete removed files from storage
       if (filesToDelete.length > 0) {
         const pathsToDelete = filesToDelete.map(f => f.storagePath).filter(Boolean);
         if (pathsToDelete.length > 0) {
@@ -381,10 +387,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     }
   });
 
-  // Mutation to delete comment
   const deleteCommentMutation = useMutation({
     mutationFn: async (commentId: string) => {
-      // 1. Fetch to get attachments
       const { data: comment, error: fetchError } = await supabase
         .from('goal_comments')
         .select('attachments_jsonb')
@@ -408,6 +412,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goal_comments', goal.id, selectedDay ? format(selectedDay, 'yyyy-MM-dd') : null] });
+      queryClient.invalidateQueries({ queryKey: ['goal_all_comment_dates', goal.id] });
       toast.success("Comment deleted");
     },
     onError: (error) => {
@@ -415,14 +420,13 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     }
   });
 
-  const handleDayClick = (day: { date: Date; isCompleted?: boolean; attachmentUrl?: string; attachmentName?: string; note?: string }) => {
+  const handleDayClick = (day: { date: Date; isCompleted?: boolean; attachmentUrl?: string; attachmentName?: string; note?: string; hasComments?: boolean }) => {
     if (isAfter(day.date, todayStart)) return;
     
     setSelectedDay(day.date);
     setIsCompleted(!!day.isCompleted);
-    // Separate saved note from input note
     setSavedNote(day.note || ""); 
-    setNote(""); // Input starts empty
+    setNote("");
     setFile(null);
     if (day.attachmentUrl) {
       setExistingAttachment({ url: day.attachmentUrl, name: day.attachmentName || 'Attachment' });
@@ -433,8 +437,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
 
   const handleSaveDay = () => {
     if (selectedDay) {
-        // Use new note if typed, otherwise keep savedNote. 
-        // If savedNote was cleared by user (via X button), it is empty string here.
         const noteToSend = note.trim() !== "" ? note : savedNote;
         onUpdateCompletion(selectedDay, isCompleted ? 1 : 0, file, false, noteToSend);
     }
@@ -443,7 +445,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
 
   const handleRemoveExistingAttachment = () => {
     if (selectedDay) {
-        // Also preserve note when removing attachment
         const noteToSend = note.trim() !== "" ? note : savedNote;
         onUpdateCompletion(selectedDay, isCompleted ? 1 : 0, null, true, noteToSend);
         setExistingAttachment(null);
@@ -469,14 +470,12 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     }
   };
 
-  // Mention handling
   const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
     const newCursorPos = e.target.selectionStart;
     setCommentText(text);
     setCursorPos(newCursorPos);
 
-    // Detect if we are typing a mention
     const textBeforeCursor = text.slice(0, newCursorPos);
     const mentionMatch = textBeforeCursor.match(/@([^@\n]*)$/);
 
@@ -492,23 +491,15 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     const textBeforeCursor = commentText.slice(0, cursorPos);
     const textAfterCursor = commentText.slice(cursorPos);
     
-    // The friendly name to display
     const friendlyName = `@${profile.first_name || 'User'}`;
     
-    // Store mapping for submission
-    setMentionMap(prev => ({
-        ...prev,
-        [friendlyName]: profile.id
-    }));
+    setMentionMap(prev => ({ ...prev, [friendlyName]: profile.id }));
 
-    // Replace the part starting with @ until cursor with the friendly name
     const newTextBefore = textBeforeCursor.replace(/@([^@\n]*)$/, `${friendlyName} `);
-    
     const newText = newTextBefore + textAfterCursor;
     setCommentText(newText);
     setMentionOpen(false);
     
-    // Refocus text area and set cursor position
     setTimeout(() => {
         if (commentTextareaRef.current) {
             commentTextareaRef.current.focus();
@@ -529,16 +520,13 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (mentionOpen && e.key === 'Enter') {
         e.preventDefault();
-        // Auto-select the first filtered profile if available
         if (filteredProfiles && filteredProfiles.length > 0) {
             insertMention(filteredProfiles[0]);
         }
     }
   };
 
-  // Helper to render mentions in comments properly
   const renderCommentContent = (content: string) => {
-    // Regex to find @[Name](uuid)
     const mentionRegex = /@\[([^\]]+)\]\s*\(([^)]+)\)/g;
     const parts = [];
     let lastIndex = 0;
@@ -548,7 +536,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
       if (match.index > lastIndex) {
         parts.push(content.slice(lastIndex, match.index));
       }
-      // Add the mention part styled
       parts.push(
         <span key={match.index} className="font-medium text-primary hover:underline cursor-pointer">
           @{match[1]}
@@ -635,6 +622,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                       buttonStyle.opacity = 0.2;
                     }
 
+                    const hasIndicators = day.attachmentUrl || day.note || day.hasComments;
+
                     return (
                       <TooltipProvider key={day.date.toString()} delayDuration={100}>
                         <Tooltip>
@@ -645,7 +634,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                               className={buttonClasses}
                               style={buttonStyle}
                             >
-                              {(day.attachmentUrl || day.note) && (
+                              {hasIndicators && (
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                   <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_2px_rgba(0,0,0,0.5)]" />
                                 </div>
@@ -661,7 +650,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                   <p className={day.isCompleted ? "text-green-600 font-medium" : "text-red-500 font-medium"}>
                                     {day.isCompleted ? 'Completed' : 'Missed'}
                                   </p>
-                                  {(day.attachmentUrl || day.note) && (
+                                  {hasIndicators && (
                                     <div className="pt-1 border-t border-border space-y-1">
                                         {day.attachmentUrl && (
                                             <div className="flex items-center gap-1.5 text-primary">
@@ -673,6 +662,12 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                             <div className="flex items-start gap-1.5 text-muted-foreground">
                                                 <MessageSquare className="h-3 w-3 mt-0.5 shrink-0" />
                                                 <span className="italic line-clamp-3">"{day.note}"</span>
+                                            </div>
+                                        )}
+                                        {day.hasComments && (
+                                            <div className="flex items-center gap-1.5 text-blue-500">
+                                                <MessageCircle className="h-3 w-3" />
+                                                <span>Discussion</span>
                                             </div>
                                         )}
                                     </div>
@@ -915,7 +910,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                                   if (e.target.files && e.target.files.length > 0) {
                                                                       setEditNewFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
                                                                   }
-                                                                  // Reset value to allow re-selection
                                                                   e.target.value = '';
                                                               }} 
                                                           />
@@ -940,7 +934,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                   {renderCommentContent(comment.content)}
                                                   {comment.attachments_jsonb && comment.attachments_jsonb.length > 0 && (
                                                       <div className="mt-2 pt-1 border-t border-border/50 flex flex-wrap gap-2">
-                                                          {/* Viewing logic: Show max 4 items, with +n overlay on the last one if more exist */}
                                                           {comment.attachments_jsonb.slice(0, 4).map((att: any, idx: number) => {
                                                             const displayCount = 4;
                                                             const totalCount = comment.attachments_jsonb.length;
