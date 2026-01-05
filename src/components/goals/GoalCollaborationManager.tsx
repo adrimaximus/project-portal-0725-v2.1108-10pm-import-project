@@ -189,7 +189,7 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
           )}
         </CardHeader>
         <CardContent>
-          <div className="flex items-center -space-x-3 overflow-hidden p-1">
+          <div className="flex flex-wrap items-center gap-1 p-1">
             <TooltipProvider>
               {goal.collaborators.map((user) => {
                 const isGoalOwner = user.id === goal.user_id;
