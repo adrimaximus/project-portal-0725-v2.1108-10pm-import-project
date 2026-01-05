@@ -81,6 +81,10 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   // Store mapped mentions to convert back to UUIDs before sending: { "@John Doe": "uuid" }
   const [mentionMap, setMentionMap] = useState<Record<string, string>>({});
 
+  // Edit comment state
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+
   const todayStart = startOfDay(today);
 
   const handlePrevYear = () => setDisplayYear(prev => prev - 1);
@@ -256,12 +260,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
       // Convert friendly mentions (@Name) back to raw format (@[Name](uuid)) using the map
       let finalContent = content;
       Object.entries(mentionMap).forEach(([name, uuid]) => {
-        // Use a regex to replace all occurrences of the friendly name
-        // We use a negative lookahead/lookbehind or specific context if needed, 
-        // but simple replacement works for now as long as names are unique enough or map is specific.
-        // Better: Replace ONLY the parts that were meant to be mentions.
-        // Ideally we would store ranges, but string replacement is simpler for this context.
-        // We escape the name for regex usage.
         const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         finalContent = finalContent.replace(new RegExp(escapedName, 'g'), `@[${name.substring(1)}]( ${uuid})`);
       });
@@ -286,6 +284,27 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     },
     onError: (error) => {
       toast.error(`Failed to add comment: ${error.message}`);
+    }
+  });
+
+  // Mutation to update comment
+  const updateCommentMutation = useMutation({
+    mutationFn: async ({ id, content }: { id: string, content: string }) => {
+      const { error } = await supabase
+        .from('goal_comments')
+        .update({ content })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goal_comments', goal.id, selectedDay ? format(selectedDay, 'yyyy-MM-dd') : null] });
+      setEditingCommentId(null);
+      setEditContent("");
+      toast.success("Comment updated");
+    },
+    onError: (error) => {
+      toast.error(`Failed to update comment: ${error.message}`);
     }
   });
 
@@ -692,31 +711,57 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                   {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                                               </span>
                                           </div>
-                                          <div className="p-2 bg-muted/50 rounded-lg text-xs break-words relative group">
-                                              {renderCommentContent(comment.content)}
-                                              {comment.attachments_jsonb && comment.attachments_jsonb.length > 0 && (
-                                                  <div className="mt-2 space-y-1 pt-1 border-t border-border/50">
-                                                      {comment.attachments_jsonb.map((att: any, idx: number) => (
-                                                          <div key={idx} className="flex items-center gap-2 p-1.5 bg-background border rounded-md max-w-fit hover:bg-accent/50 transition-colors">
-                                                              <Paperclip className="h-3 w-3 text-muted-foreground" />
-                                                              <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline truncate max-w-[150px] text-primary">
-                                                                  {att.name}
-                                                              </a>
-                                                          </div>
-                                                      ))}
+                                          {editingCommentId === comment.id ? (
+                                              <div className="flex flex-col gap-2">
+                                                  <Textarea 
+                                                      value={editContent} 
+                                                      onChange={(e) => setEditContent(e.target.value)} 
+                                                      className="text-xs min-h-[60px]"
+                                                  />
+                                                  <div className="flex gap-2 justify-end">
+                                                      <Button size="sm" variant="outline" onClick={() => setEditingCommentId(null)}>Cancel</Button>
+                                                      <Button size="sm" onClick={() => updateCommentMutation.mutate({ id: comment.id, content: editContent })}>Save</Button>
                                                   </div>
-                                              )}
-                                              {user?.id === comment.user_id && (
-                                                  <Button
-                                                      variant="ghost"
-                                                      size="icon"
-                                                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background shadow-sm border opacity-0 group-hover:opacity-100 transition-opacity"
-                                                      onClick={() => deleteCommentMutation.mutate(comment.id)}
-                                                  >
-                                                      <Trash2 className="h-3 w-3 text-destructive" />
-                                                  </Button>
-                                              )}
-                                          </div>
+                                              </div>
+                                          ) : (
+                                              <div className="p-2 bg-muted/50 rounded-lg text-xs break-words relative group">
+                                                  {renderCommentContent(comment.content)}
+                                                  {comment.attachments_jsonb && comment.attachments_jsonb.length > 0 && (
+                                                      <div className="mt-2 space-y-1 pt-1 border-t border-border/50">
+                                                          {comment.attachments_jsonb.map((att: any, idx: number) => (
+                                                              <div key={idx} className="flex items-center gap-2 p-1.5 bg-background border rounded-md max-w-fit hover:bg-accent/50 transition-colors">
+                                                                  <Paperclip className="h-3 w-3 text-muted-foreground" />
+                                                                  <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline truncate max-w-[150px] text-primary">
+                                                                      {att.name}
+                                                                  </a>
+                                                              </div>
+                                                          ))}
+                                                      </div>
+                                                  )}
+                                                  {user?.id === comment.user_id && (
+                                                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                          <DropdownMenu>
+                                                              <DropdownMenuTrigger asChild>
+                                                                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                                                                      <MoreHorizontal className="h-3 w-3" />
+                                                                  </Button>
+                                                              </DropdownMenuTrigger>
+                                                              <DropdownMenuContent align="end">
+                                                                  <DropdownMenuItem onClick={() => {
+                                                                      setEditingCommentId(comment.id);
+                                                                      setEditContent(comment.content);
+                                                                  }}>
+                                                                      <Pencil className="h-3 w-3 mr-2" /> Edit
+                                                                  </DropdownMenuItem>
+                                                                  <DropdownMenuItem className="text-destructive" onClick={() => deleteCommentMutation.mutate(comment.id)}>
+                                                                      <Trash2 className="h-3 w-3 mr-2" /> Delete
+                                                                  </DropdownMenuItem>
+                                                              </DropdownMenuContent>
+                                                          </DropdownMenu>
+                                                      </div>
+                                                  )}
+                                              </div>
+                                          )}
                                       </div>
                                   </div>
                               ))
