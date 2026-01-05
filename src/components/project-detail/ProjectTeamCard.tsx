@@ -13,6 +13,7 @@ import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { getInitials, generatePastelColor, getAvatarUrl } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
+import ProjectReportCard from "./ProjectReportCard";
 
 interface ProjectTeamCardProps {
   project: Project;
@@ -155,7 +156,7 @@ const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
   );
 
   return (
-    <>
+    <div className="space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Team</CardTitle>
@@ -229,10 +230,13 @@ const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
           </CardFooter>
         )}
       </Card>
+      
+      <ProjectReportCard project={project} />
+
       {canChangeOwner && (
         <ChangeOwnerDialog open={isChangeOwnerDialogOpen} onOpenChange={setIsChangeOwnerDialogOpen} project={project} onOwnerChange={handleOwnerChange} />
       )}
-    </>
+    </div>
   );
 };
 
