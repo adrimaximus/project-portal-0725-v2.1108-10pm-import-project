@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Goal } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +19,7 @@ const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsigh
   const [insight, setInsight] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const prevProgressRef = useRef<string>("");
 
   const checkConnection = useCallback(async () => {
     try {
@@ -40,7 +41,7 @@ const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsigh
 
   const fetchInsight = useCallback(async () => {
     setIsLoading(true);
-    setInsight(null);
+    // Keep showing old insight while loading new one if available, to avoid flicker
     try {
       const context: { 
         yearly?: { percentage: number }; 
@@ -65,7 +66,8 @@ const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsigh
     } catch (error: any) {
       console.error("Failed to generate AI insight:", error);
       if (!error.message.includes("configured")) {
-        toast.error("Couldn't get an insight from the AI coach right now.");
+        // Silent fail for auto-updates to not annoy user, just log
+        console.warn("Couldn't get an insight from the AI coach right now.");
       }
     } finally {
       setIsLoading(false);
@@ -73,14 +75,31 @@ const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsigh
   }, [goal, yearlyProgress, monthlyProgress]);
 
   useEffect(() => {
-    checkConnection().then(connected => {
-      if (connected && (yearlyProgress || monthlyProgress)) {
-        // Automatically fetch only if we haven't fetched yet or if progress changes significantly
-        // For now, let's keep it manual or on-mount to avoid spamming the API
-        // fetchInsight(); 
-      }
-    });
-  }, [checkConnection, yearlyProgress, monthlyProgress]); // Removing fetchInsight from dependencies to prevent loop if logic changes
+    let isMounted = true;
+
+    const runAutoFetch = async () => {
+        const connected = await checkConnection();
+        if (connected && isMounted) {
+            // Create a signature of the current progress state to detect changes
+            const currentProgressSig = JSON.stringify({ 
+                yearly: yearlyProgress?.percentage, 
+                monthly: monthlyProgress ? { ...monthlyProgress } : null 
+            });
+
+            // Only fetch if progress data has actually changed or if we have no insight yet
+            if (currentProgressSig !== prevProgressRef.current || !insight) {
+                prevProgressRef.current = currentProgressSig;
+                await fetchInsight();
+            }
+        }
+    };
+
+    runAutoFetch();
+
+    return () => {
+        isMounted = false;
+    };
+  }, [checkConnection, fetchInsight, yearlyProgress, monthlyProgress, insight]); 
 
   if (!isConnected) {
     return (
@@ -108,35 +127,36 @@ const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsigh
     );
   }
 
+  // Don't render empty card if loading initially and no insight
+  if (isLoading && !insight) {
+      return (
+        <Card className="mt-4 bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/50 border-indigo-100/50 dark:from-indigo-950/10 dark:via-background dark:to-purple-950/10 dark:border-indigo-900/30 shadow-sm animate-pulse">
+            <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
+                <Sparkles className="h-4 w-4 text-indigo-500" />
+                AI Coach Insight
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="h-4 bg-indigo-100/50 rounded w-3/4 mb-2"></div>
+                <div className="h-4 bg-indigo-100/50 rounded w-1/2"></div>
+            </CardContent>
+        </Card>
+      );
+  }
+
   return (
-    <Card className="mt-4 bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/50 border-indigo-100/50 dark:from-indigo-950/10 dark:via-background dark:to-purple-950/10 dark:border-indigo-900/30 shadow-sm">
+    <Card className="mt-4 bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/50 border-indigo-100/50 dark:from-indigo-950/10 dark:via-background dark:to-purple-950/10 dark:border-indigo-900/30 shadow-sm transition-all duration-500">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
           <Sparkles className="h-4 w-4 text-indigo-500" />
           AI Coach Insight
         </CardTitle>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/30"
-          onClick={fetchInsight}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <Loader2 className="h-3 w-3 animate-spin mr-1" />
-          ) : (
-            <Lightbulb className="h-3 w-3 mr-1" />
-          )}
-          {insight ? 'Refresh Insight' : 'Get Insight'}
-        </Button>
+        {/* Removed Manual Refresh Button to keep UI clean as requested, auto-update handles it */}
+        {isLoading && <Loader2 className="h-3 w-3 animate-spin text-indigo-400" />}
       </CardHeader>
       <CardContent>
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-6 gap-2 text-sm text-muted-foreground animate-pulse">
-            <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
-            <span>Analyzing your progress...</span>
-          </div>
-        ) : insight ? (
+        {insight ? (
           <div className="text-sm text-foreground/80 leading-relaxed bg-white/50 dark:bg-black/20 p-3 rounded-lg border border-indigo-100/50 dark:border-indigo-900/30">
             <ReactMarkdown
               components={{
@@ -151,17 +171,9 @@ const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsigh
           </div>
         ) : (
            <div className="text-center py-4 px-2">
-             <p className="text-xs text-muted-foreground mb-3">
-               Click "Get Insight" to receive personalized feedback and motivation based on your recent activity.
+             <p className="text-xs text-muted-foreground">
+               Analyzing your progress...
              </p>
-             <Button 
-               size="sm" 
-               className="bg-indigo-600 hover:bg-indigo-700 text-white h-8 text-xs"
-               onClick={fetchInsight}
-             >
-               <Sparkles className="h-3 w-3 mr-2" />
-               Generate Insight
-             </Button>
            </div>
         )}
       </CardContent>
