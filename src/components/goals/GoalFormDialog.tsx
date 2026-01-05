@@ -174,11 +174,14 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
     setIsSaving(true);
 
     try {
+      const { tags, ...restOfFormData } = formData;
+      const newTags = tags.filter(t => t.isNew);
+      const existingTagIds = tags
+        .filter(t => !t.isNew && t.id)
+        .map(t => t.id)
+        .filter(Boolean); // Ensure no nulls are passed
+
       if (isEditMode && goal) {
-        const newTags = formData.tags.filter(t => t.isNew);
-        const existingTagIds = formData.tags.filter(t => !t.isNew).map(t => t.id);
-        const { tags, ...restOfFormData } = formData;
-        
         const { error } = await supabase
           .rpc('update_goal_with_tags', {
             p_goal_id: goal.id,
@@ -194,7 +197,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
             p_target_value: restOfFormData.targetValue,
             p_unit: restOfFormData.unit,
             p_tags: existingTagIds,
-            p_custom_tags: newTags.map(({ name, color }) => ({ name, color })),
+            p_custom_tags: newTags.length > 0 ? newTags.map(({ name, color }) => ({ name, color })) : null,
           });
 
         if (error) throw error;
@@ -204,10 +207,6 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
         SafeLocalStorage.removeItem(storageKey);
         onSuccess(goal);
       } else {
-        const { tags, ...restOfFormData } = formData;
-        const existingTagIds = tags.filter(t => !t.isNew && t.id).map(t => t.id);
-        const newCustomTags = tags.filter(t => t.isNew).map(({ name, color }) => ({ name, color }));
-
         const rpcParams = {
             p_title: restOfFormData.title,
             p_description: restOfFormData.description || null,
@@ -221,7 +220,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
             p_target_value: restOfFormData.targetValue ?? null,
             p_unit: restOfFormData.unit || null,
             p_existing_tags: existingTagIds,
-            p_custom_tags: newCustomTags,
+            p_custom_tags: newTags.length > 0 ? newTags.map(({ name, color }) => ({ name, color })) : null,
         };
 
         const { data: newGoal, error: rpcError } = await supabase
@@ -237,6 +236,7 @@ const GoalFormDialog = ({ open, onOpenChange, onSuccess, goal }: GoalFormDialogP
       }
     } catch (error: any) {
       toast.error(`Failed to save goal: ${error.message}`);
+      console.error(error);
     } finally {
       setIsSaving(false);
     }

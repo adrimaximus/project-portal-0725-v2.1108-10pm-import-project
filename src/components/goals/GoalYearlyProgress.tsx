@@ -259,7 +259,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                 name: file.name,
                 url: publicUrl,
                 type: file.type,
-                size: file.size
+                size: file.size,
+                storagePath: fileName // Keep path for future deletion
             };
         });
 
@@ -720,7 +721,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                   <Button
                                       variant="ghost"
                                       size="icon"
-                                      type="button"
                                       className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
                                       onClick={handleRemoveExistingAttachment}
                                   >
@@ -741,7 +741,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    type="button"
                                     className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
                                     onClick={() => { setFile(null); if(fileInputRef.current) fileInputRef.current.value=''; }}
                                 >
@@ -771,7 +770,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                       <div className="flex justify-between items-center">
                           <Label htmlFor="note" className="text-sm font-medium text-muted-foreground ml-1">Note (Optional)</Label>
                           {savedNote && note === "" && (
-                              <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => { setSavedNote(""); setNote(""); }}>
+                              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => { setSavedNote(""); setNote(""); }}>
                                   Clear Note
                               </Button>
                           )}
@@ -821,16 +820,16 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                   
                                                   {/* List existing/current attachments */}
                                                   {(editAttachments.length > 0 || editNewFiles.length > 0) && (
-                                                      <div className="grid grid-cols-4 gap-2">
+                                                      <div className="mt-2 pt-1 border-t border-border/50 flex flex-wrap gap-2">
                                                           {/* Existing attachments */}
                                                           {editAttachments.map((att: any, idx: number) => (
-                                                              <div key={`existing-${idx}`} className="relative group/attachment border rounded-md overflow-hidden bg-background aspect-square">
+                                                              <div key={`existing-${idx}`} className="w-[70px] relative group/attachment">
                                                                   {att.type?.startsWith('image/') ? (
-                                                                      <div className="w-full h-full">
+                                                                      <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-background relative">
                                                                           <img src={att.url} alt={att.name} className="w-full h-full object-cover" />
                                                                       </div>
                                                                   ) : (
-                                                                      <div className="w-full h-full flex items-center justify-center">
+                                                                      <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-muted/30 flex items-center justify-center">
                                                                           <Paperclip className="h-5 w-5 text-muted-foreground" />
                                                                       </div>
                                                                   )}
@@ -846,13 +845,13 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                           ))}
                                                           {/* New attachments pending upload */}
                                                           {editNewFiles.map((file, idx) => (
-                                                              <div key={`new-${idx}`} className="relative group/attachment border rounded-md overflow-hidden bg-background aspect-square">
+                                                              <div key={`new-${idx}`} className="w-[70px] relative group/attachment">
                                                                   {file.type?.startsWith('image/') ? (
-                                                                      <div className="w-full h-full">
+                                                                      <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-background relative">
                                                                           <img src={URL.createObjectURL(file)} alt={file.name} className="w-full h-full object-cover" />
                                                                       </div>
                                                                   ) : (
-                                                                      <div className="w-full h-full flex items-center justify-center">
+                                                                      <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-muted/30 flex items-center justify-center">
                                                                           <Paperclip className="h-5 w-5 text-muted-foreground" />
                                                                       </div>
                                                                   )}
@@ -913,9 +912,12 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                   {renderCommentContent(comment.content)}
                                                   {comment.attachments_jsonb && comment.attachments_jsonb.length > 0 && (
                                                       <div className="mt-2 pt-1 border-t border-border/50 flex flex-wrap gap-2">
+                                                          {/* Viewing logic: Show max 4 items, with +n overlay on the last one if more exist */}
                                                           {comment.attachments_jsonb.slice(0, 4).map((att: any, idx: number) => {
-                                                            const extraCount = comment.attachments_jsonb.length - 3;
-                                                            const isOverlay = idx === 3 && comment.attachments_jsonb.length > 4;
+                                                            const displayCount = 4;
+                                                            const totalCount = comment.attachments_jsonb.length;
+                                                            const extraCount = totalCount - (displayCount - 1);
+                                                            const isOverlay = idx === 3 && totalCount > 4;
                                                             
                                                             return (
                                                                 <div key={idx} className="w-[70px] relative">
@@ -1006,7 +1008,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                               <button 
                                                   onClick={() => setCommentFiles(prev => prev.filter((_, i) => i !== index))} 
                                                   className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                                                  type="button"
                                               >
                                                   <X className="h-3.5 w-3.5" />
                                               </button>
