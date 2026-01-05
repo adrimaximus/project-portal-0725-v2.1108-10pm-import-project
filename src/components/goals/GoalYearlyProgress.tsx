@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Check, X, FileText, Paperclip, Eye, Trash2, Send, MoreHorizontal, Pencil, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, X, FileText, Paperclip, Eye, Trash2, Send, MoreHorizontal, Pencil, Loader2, MessageSquare } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -265,7 +265,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                 name: file.name,
                 url: publicUrl,
                 type: file.type,
-                size: file.size
+                size: file.size,
+                storagePath: fileName // Keep path for future deletion
             };
         });
 
@@ -651,17 +652,33 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                               )}
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{format(day.date, 'PPP', { locale: enUS })}</p>
-                            {isFutureDay ? <p>Future date</p> : 
-                             !isValidDay ? <p>Not a scheduled day</p> :
+                          <TooltipContent className="text-xs max-w-[200px]">
+                            <p className="font-semibold mb-1">{format(day.date, 'PPP', { locale: enUS })}</p>
+                            {isFutureDay ? <p className="text-muted-foreground">Future date</p> : 
+                             !isValidDay ? <p className="text-muted-foreground">Not a scheduled day</p> :
                              day.isCompleted !== undefined ? (
-                                <>
-                                  <p>{day.isCompleted ? 'Completed' : 'Not completed'}</p>
-                                  {day.attachmentUrl && <div className="flex items-center gap-1 mt-1 text-xs text-primary"><FileText className="h-3 w-3" /> Report attached</div>}
-                                  {day.note && <div className="mt-1 text-xs italic opacity-80 line-clamp-2 max-w-[150px]">"{day.note}"</div>}
-                                </>
-                             ) : <p>Click to update</p>}
+                                <div className="space-y-2">
+                                  <p className={day.isCompleted ? "text-green-600 font-medium" : "text-red-500 font-medium"}>
+                                    {day.isCompleted ? 'Completed' : 'Missed'}
+                                  </p>
+                                  {(day.attachmentUrl || day.note) && (
+                                    <div className="pt-1 border-t border-border space-y-1">
+                                        {day.attachmentUrl && (
+                                            <div className="flex items-center gap-1.5 text-primary">
+                                                <Paperclip className="h-3 w-3" /> 
+                                                <span>Attachment</span>
+                                            </div>
+                                        )}
+                                        {day.note && (
+                                            <div className="flex items-start gap-1.5 text-muted-foreground">
+                                                <MessageSquare className="h-3 w-3 mt-0.5 shrink-0" />
+                                                <span className="italic line-clamp-3">"{day.note}"</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                  )}
+                                </div>
+                             ) : <p className="text-muted-foreground">Click to update</p>}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
