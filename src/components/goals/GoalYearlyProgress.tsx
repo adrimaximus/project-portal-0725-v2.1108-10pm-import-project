@@ -78,6 +78,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const [mentionOpen, setMentionOpen] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [cursorPos, setCursorPos] = useState(0);
+  // Store mapped mentions to convert back to UUIDs before sending: { "@John Doe": "uuid" }
+  const [mentionMap, setMentionMap] = useState<Record<string, string>>({});
 
   const todayStart = startOfDay(today);
 
@@ -251,13 +253,26 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
         });
       }
 
+      // Convert friendly mentions (@Name) back to raw format (@[Name](uuid)) using the map
+      let finalContent = content;
+      Object.entries(mentionMap).forEach(([name, uuid]) => {
+        // Use a regex to replace all occurrences of the friendly name
+        // We use a negative lookahead/lookbehind or specific context if needed, 
+        // but simple replacement works for now as long as names are unique enough or map is specific.
+        // Better: Replace ONLY the parts that were meant to be mentions.
+        // Ideally we would store ranges, but string replacement is simpler for this context.
+        // We escape the name for regex usage.
+        const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        finalContent = finalContent.replace(new RegExp(escapedName, 'g'), `@[${name.substring(1)}]( ${uuid})`);
+      });
+
       const { error } = await supabase
         .from('goal_comments')
         .insert({
           goal_id: goal.id,
           user_id: user.id,
           comment_date: dateStr,
-          content: content,
+          content: finalContent,
           attachments_jsonb: attachments
         });
       
@@ -267,6 +282,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
       queryClient.invalidateQueries({ queryKey: ['goal_comments', goal.id, selectedDay ? format(selectedDay, 'yyyy-MM-dd') : null] });
       setCommentText("");
       setCommentFile(null);
+      setMentionMap({});
     },
     onError: (error) => {
       toast.error(`Failed to add comment: ${error.message}`);
@@ -371,9 +387,17 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     const textBeforeCursor = commentText.slice(0, cursorPos);
     const textAfterCursor = commentText.slice(cursorPos);
     
-    // Replace the part starting with @ until cursor with the mention syntax
-    // The mention syntax expected by backend is @[Name](uuid)
-    const newTextBefore = textBeforeCursor.replace(/@([^@\n]*)$/, `@[${profile.first_name || 'User'}]( ${profile.id}) `);
+    // The friendly name to display
+    const friendlyName = `@${profile.first_name || 'User'}`;
+    
+    // Store mapping for submission
+    setMentionMap(prev => ({
+        ...prev,
+        [friendlyName]: profile.id
+    }));
+
+    // Replace the part starting with @ until cursor with the friendly name
+    const newTextBefore = textBeforeCursor.replace(/@([^@\n]*)$/, `${friendlyName} `);
     
     const newText = newTextBefore + textAfterCursor;
     setCommentText(newText);
@@ -396,6 +420,16 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     const query = mentionQuery.toLowerCase();
     return fullName.includes(query) || email.includes(query);
   });
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mentionOpen && e.key === 'Enter') {
+        e.preventDefault();
+        // Auto-select the first filtered profile if available
+        if (filteredProfiles && filteredProfiles.length > 0) {
+            insertMention(filteredProfiles[0]);
+        }
+    }
+  };
 
   // Helper to render mentions in comments properly
   const renderCommentContent = (content: string) => {
@@ -714,6 +748,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                 className="min-h-[80px] text-xs resize-none pr-20 pb-8"
                                                 value={commentText}
                                                 onChange={handleCommentChange}
+                                                onKeyDown={handleKeyDown}
                                             />
                                         </div>
                                     </PopoverTrigger>
