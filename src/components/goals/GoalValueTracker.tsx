@@ -48,17 +48,25 @@ const GoalValueTracker = ({ goal, onLogValue, selectedYear, onYearChange }: Goal
   const [mentionQuery, setMentionQuery] = useState("");
   const [cursorPos, setCursorPos] = useState(0);
 
+  // Fetch profiles only for collaborators and owner
   const { data: profiles } = useQuery({
-    queryKey: ['profiles_for_mention'],
+    queryKey: ['profiles_for_mention', goal.id],
     queryFn: async () => {
+      const collaboratorIds = (goal.collaborators || []).map(c => c.id);
+      const userIds = new Set([...collaboratorIds, goal.user_id]); // Add owner
+      
+      if (userIds.size === 0) return [];
+
       const { data, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, email, avatar_url')
-        .eq('status', 'active')
-        .limit(20);
+        .in('id', Array.from(userIds))
+        .eq('status', 'active');
+      
       if (error) throw error;
       return data;
     },
+    enabled: !!goal.id,
     staleTime: 1000 * 60 * 5,
   });
 
@@ -172,6 +180,19 @@ const GoalValueTracker = ({ goal, onLogValue, selectedYear, onYearChange }: Goal
     }, 0);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mentionOpen && e.key === 'Enter') {
+        e.preventDefault();
+        const filtered = profiles?.filter(p => {
+            const q = mentionQuery.toLowerCase();
+            return (p.first_name + ' ' + p.last_name).toLowerCase().includes(q) || p.email.toLowerCase().includes(q);
+        });
+        if (filtered && filtered.length > 0) {
+            insertMention(filtered[0]);
+        }
+    }
+  };
+
   const filteredProfiles = profiles?.filter(p => {
     if (!mentionQuery) return true;
     const fullName = `${p.first_name || ''} ${p.last_name || ''}`.toLowerCase();
@@ -242,6 +263,7 @@ const GoalValueTracker = ({ goal, onLogValue, selectedYear, onYearChange }: Goal
                                         placeholder="Tambahkan catatan (ketik @ untuk mention)..." 
                                         value={note}
                                         onChange={handleNoteChange}
+                                        onKeyDown={handleKeyDown}
                                         className="text-sm min-h-[60px]"
                                     />
                                 </div>
