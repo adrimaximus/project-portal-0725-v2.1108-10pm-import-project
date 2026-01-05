@@ -824,8 +824,12 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                               className="hidden" 
                                                               multiple
                                                               onChange={(e) => {
-                                                                  if (e.target.files) {
+                                                                  if (e.target.files && e.target.files.length > 0) {
                                                                       setEditNewFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
+                                                                  }
+                                                                  // Clear input to allow selecting the same file again if needed
+                                                                  if (editFileInputRef.current) {
+                                                                      editFileInputRef.current.value = '';
                                                                   }
                                                               }} 
                                                           />
@@ -849,7 +853,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                               <div className="p-2 bg-muted/50 rounded-lg text-xs break-words relative group">
                                                   {renderCommentContent(comment.content)}
                                                   {comment.attachments_jsonb && comment.attachments_jsonb.length > 0 && (
-                                                      <div className="mt-2 space-y-1 pt-1 border-t border-border/50 grid grid-cols-4 gap-2">
+                                                      <div className="mt-2 pt-1 border-t border-border/50 grid grid-cols-4 gap-2">
                                                           {/* Viewing logic: Limit to 5 items, show +N if more */}
                                                           {(comment.attachments_jsonb.length > 5 
                                                               ? comment.attachments_jsonb.slice(0, 4) 
@@ -1015,8 +1019,11 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                           className="hidden" 
                                           multiple
                                           onChange={(e) => {
-                                              if (e.target.files) {
+                                              if (e.target.files && e.target.files.length > 0) {
                                                   setCommentFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
+                                              }
+                                              if (commentFileInputRef.current) {
+                                                  commentFileInputRef.current.value = '';
                                               }
                                           }} 
                                       />
