@@ -19,7 +19,7 @@ const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsigh
   const [insight, setInsight] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const prevProgressRef = useRef<string>("");
+  const prevGoalRef = useRef<string>("");
 
   const checkConnection = useCallback(async () => {
     try {
@@ -54,8 +54,8 @@ const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsigh
       } else if (yearlyProgress) {
         context.yearly = yearlyProgress;
       } else {
-        setIsLoading(false);
-        return;
+        // If no specific progress context is passed, we can still generate insight based on the goal object itself
+        // but let's check if we have enough info.
       }
       
       // Enhanced prompt instructions for better Indonesian output
@@ -80,15 +80,20 @@ const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsigh
     const runAutoFetch = async () => {
         const connected = await checkConnection();
         if (connected && isMounted) {
-            // Create a signature of the current progress state to detect changes
-            const currentProgressSig = JSON.stringify({ 
+            // Create a signature of the current goal state + progress to detect changes
+            // We include goal.completions length and last updated timestamp if available to be more precise
+            const currentGoalSig = JSON.stringify({ 
+                id: goal.id,
+                completionsCount: goal.completions?.length,
+                // Add a timestamp or value sum to detect updates even if count is same (e.g. value change)
+                completionsValueSum: goal.completions?.reduce((sum, c) => sum + c.value, 0),
                 yearly: yearlyProgress?.percentage, 
                 monthly: monthlyProgress ? { ...monthlyProgress } : null 
             });
 
-            // Only fetch if progress data has actually changed or if we have no insight yet
-            if (currentProgressSig !== prevProgressRef.current || !insight) {
-                prevProgressRef.current = currentProgressSig;
+            // Only fetch if data has actually changed or if we have no insight yet
+            if (currentGoalSig !== prevGoalRef.current || !insight) {
+                prevGoalRef.current = currentGoalSig;
                 await fetchInsight();
             }
         }
@@ -99,7 +104,7 @@ const AiCoachInsight = ({ goal, yearlyProgress, monthlyProgress }: AiCoachInsigh
     return () => {
         isMounted = false;
     };
-  }, [checkConnection, fetchInsight, yearlyProgress, monthlyProgress, insight]); 
+  }, [checkConnection, fetchInsight, goal, yearlyProgress, monthlyProgress, insight]); 
 
   if (!isConnected) {
     return (
