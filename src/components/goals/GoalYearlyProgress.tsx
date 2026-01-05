@@ -70,7 +70,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dayToConfirm, setDayToConfirm] = useState<Date | null>(null);
   const [commentText, setCommentText] = useState("");
-  const [commentFile, setCommentFile] = useState<File | null>(null);
+  const [commentFiles, setCommentFiles] = useState<File[]>([]);
   const commentFileInputRef = useRef<HTMLInputElement>(null);
   const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -234,30 +234,35 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
 
   // Mutation to add comment
   const addCommentMutation = useMutation({
-    mutationFn: async ({ content, file }: { content: string, file: File | null }) => {
+    mutationFn: async ({ content, files }: { content: string, files: File[] }) => {
       if (!selectedDay || !user) throw new Error("No day selected or user not logged in");
       const dateStr = format(selectedDay, 'yyyy-MM-dd');
       
       let attachments: any[] = [];
 
-      if (file) {
-        const fileName = `${goal.id}/${Date.now()}-${file.name.replace(/[^\x00-\x7F]/g, "")}`;
-        const { error: uploadError } = await supabase.storage
-            .from('goal-attachments')
-            .upload(fileName, file);
-        
-        if (uploadError) throw uploadError;
-        
-        const { data: { publicUrl } } = supabase.storage
-            .from('goal-attachments')
-            .getPublicUrl(fileName);
+      if (files && files.length > 0) {
+        // Upload all files
+        const uploadPromises = files.map(async (file) => {
+            const fileName = `${goal.id}/${Date.now()}-${file.name.replace(/[^\x00-\x7F]/g, "")}`;
+            const { error: uploadError } = await supabase.storage
+                .from('goal-attachments')
+                .upload(fileName, file);
             
-        attachments.push({
-            name: file.name,
-            url: publicUrl,
-            type: file.type,
-            size: file.size
+            if (uploadError) throw uploadError;
+            
+            const { data: { publicUrl } } = supabase.storage
+                .from('goal-attachments')
+                .getPublicUrl(fileName);
+                
+            return {
+                name: file.name,
+                url: publicUrl,
+                type: file.type,
+                size: file.size
+            };
         });
+
+        attachments = await Promise.all(uploadPromises);
       }
 
       // Convert friendly mentions (@Name) back to raw format (@[Name](uuid)) using the map
@@ -282,7 +287,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goal_comments', goal.id, selectedDay ? format(selectedDay, 'yyyy-MM-dd') : null] });
       setCommentText("");
-      setCommentFile(null);
+      setCommentFiles([]);
       setMentionMap({});
     },
     onError: (error) => {
@@ -406,8 +411,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   };
 
   const handleSubmitComment = () => {
-    if (commentText.trim() || commentFile) {
-      addCommentMutation.mutate({ content: commentText, file: commentFile });
+    if (commentText.trim() || commentFiles.length > 0) {
+      addCommentMutation.mutate({ content: commentText, files: commentFiles });
     }
   };
 
@@ -885,13 +890,20 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                               <AvatarFallback>{user?.email?.substring(0, 2).toUpperCase()}</AvatarFallback>
                           </Avatar>
                           <div className="flex-1 space-y-2">
-                              {commentFile && (
-                                  <div className="flex items-center gap-2 p-2 bg-muted rounded-md text-xs border">
-                                      <Paperclip className="h-3 w-3 text-primary" />
-                                      <span className="truncate flex-1 max-w-[200px]">{commentFile.name}</span>
-                                      <button onClick={() => setCommentFile(null)} className="text-muted-foreground hover:text-destructive transition-colors">
-                                          <X className="h-3.5 w-3.5" />
-                                      </button>
+                              {commentFiles.length > 0 && (
+                                  <div className="flex flex-wrap gap-2 mb-2">
+                                      {commentFiles.map((file, index) => (
+                                          <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md text-xs border max-w-full">
+                                              <Paperclip className="h-3 w-3 text-primary shrink-0" />
+                                              <span className="truncate max-w-[150px]">{file.name}</span>
+                                              <button 
+                                                  onClick={() => setCommentFiles(prev => prev.filter((_, i) => i !== index))} 
+                                                  className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                                              >
+                                                  <X className="h-3.5 w-3.5" />
+                                              </button>
+                                          </div>
+                                      ))}
                                   </div>
                               )}
                               <div className="relative">
@@ -958,13 +970,18 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                           type="file" 
                                           ref={commentFileInputRef} 
                                           className="hidden" 
-                                          onChange={(e) => e.target.files && setCommentFile(e.target.files[0])} 
+                                          multiple
+                                          onChange={(e) => {
+                                              if (e.target.files) {
+                                                  setCommentFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
+                                              }
+                                          }} 
                                       />
                                       <Button
                                           size="icon"
                                           variant="ghost"
                                           className="h-6 w-6 text-primary hover:bg-primary/10"
-                                          disabled={(!commentText.trim() && !commentFile) || addCommentMutation.isPending}
+                                          disabled={(!commentText.trim() && commentFiles.length === 0) || addCommentMutation.isPending}
                                           onClick={handleSubmitComment}
                                           title="Send comment"
                                       >
