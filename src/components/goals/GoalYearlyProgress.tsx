@@ -292,8 +292,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
 
   // Mutation to update comment
   const updateCommentMutation = useMutation({
-    mutationFn: async ({ id, content, file, attachments }: { id: string, content: string, file: File | null, attachments: any[] }) => {
-      let updatedAttachments = [...(attachments || [])];
+    mutationFn: async ({ id, content, file, existingAttachments }: { id: string, content: string, file: File | null, existingAttachments: any[] }) => {
+      let updatedAttachments = [...(existingAttachments || [])];
 
       if (file) {
         const fileName = `${goal.id}/${Date.now()}-${file.name.replace(/[^\x00-\x7F]/g, "")}`;
@@ -812,7 +812,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                               id: comment.id, 
                                                               content: editContent,
                                                               file: editFile,
-                                                              attachments: editAttachments 
+                                                              existingAttachments: editAttachments // Use the correct variable here
                                                           })}>Save</Button>
                                                       </div>
                                                   </div>
