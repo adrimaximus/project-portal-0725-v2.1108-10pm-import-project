@@ -216,7 +216,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
 
   // Query for profiles (for mentions) - Limited to collaborators
   const { data: profiles } = useQuery({
-    queryKey: ['profiles_for_mention', goal.id], // Dependent on goal.id so it refreshes if goal changes
+    queryKey: ['profiles_for_mention', goal.id],
     queryFn: async () => {
       if (collaboratorIds.length === 0) return [];
       
@@ -431,8 +431,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
 
     // Detect if we are typing a mention
     const textBeforeCursor = text.slice(0, newCursorPos);
-    // Modified regex to allow spaces in names (e.g. @John Doe) as long as we are still typing
-    // It captures anything after @ that isn't another @ or newline, until the cursor
     const mentionMatch = textBeforeCursor.match(/@([^@\n]*)$/);
 
     if (mentionMatch) {
@@ -795,6 +793,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                                       </div>
                                                                   )}
                                                                   <button
+                                                                      type="button"
                                                                       onClick={() => setEditAttachments(prev => prev.filter((_, i) => i !== idx))}
                                                                       className="absolute top-0 right-0 bg-black/50 hover:bg-destructive text-white p-0.5 rounded-bl-md opacity-0 group-hover/attachment:opacity-100 transition-opacity"
                                                                       title="Remove attachment"
@@ -816,6 +815,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                                       </div>
                                                                   )}
                                                                   <button
+                                                                      type="button"
                                                                       onClick={() => setEditNewFiles(prev => prev.filter((_, i) => i !== idx))}
                                                                       className="absolute top-0 right-0 bg-black/50 hover:bg-destructive text-white p-0.5 rounded-bl-md opacity-0 group-hover/attachment:opacity-100 transition-opacity"
                                                                       title="Remove file"
