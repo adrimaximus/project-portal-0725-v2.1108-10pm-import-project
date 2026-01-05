@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import { getAvatarUrl, generatePastelColor } from '@/lib/utils';
 import AttachmentViewerModal from '@/components/AttachmentViewerModal';
 import GoalLogTable from './GoalLogTable';
+import { GoalCompletion } from "@/types";
 
 interface GoalYearlyProgressProps {
   goal: Goal;
@@ -230,24 +231,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   // Get collaborator IDs to filter mentions
   const collaboratorIds = (goal.collaborators || []).map((c: any) => c.id);
 
-  // Query for profiles (for mentions)
-  const { data: profiles } = useQuery({
-    queryKey: ['profiles_for_mention', goal.id],
-    queryFn: async () => {
-      if (collaboratorIds.length === 0) return [];
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, email, avatar_url')
-        .in('id', collaboratorIds)
-        .eq('status', 'active');
-        
-      if (error) throw error;
-      return data;
-    },
-    enabled: collaboratorIds.length > 0,
-    staleTime: 1000 * 60 * 5, 
-  });
+  // Use props instead of fetching profiles again
+  const profiles = goal.collaborators;
 
   const addCommentMutation = useMutation({
     mutationFn: async ({ content, files }: { content: string, files: File[] }) => {
@@ -697,6 +682,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
               goalOwnerId={goal.user_id}
               selectedYear={displayYear.toString()}
               onYearChange={(y) => setDisplayYear(parseInt(y))}
+              collaborators={goal.collaborators}
             />
           </div>
         </CardContent>
@@ -1082,9 +1068,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                         onCloseAutoFocus={(e) => e.preventDefault()}
                                     >
                                         <Command shouldFilter={false}>
-                                            <div className="hidden">
-                                                <CommandInput placeholder="Search people..." value={mentionQuery} onValueChange={setMentionQuery} />
-                                            </div>
                                             <CommandList>
                                                 <CommandEmpty>No person found.</CommandEmpty>
                                                 <CommandGroup>
