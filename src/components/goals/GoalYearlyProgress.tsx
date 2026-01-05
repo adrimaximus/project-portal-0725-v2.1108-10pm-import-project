@@ -259,7 +259,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                 name: file.name,
                 url: publicUrl,
                 type: file.type,
-                size: file.size
+                size: file.size,
+                storagePath: fileName // Keep path for future deletion
             };
         });
 
@@ -296,9 +297,33 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     }
   });
 
-  // Mutation to update comment
+  // Mutation to update comment with storage cleanup logic
   const updateCommentMutation = useMutation({
     mutationFn: async ({ id, content, newFiles, existingAttachments }: { id: string, content: string, newFiles: File[], existingAttachments: any[] }) => {
+      
+      // 1. Fetch current comment to find what was removed
+      const { data: currentComment, error: fetchError } = await supabase
+        .from('goal_comments')
+        .select('attachments_jsonb')
+        .eq('id', id)
+        .single();
+      
+      if (fetchError) throw fetchError;
+
+      const oldAttachments = (currentComment.attachments_jsonb as any[]) || [];
+      
+      // 2. Identify removed files
+      const newAttachmentUrls = new Set(existingAttachments.map(a => a.url));
+      const filesToDelete = oldAttachments.filter(oldAtt => !newAttachmentUrls.has(oldAtt.url));
+
+      // 3. Delete removed files from storage
+      if (filesToDelete.length > 0) {
+        const pathsToDelete = filesToDelete.map(f => f.storagePath).filter(Boolean);
+        if (pathsToDelete.length > 0) {
+           await supabase.storage.from('goal-attachments').remove(pathsToDelete);
+        }
+      }
+
       let updatedAttachments = [...(existingAttachments || [])];
 
       if (newFiles && newFiles.length > 0) {
@@ -318,7 +343,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                 name: file.name,
                 url: publicUrl,
                 type: file.type,
-                size: file.size
+                size: file.size,
+                storagePath: fileName
             };
         });
 
@@ -352,6 +378,21 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   // Mutation to delete comment
   const deleteCommentMutation = useMutation({
     mutationFn: async (commentId: string) => {
+      // 1. Fetch to get attachments
+      const { data: comment, error: fetchError } = await supabase
+        .from('goal_comments')
+        .select('attachments_jsonb')
+        .eq('id', commentId)
+        .single();
+        
+      if (!fetchError && comment && comment.attachments_jsonb) {
+          const attachments = comment.attachments_jsonb as any[];
+          const pathsToDelete = attachments.map(a => a.storagePath).filter(Boolean);
+          if (pathsToDelete.length > 0) {
+              await supabase.storage.from('goal-attachments').remove(pathsToDelete);
+          }
+      }
+
       const { error } = await supabase
         .from('goal_comments')
         .delete()
