@@ -86,6 +86,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const [editContent, setEditContent] = useState("");
   const [editNewFiles, setEditNewFiles] = useState<File[]>([]);
   const [editAttachments, setEditAttachments] = useState<any[]>([]);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const todayStart = startOfDay(today);
 
