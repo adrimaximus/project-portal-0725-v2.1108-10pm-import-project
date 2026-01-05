@@ -817,7 +817,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                               id: comment.id, 
                                                               content: editContent,
                                                               file: editFile,
-                                                              existingAttachments: editAttachments // Use the correct variable here
+                                                              attachments: editAttachments 
                                                           })}>Save</Button>
                                                       </div>
                                                   </div>
@@ -826,28 +826,36 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                               <div className="p-2 bg-muted/50 rounded-lg text-xs break-words relative group">
                                                   {renderCommentContent(comment.content)}
                                                   {comment.attachments_jsonb && comment.attachments_jsonb.length > 0 && (
-                                                      <div className="mt-2 space-y-1 pt-1 border-t border-border/50">
+                                                      <div className="mt-2 pt-2 border-t border-border/50 grid grid-cols-3 gap-2">
                                                           {comment.attachments_jsonb.map((att: any, idx: number) => (
-                                                              <div key={idx}>
-                                                                  {att.type?.startsWith('image/') ? (
-                                                                      <div className="mt-2 mb-1 rounded-md overflow-hidden border border-border/50 bg-background max-w-[240px]">
-                                                                          <a href={att.url} target="_blank" rel="noopener noreferrer">
-                                                                              <img 
-                                                                                src={att.url} 
-                                                                                alt={att.name} 
-                                                                                className="w-full h-auto object-cover max-h-[200px]" 
-                                                                                loading="lazy"
-                                                                              />
-                                                                          </a>
-                                                                      </div>
-                                                                  ) : (
-                                                                      <div className="flex items-center gap-2 p-1.5 bg-background border rounded-md max-w-fit hover:bg-accent/50 transition-colors">
-                                                                          <Paperclip className="h-3 w-3 text-muted-foreground" />
-                                                                          <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline truncate max-w-[150px] text-primary">
-                                                                              {att.name}
-                                                                          </a>
-                                                                      </div>
-                                                                  )}
+                                                              <div key={idx} className="aspect-square rounded-md overflow-hidden border border-border/50 bg-background hover:opacity-90 transition-opacity">
+                                                                  <a 
+                                                                    href={att.url} 
+                                                                    target="_blank" 
+                                                                    rel="noopener noreferrer"
+                                                                    className="flex items-center justify-center w-full h-full"
+                                                                    title={att.name}
+                                                                  >
+                                                                      {att.type?.startsWith('image/') ? (
+                                                                          <img 
+                                                                            src={att.url} 
+                                                                            alt={att.name} 
+                                                                            className="w-full h-full object-cover" 
+                                                                            loading="lazy"
+                                                                          />
+                                                                      ) : (
+                                                                          <div className="flex flex-col items-center justify-center p-2 text-center w-full h-full bg-muted/30">
+                                                                              {att.type === 'application/pdf' ? (
+                                                                                  <FileText className="h-8 w-8 text-red-500 mb-1" />
+                                                                              ) : (
+                                                                                  <Paperclip className="h-8 w-8 text-muted-foreground mb-1" />
+                                                                              )}
+                                                                              <span className="text-[9px] text-muted-foreground w-full truncate px-1">
+                                                                                  {att.name}
+                                                                              </span>
+                                                                          </div>
+                                                                      )}
+                                                                  </a>
                                                               </div>
                                                           ))}
                                                       </div>
