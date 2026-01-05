@@ -72,6 +72,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const [commentText, setCommentText] = useState("");
   const [commentFile, setCommentFile] = useState<File | null>(null);
   const commentFileInputRef = useRef<HTMLInputElement>(null);
+  const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Mention state
   const [mentionOpen, setMentionOpen] = useState(false);
@@ -200,18 +201,25 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     enabled: !!selectedDay
   });
 
-  // Query for profiles (for mentions)
+  // Get collaborator IDs to filter mentions
+  const collaboratorIds = (goal.collaborators || []).map((c: any) => c.id);
+
+  // Query for profiles (for mentions) - Limited to collaborators
   const { data: profiles } = useQuery({
-    queryKey: ['profiles_for_mention'],
+    queryKey: ['profiles_for_mention', goal.id], // Dependent on goal.id so it refreshes if goal changes
     queryFn: async () => {
+      if (collaboratorIds.length === 0) return [];
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, email, avatar_url')
-        .eq('status', 'active')
-        .limit(20);
+        .in('id', collaboratorIds)
+        .eq('status', 'active');
+        
       if (error) throw error;
       return data;
     },
+    enabled: collaboratorIds.length > 0,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
@@ -347,7 +355,9 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
 
     // Detect if we are typing a mention
     const textBeforeCursor = text.slice(0, newCursorPos);
-    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+    // Modified regex to allow spaces in names (e.g. @John Doe) as long as we are still typing
+    // It captures anything after @ that isn't another @ or newline, until the cursor
+    const mentionMatch = textBeforeCursor.match(/@([^@\n]*)$/);
 
     if (mentionMatch) {
       setMentionOpen(true);
@@ -363,12 +373,20 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     
     // Replace the part starting with @ until cursor with the mention syntax
     // The mention syntax expected by backend is @[Name](uuid)
-    const newTextBefore = textBeforeCursor.replace(/@(\w*)$/, `@[${profile.first_name || 'User'}]( ${profile.id}) `);
+    const newTextBefore = textBeforeCursor.replace(/@([^@\n]*)$/, `@[${profile.first_name || 'User'}]( ${profile.id}) `);
     
     const newText = newTextBefore + textAfterCursor;
     setCommentText(newText);
     setMentionOpen(false);
-    // Optionally focus back to textarea logic here if we had a ref
+    
+    // Refocus text area and set cursor position
+    setTimeout(() => {
+        if (commentTextareaRef.current) {
+            commentTextareaRef.current.focus();
+            const newPos = newTextBefore.length;
+            commentTextareaRef.current.setSelectionRange(newPos, newPos);
+        }
+    }, 0);
   };
 
   const filteredProfiles = profiles?.filter(p => {
@@ -691,6 +709,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                     <PopoverTrigger asChild>
                                         <div className="w-full">
                                             <Textarea
+                                                ref={commentTextareaRef}
                                                 placeholder="Write a comment... (Type @ to mention)"
                                                 className="min-h-[80px] text-xs resize-none pr-20 pb-8"
                                                 value={commentText}
@@ -698,7 +717,13 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                             />
                                         </div>
                                     </PopoverTrigger>
-                                    <PopoverContent className="p-0 w-[200px]" align="start" side="top">
+                                    <PopoverContent 
+                                        className="p-0 w-[200px]" 
+                                        align="start" 
+                                        side="top"
+                                        onOpenAutoFocus={(e) => e.preventDefault()}
+                                        onCloseAutoFocus={(e) => e.preventDefault()}
+                                    >
                                         <Command shouldFilter={false}>
                                             <div className="hidden">
                                                 <CommandInput placeholder="Search people..." value={mentionQuery} onValueChange={setMentionQuery} />
@@ -711,7 +736,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                             key={profile.id}
                                                             value={`${profile.first_name} ${profile.last_name} ${profile.email}`}
                                                             onSelect={() => insertMention(profile)}
-                                                            className="text-xs"
+                                                            className="text-xs cursor-pointer"
                                                         >
                                                             <Avatar className="h-6 w-6 mr-2">
                                                                 <AvatarImage src={profile.avatar_url} />
