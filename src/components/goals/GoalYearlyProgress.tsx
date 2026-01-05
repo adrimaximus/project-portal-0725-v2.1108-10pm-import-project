@@ -179,7 +179,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   }>({ yearly: { percentage: overallPercentage } });
 
   // Query for comments
-  const { data: comments, isLoading: isLoadingComments, isError } = useQuery({
+  const { data: comments = [], isLoading: isLoadingComments, isError } = useQuery({
     queryKey: ['goal_comments', goal.id, selectedDay ? format(selectedDay, 'yyyy-MM-dd') : null],
     queryFn: async () => {
       if (!selectedDay) return [];
@@ -206,7 +206,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
         .order('created_at', { ascending: true });
       
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: !!selectedDay
   });
@@ -735,9 +735,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                               <div className="flex justify-center p-4">
                                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                               </div>
-                          ) : isError ? (
-                              <p className="text-xs text-destructive text-center py-2">Failed to load comments.</p>
-                          ) : !comments || comments.length === 0 ? (
+                          ) : comments?.length === 0 ? (
                               <p className="text-xs text-muted-foreground text-center py-2">No comments yet.</p>
                           ) : (
                               comments?.map((comment: any) => (
