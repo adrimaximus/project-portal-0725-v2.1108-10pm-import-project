@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { Goal } from '@/types';
-import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay, getDay } from 'date-fns';
+import { format, getYear, eachDayOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO, isWithinInterval, isBefore, isToday, isAfter, startOfDay, getDay, formatDistanceToNow } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Check, X, FileText, Paperclip, Eye, Trash2, Send, MoreHorizontal, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, X, FileText, Paperclip, Eye, Trash2, Send, MoreHorizontal, Pencil, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -21,6 +21,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from "sonner";
 
 interface GoalYearlyProgressProps {
   goal: Goal;
@@ -31,6 +34,7 @@ interface GoalYearlyProgressProps {
 const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: GoalYearlyProgressProps) => {
   const { completions: rawCompletions, color, specific_days: specificDays } = goal;
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   
   // Map completions, ensuring we catch 'notes' from DB and map it to 'note' for internal use
   const completions = rawCompletions.map(c => ({ 
@@ -52,6 +56,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const [existingAttachment, setExistingAttachment] = useState<{ url: string, name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dayToConfirm, setDayToConfirm] = useState<Date | null>(null);
+  const [commentText, setCommentText] = useState("");
 
   const todayStart = startOfDay(today);
 
@@ -143,6 +148,82 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     month?: { name: string; percentage: number; completedCount: number; possibleCount: number; };
   }>({ yearly: { percentage: overallPercentage } });
 
+  // Query for comments
+  const { data: comments, isLoading: isLoadingComments } = useQuery({
+    queryKey: ['goal_comments', goal.id, selectedDay ? format(selectedDay, 'yyyy-MM-dd') : null],
+    queryFn: async () => {
+      if (!selectedDay) return [];
+      const dateStr = format(selectedDay, 'yyyy-MM-dd');
+      
+      const { data, error } = await supabase
+        .from('goal_comments')
+        .select(`
+          id,
+          content,
+          created_at,
+          user_id,
+          profiles:user_id (
+            first_name,
+            last_name,
+            email,
+            avatar_url
+          )
+        `)
+        .eq('goal_id', goal.id)
+        .eq('comment_date', dateStr)
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedDay
+  });
+
+  // Mutation to add comment
+  const addCommentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      if (!selectedDay || !user) throw new Error("No day selected or user not logged in");
+      const dateStr = format(selectedDay, 'yyyy-MM-dd');
+      
+      const { error } = await supabase
+        .from('goal_comments')
+        .insert({
+          goal_id: goal.id,
+          user_id: user.id,
+          comment_date: dateStr,
+          content: content
+        });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goal_comments', goal.id, selectedDay ? format(selectedDay, 'yyyy-MM-dd') : null] });
+      setCommentText("");
+    },
+    onError: (error) => {
+      toast.error(`Failed to add comment: ${error.message}`);
+    }
+  });
+
+  // Mutation to delete comment
+  const deleteCommentMutation = useMutation({
+    mutationFn: async (commentId: string) => {
+      const { error } = await supabase
+        .from('goal_comments')
+        .delete()
+        .eq('id', commentId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goal_comments', goal.id, selectedDay ? format(selectedDay, 'yyyy-MM-dd') : null] });
+      toast.success("Comment deleted");
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete comment: ${error.message}`);
+    }
+  });
+
   const handleDayClick = (day: { date: Date; isCompleted?: boolean; attachmentUrl?: string; attachmentName?: string; note?: string }) => {
     if (isAfter(day.date, todayStart)) return;
     
@@ -194,6 +275,12 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const handleEditNote = () => {
     setNote(savedNote);
     setSavedNote("");
+  };
+
+  const handleSubmitComment = () => {
+    if (commentText.trim()) {
+      addCommentMutation.mutate(commentText);
+    }
   };
 
   return (
@@ -405,7 +492,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                       <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
                   </div>
 
-                  {/* Note Section */}
+                  {/* Note Section (Submission) */}
                   <div className="space-y-3">
                       {savedNote && (
                         <div className="space-y-1.5">
@@ -457,6 +544,76 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                         >
                           <Send className="h-4 w-4" />
                         </Button>
+                      </div>
+                  </div>
+
+                  {/* Comments Section */}
+                  <div className="space-y-3 pt-4 border-t">
+                      <Label className="text-sm font-medium text-muted-foreground ml-1">Discussion</Label>
+                      <div className="space-y-4">
+                          {isLoadingComments ? (
+                              <div className="flex justify-center p-4">
+                                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                              </div>
+                          ) : comments?.length === 0 ? (
+                              <p className="text-xs text-muted-foreground text-center py-2">No comments yet.</p>
+                          ) : (
+                              comments?.map((comment: any) => (
+                                  <div key={comment.id} className="flex gap-3 text-sm">
+                                      <Avatar className="h-8 w-8 shrink-0">
+                                          <AvatarImage src={comment.profiles?.avatar_url} />
+                                          <AvatarFallback>{comment.profiles?.first_name?.[0] || 'U'}</AvatarFallback>
+                                      </Avatar>
+                                      <div className="flex-1 space-y-1">
+                                          <div className="flex items-center justify-between">
+                                              <span className="font-semibold text-xs">
+                                                  {comment.profiles?.first_name} {comment.profiles?.last_name}
+                                              </span>
+                                              <span className="text-[10px] text-muted-foreground">
+                                                  {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                                              </span>
+                                          </div>
+                                          <div className="p-2 bg-muted/50 rounded-lg text-xs break-words relative group">
+                                              {comment.content}
+                                              {user?.id === comment.user_id && (
+                                                  <Button
+                                                      variant="ghost"
+                                                      size="icon"
+                                                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background shadow-sm border opacity-0 group-hover:opacity-100 transition-opacity"
+                                                      onClick={() => deleteCommentMutation.mutate(comment.id)}
+                                                  >
+                                                      <Trash2 className="h-3 w-3 text-destructive" />
+                                                  </Button>
+                                              )}
+                                          </div>
+                                      </div>
+                                  </div>
+                              ))
+                          )}
+                      </div>
+                      
+                      <div className="flex gap-3 items-start mt-4">
+                          <Avatar className="h-8 w-8 shrink-0">
+                              <AvatarImage src={user?.user_metadata?.avatar_url} />
+                              <AvatarFallback>{user?.email?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 relative">
+                              <Textarea
+                                  placeholder="Write a comment..."
+                                  className="min-h-[80px] text-xs resize-none pr-10"
+                                  value={commentText}
+                                  onChange={(e) => setCommentText(e.target.value)}
+                              />
+                              <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="absolute bottom-2 right-2 h-6 w-6"
+                                  disabled={!commentText.trim() || addCommentMutation.isPending}
+                                  onClick={handleSubmitComment}
+                              >
+                                  {addCommentMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                              </Button>
+                          </div>
                       </div>
                   </div>
               </div>
