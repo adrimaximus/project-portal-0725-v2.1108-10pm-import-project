@@ -250,7 +250,7 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId, selectedYear: propYea
         toast.success("Note updated successfully");
         queryClient.invalidateQueries({ queryKey: ['goal'] });
         
-        setSelectedLog(prev => prev ? { ...prev, notes: note } as any : null);
+        setSelectedLog(null); // Close modal on save
         
     } catch (error: any) {
         toast.error("Failed to save note", { description: error.message });
@@ -295,13 +295,44 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId, selectedYear: propYea
   });
 
   const { data: profiles } = useQuery({
-    queryKey: ['profiles_for_log_mention'],
+    queryKey: ['profiles_for_log_mention', selectedLog?.goal_id],
     queryFn: async () => {
+      if (!selectedLog?.goal_id) return [];
+
+      // 1. Fetch collaborators
+      const { data: collaborators, error: collabError } = await supabase
+        .from('goal_collaborators')
+        .select('user_id')
+        .eq('goal_id', selectedLog.goal_id);
+      
+      if (collabError) throw collabError;
+
+      const userIds = new Set((collaborators || []).map(c => c.user_id));
+
+      // 2. Add owner
+      if (goalOwnerId) {
+        userIds.add(goalOwnerId);
+      } else {
+        // Fetch if not provided prop
+        const { data: goal, error: goalError } = await supabase
+            .from('goals')
+            .select('user_id')
+            .eq('id', selectedLog.goal_id)
+            .single();
+        
+        if (!goalError && goal) {
+            userIds.add(goal.user_id);
+        }
+      }
+
+      if (userIds.size === 0) return [];
+
       const { data, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, email, avatar_url')
-        .eq('status', 'active')
-        .limit(20);
+        .in('id', Array.from(userIds))
+        .eq('status', 'active');
+      
       if (error) throw error;
       return data;
     },
@@ -877,7 +908,7 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId, selectedYear: propYea
                     disabled={isSaving}
                 >
                     {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                    Save Note
+                    Save
                 </Button>
              )}
           </div>
