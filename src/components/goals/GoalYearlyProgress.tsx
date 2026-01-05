@@ -272,11 +272,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
       }
   };
 
-  const handleEditNote = () => {
-    setNote(savedNote);
-    setSavedNote("");
-  };
-
   const handleSubmitComment = () => {
     if (commentText.trim()) {
       addCommentMutation.mutate(commentText);
@@ -490,61 +485,6 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                           </div>
                       )}
                       <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
-                  </div>
-
-                  {/* Note Section (Submission) */}
-                  <div className="space-y-3">
-                      {savedNote && (
-                        <div className="space-y-1.5">
-                            <Label className="text-sm font-medium text-muted-foreground ml-1">Posted Note</Label>
-                            <div className="flex gap-3 items-start p-3 rounded-xl border bg-muted/30 relative group">
-                                <Avatar className="h-8 w-8 shrink-0">
-                                    <AvatarImage src={user?.user_metadata?.avatar_url} />
-                                    <AvatarFallback>{user?.email?.substring(0, 2).toUpperCase() || 'U'}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 text-sm text-foreground break-words pt-1 min-w-0">
-                                    {savedNote}
-                                </div>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0 -mt-1 -mr-1">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={handleEditNote}>
-                                            <Pencil className="mr-2 h-4 w-4" /> Edit
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setSavedNote("")}>
-                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                        </div>
-                      )}
-
-                      <Label htmlFor="note" className="text-sm font-medium text-muted-foreground ml-1">
-                        {savedNote ? "Update Note" : "Note"}
-                      </Label>
-                      <div className="relative">
-                        <Textarea 
-                          id="note"
-                          placeholder="Add a note..." 
-                          value={note} 
-                          onChange={(e) => setNote(e.target.value)} 
-                          className="resize-none min-h-[100px] pr-12"
-                        />
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          className="absolute bottom-3 right-3 h-8 w-8 text-muted-foreground hover:text-primary transition-colors"
-                          onClick={handleSaveDay}
-                          title="Save note"
-                        >
-                          <Send className="h-4 w-4" />
-                        </Button>
-                      </div>
                   </div>
 
                   {/* Comments Section */}
