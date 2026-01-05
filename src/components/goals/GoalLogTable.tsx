@@ -179,6 +179,63 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId, selectedYear: propYea
     }
   };
 
+  const handleDeleteAttachment = async () => {
+    if (!selectedLog) return;
+    if (!window.confirm('Are you sure you want to remove this attachment?')) return;
+
+    const toastId = toast.loading("Removing file...");
+
+    try {
+      const { error } = await supabase
+        .from('goal_completions')
+        .update({
+          attachment_url: null,
+          attachment_name: null,
+          attachment_type: null
+        })
+        .eq('id', selectedLog.id);
+
+      if (error) throw error;
+
+      setSelectedLog(prev => prev ? {
+        ...prev,
+        attachment_url: null,
+        attachment_name: null,
+        attachment_type: null
+      } as any : null);
+
+      queryClient.invalidateQueries({ queryKey: ['goal'] });
+      toast.success("File removed successfully", { id: toastId });
+
+    } catch (error) {
+      console.error('Error removing file:', error);
+      toast.error('Failed to remove file', { id: toastId });
+    }
+  };
+
+  const handleDownload = async () => {
+    const attachmentUrl = (selectedLog as any)?.attachment_url;
+    const attachmentName = (selectedLog as any)?.attachment_name;
+    
+    if (!attachmentUrl) return;
+    
+    try {
+        const response = await fetch(attachmentUrl);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = attachmentName || 'attachment';
+        document.body.appendChild(link);
+        link.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+    } catch (error) {
+        console.error('Download error:', error);
+        window.open(attachmentUrl, '_blank');
+    }
+  };
+
   const handleSaveNote = async () => {
     if (!selectedLog) return;
     setIsSaving(true);
@@ -592,14 +649,31 @@ const GoalLogTable = ({ logs, unit, goalType, goalOwnerId, selectedYear: propYea
                               <p className="text-xs text-muted-foreground">Attached evidence</p>
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors" onClick={() => window.open(selectedAttachmentUrl, '_blank')} title="View">
-                                  <Eye className="h-4 w-4" />
-                              </Button>
-                              {canEdit && (
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors" onClick={handleEditUpload} title="Replace">
-                                      <Upload className="h-4 w-4" />
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors">
+                                    <MoreHorizontal className="h-4 w-4" />
                                   </Button>
-                              )}
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => window.open(selectedAttachmentUrl, '_blank')}>
+                                    <Eye className="mr-2 h-4 w-4" /> View
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={handleDownload}>
+                                    <Download className="mr-2 h-4 w-4" /> Download
+                                  </DropdownMenuItem>
+                                  {canEdit && (
+                                    <>
+                                      <DropdownMenuItem onClick={handleEditUpload}>
+                                        <Upload className="mr-2 h-4 w-4" /> Replace
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={handleDeleteAttachment} className="text-destructive focus:text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                           </div>
                       </div>
                    ) : (
