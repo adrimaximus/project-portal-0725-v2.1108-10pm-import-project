@@ -57,6 +57,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dayToConfirm, setDayToConfirm] = useState<Date | null>(null);
   const [commentText, setCommentText] = useState("");
+  const [commentFile, setCommentFile] = useState<File | null>(null);
+  const commentFileInputRef = useRef<HTMLInputElement>(null);
 
   const todayStart = startOfDay(today);
 
@@ -162,6 +164,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
           content,
           created_at,
           user_id,
+          attachments_jsonb,
           profiles:user_id (
             first_name,
             last_name,
@@ -181,17 +184,40 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
 
   // Mutation to add comment
   const addCommentMutation = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async ({ content, file }: { content: string, file: File | null }) => {
       if (!selectedDay || !user) throw new Error("No day selected or user not logged in");
       const dateStr = format(selectedDay, 'yyyy-MM-dd');
       
+      let attachments: any[] = [];
+
+      if (file) {
+        const fileName = `${goal.id}/${Date.now()}-${file.name.replace(/[^\x00-\x7F]/g, "")}`;
+        const { error: uploadError } = await supabase.storage
+            .from('goal_attachments')
+            .upload(fileName, file);
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabase.storage
+            .from('goal_attachments')
+            .getPublicUrl(fileName);
+            
+        attachments.push({
+            name: file.name,
+            url: publicUrl,
+            type: file.type,
+            size: file.size
+        });
+      }
+
       const { error } = await supabase
         .from('goal_comments')
         .insert({
           goal_id: goal.id,
           user_id: user.id,
           comment_date: dateStr,
-          content: content
+          content: content,
+          attachments_jsonb: attachments
         });
       
       if (error) throw error;
@@ -199,6 +225,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goal_comments', goal.id, selectedDay ? format(selectedDay, 'yyyy-MM-dd') : null] });
       setCommentText("");
+      setCommentFile(null);
     },
     onError: (error) => {
       toast.error(`Failed to add comment: ${error.message}`);
@@ -273,8 +300,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   };
 
   const handleSubmitComment = () => {
-    if (commentText.trim()) {
-      addCommentMutation.mutate(commentText);
+    if (commentText.trim() || commentFile) {
+      addCommentMutation.mutate({ content: commentText, file: commentFile });
     }
   };
 
@@ -515,6 +542,18 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                           </div>
                                           <div className="p-2 bg-muted/50 rounded-lg text-xs break-words relative group">
                                               {comment.content}
+                                              {comment.attachments_jsonb && comment.attachments_jsonb.length > 0 && (
+                                                  <div className="mt-2 space-y-1 pt-1 border-t border-border/50">
+                                                      {comment.attachments_jsonb.map((att: any, idx: number) => (
+                                                          <div key={idx} className="flex items-center gap-2 p-1.5 bg-background border rounded-md max-w-fit hover:bg-accent/50 transition-colors">
+                                                              <Paperclip className="h-3 w-3 text-muted-foreground" />
+                                                              <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline truncate max-w-[150px] text-primary">
+                                                                  {att.name}
+                                                              </a>
+                                                          </div>
+                                                      ))}
+                                                  </div>
+                                              )}
                                               {user?.id === comment.user_id && (
                                                   <Button
                                                       variant="ghost"
@@ -537,22 +576,51 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                               <AvatarImage src={user?.user_metadata?.avatar_url} />
                               <AvatarFallback>{user?.email?.substring(0, 2).toUpperCase()}</AvatarFallback>
                           </Avatar>
-                          <div className="flex-1 relative">
-                              <Textarea
-                                  placeholder="Write a comment..."
-                                  className="min-h-[80px] text-xs resize-none pr-10"
-                                  value={commentText}
-                                  onChange={(e) => setCommentText(e.target.value)}
-                              />
-                              <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="absolute bottom-2 right-2 h-6 w-6"
-                                  disabled={!commentText.trim() || addCommentMutation.isPending}
-                                  onClick={handleSubmitComment}
-                              >
-                                  {addCommentMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-                              </Button>
+                          <div className="flex-1 space-y-2">
+                              {commentFile && (
+                                  <div className="flex items-center gap-2 p-2 bg-muted rounded-md text-xs border">
+                                      <Paperclip className="h-3 w-3 text-primary" />
+                                      <span className="truncate flex-1 max-w-[200px]">{commentFile.name}</span>
+                                      <button onClick={() => setCommentFile(null)} className="text-muted-foreground hover:text-destructive transition-colors">
+                                          <X className="h-3.5 w-3.5" />
+                                      </button>
+                                  </div>
+                              )}
+                              <div className="relative">
+                                  <Textarea
+                                      placeholder="Write a comment..."
+                                      className="min-h-[80px] text-xs resize-none pr-20 pb-8"
+                                      value={commentText}
+                                      onChange={(e) => setCommentText(e.target.value)}
+                                  />
+                                  <div className="absolute bottom-2 right-2 flex gap-1">
+                                      <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                          onClick={() => commentFileInputRef.current?.click()}
+                                          title="Attach file"
+                                      >
+                                          <Paperclip className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <input 
+                                          type="file" 
+                                          ref={commentFileInputRef} 
+                                          className="hidden" 
+                                          onChange={(e) => e.target.files && setCommentFile(e.target.files[0])} 
+                                      />
+                                      <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-6 w-6 text-primary hover:bg-primary/10"
+                                          disabled={(!commentText.trim() && !commentFile) || addCommentMutation.isPending}
+                                          onClick={handleSubmitComment}
+                                          title="Send comment"
+                                      >
+                                          {addCommentMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                                      </Button>
+                                  </div>
+                              </div>
                           </div>
                       </div>
                   </div>
