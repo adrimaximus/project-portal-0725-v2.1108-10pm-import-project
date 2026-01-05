@@ -84,6 +84,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   // Edit comment state
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const todayStart = startOfDay(today);
 
@@ -289,10 +291,35 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
 
   // Mutation to update comment
   const updateCommentMutation = useMutation({
-    mutationFn: async ({ id, content }: { id: string, content: string }) => {
+    mutationFn: async ({ id, content, file, existingAttachments }: { id: string, content: string, file: File | null, existingAttachments: any[] }) => {
+      let updatedAttachments = [...(existingAttachments || [])];
+
+      if (file) {
+        const fileName = `${goal.id}/${Date.now()}-${file.name.replace(/[^\x00-\x7F]/g, "")}`;
+        const { error: uploadError } = await supabase.storage
+            .from('goal_attachments')
+            .upload(fileName, file);
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabase.storage
+            .from('goal_attachments')
+            .getPublicUrl(fileName);
+            
+        updatedAttachments.push({
+            name: file.name,
+            url: publicUrl,
+            type: file.type,
+            size: file.size
+        });
+      }
+
       const { error } = await supabase
         .from('goal_comments')
-        .update({ content })
+        .update({ 
+            content,
+            attachments_jsonb: updatedAttachments
+        })
         .eq('id', id);
       
       if (error) throw error;
@@ -301,6 +328,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
       queryClient.invalidateQueries({ queryKey: ['goal_comments', goal.id, selectedDay ? format(selectedDay, 'yyyy-MM-dd') : null] });
       setEditingCommentId(null);
       setEditContent("");
+      setEditFile(null);
       toast.success("Comment updated");
     },
     onError: (error) => {
@@ -718,9 +746,45 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                       onChange={(e) => setEditContent(e.target.value)} 
                                                       className="text-xs min-h-[60px]"
                                                   />
-                                                  <div className="flex gap-2 justify-end">
-                                                      <Button size="sm" variant="outline" onClick={() => setEditingCommentId(null)}>Cancel</Button>
-                                                      <Button size="sm" onClick={() => updateCommentMutation.mutate({ id: comment.id, content: editContent })}>Save</Button>
+                                                  {editFile && (
+                                                      <div className="flex items-center gap-2 p-2 bg-muted rounded-md text-xs border">
+                                                          <Paperclip className="h-3 w-3 text-primary" />
+                                                          <span className="truncate flex-1 max-w-[200px]">{editFile.name}</span>
+                                                          <button onClick={() => setEditFile(null)} className="text-muted-foreground hover:text-destructive transition-colors">
+                                                              <X className="h-3.5 w-3.5" />
+                                                          </button>
+                                                      </div>
+                                                  )}
+                                                  <div className="flex gap-2 justify-between items-center">
+                                                      <div className="flex items-center">
+                                                          <Button
+                                                              size="icon"
+                                                              variant="ghost"
+                                                              className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                                              onClick={() => editFileInputRef.current?.click()}
+                                                              title="Attach file"
+                                                          >
+                                                              <Paperclip className="h-3.5 w-3.5" />
+                                                          </Button>
+                                                          <input 
+                                                              type="file" 
+                                                              ref={editFileInputRef} 
+                                                              className="hidden" 
+                                                              onChange={(e) => e.target.files && setEditFile(e.target.files[0])} 
+                                                          />
+                                                      </div>
+                                                      <div className="flex gap-2">
+                                                          <Button size="sm" variant="outline" onClick={() => {
+                                                              setEditingCommentId(null);
+                                                              setEditFile(null);
+                                                          }}>Cancel</Button>
+                                                          <Button size="sm" onClick={() => updateCommentMutation.mutate({ 
+                                                              id: comment.id, 
+                                                              content: editContent,
+                                                              file: editFile,
+                                                              existingAttachments: comment.attachments_jsonb 
+                                                          })}>Save</Button>
+                                                      </div>
                                                   </div>
                                               </div>
                                           ) : (
@@ -750,6 +814,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                                   <DropdownMenuItem onClick={() => {
                                                                       setEditingCommentId(comment.id);
                                                                       setEditContent(comment.content);
+                                                                      setEditFile(null);
                                                                   }}>
                                                                       <Pencil className="h-3 w-3 mr-2" /> Edit
                                                                   </DropdownMenuItem>
