@@ -820,10 +820,10 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                   
                                                   {/* List existing/current attachments */}
                                                   {(editAttachments.length > 0 || editNewFiles.length > 0) && (
-                                                      <div className="mt-2 pt-1 border-t border-border/50 flex flex-wrap gap-2">
+                                                      <div className="grid grid-cols-4 gap-2">
                                                           {/* Existing attachments */}
                                                           {editAttachments.map((att: any, idx: number) => (
-                                                              <div key={`existing-${idx}`} className="w-[70px] relative group/attachment">
+                                                              <div key={`existing-${idx}`} className="w-[50px] relative group/attachment">
                                                                   {att.type?.startsWith('image/') ? (
                                                                       <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-background relative">
                                                                           <img src={att.url} alt={att.name} className="w-full h-full object-cover" />
@@ -845,7 +845,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                           ))}
                                                           {/* New attachments pending upload */}
                                                           {editNewFiles.map((file, idx) => (
-                                                              <div key={`new-${idx}`} className="w-[70px] relative group/attachment">
+                                                              <div key={`new-${idx}`} className="w-[50px] relative group/attachment">
                                                                   {file.type?.startsWith('image/') ? (
                                                                       <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-background relative">
                                                                           <img src={URL.createObjectURL(file)} alt={file.name} className="w-full h-full object-cover" />
@@ -920,7 +920,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                             const isOverlay = idx === 3 && totalCount > 4;
                                                             
                                                             return (
-                                                                <div key={idx} className="w-[70px] relative">
+                                                                <div key={idx} className="w-[50px] relative">
                                                                     {att.type?.startsWith('image/') ? (
                                                                         <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-background hover:opacity-90 transition-opacity relative">
                                                                             <a href={att.url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center">
@@ -939,13 +939,13 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                                         </div>
                                                                     ) : (
                                                                         <div className="aspect-square rounded-md overflow-hidden border border-border/50 bg-muted/30 hover:opacity-90 transition-opacity relative">
-                                                                            <a href={att.url} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center w-full h-full p-2 text-center">
+                                                                            <a href={att.url} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center w-full h-full p-1 text-center">
                                                                                 {att.type === 'application/pdf' ? (
-                                                                                    <FileText className="h-8 w-8 text-red-500 mb-1" />
+                                                                                    <FileText className="h-6 w-6 text-red-500 mb-0.5" />
                                                                                 ) : (
-                                                                                    <Paperclip className="h-8 w-8 text-muted-foreground mb-1" />
+                                                                                    <Paperclip className="h-6 w-6 text-muted-foreground mb-0.5" />
                                                                                 )}
-                                                                                <span className="text-[9px] text-muted-foreground w-full truncate px-1">
+                                                                                <span className="text-[8px] text-muted-foreground w-full truncate px-0.5">
                                                                                     {att.name}
                                                                                 </span>
                                                                             </a>
