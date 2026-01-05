@@ -51,8 +51,19 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [userToMakeOwner, setUserToMakeOwner] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isMasterAdmin, setIsMasterAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkMasterAdmin = async () => {
+      if (!currentUser) return;
+      const { data } = await supabase.rpc('is_master_admin');
+      setIsMasterAdmin(!!data);
+    };
+    checkMasterAdmin();
+  }, [currentUser]);
 
   const isOwner = currentUser?.id === goal.user_id;
+  const canManageCollaborators = isOwner || isMasterAdmin;
 
   useEffect(() => {
     setSelectedUserIds(goal.collaborators.map(c => c.id));
@@ -125,7 +136,7 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-lg font-medium">Collaborators</CardTitle>
-          {isOwner && (
+          {canManageCollaborators && (
             <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-8">
@@ -182,7 +193,7 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
             <TooltipProvider>
               {goal.collaborators.map((user) => {
                 const isGoalOwner = user.id === goal.user_id;
-                const canManage = isOwner && !isGoalOwner;
+                const canManageUser = canManageCollaborators && !isGoalOwner;
 
                 const AvatarComponent = (
                   <div
@@ -204,7 +215,7 @@ const GoalCollaborationManager = ({ goal, onCollaboratorsUpdate }: GoalCollabora
 
                 return (
                   <div key={user.id}>
-                    {canManage ? (
+                    {canManageUser ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger className="focus:outline-none cursor-pointer">
                           <Tooltip>
