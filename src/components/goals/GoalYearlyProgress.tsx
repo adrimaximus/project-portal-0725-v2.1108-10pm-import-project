@@ -242,13 +242,13 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
       if (file) {
         const fileName = `${goal.id}/${Date.now()}-${file.name.replace(/[^\x00-\x7F]/g, "")}`;
         const { error: uploadError } = await supabase.storage
-            .from('goal_attachments')
+            .from('goal-attachments')
             .upload(fileName, file);
         
         if (uploadError) throw uploadError;
         
         const { data: { publicUrl } } = supabase.storage
-            .from('goal_attachments')
+            .from('goal-attachments')
             .getPublicUrl(fileName);
             
         attachments.push({
@@ -297,13 +297,13 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
       if (file) {
         const fileName = `${goal.id}/${Date.now()}-${file.name.replace(/[^\x00-\x7F]/g, "")}`;
         const { error: uploadError } = await supabase.storage
-            .from('goal_attachments')
+            .from('goal-attachments')
             .upload(fileName, file);
         
         if (uploadError) throw uploadError;
         
         const { data: { publicUrl } } = supabase.storage
-            .from('goal_attachments')
+            .from('goal-attachments')
             .getPublicUrl(fileName);
             
         updatedAttachments.push({
