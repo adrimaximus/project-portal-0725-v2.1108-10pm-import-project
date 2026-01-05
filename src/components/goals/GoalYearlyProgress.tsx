@@ -21,6 +21,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
@@ -59,6 +72,11 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
   const [commentText, setCommentText] = useState("");
   const [commentFile, setCommentFile] = useState<File | null>(null);
   const commentFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Mention state
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [cursorPos, setCursorPos] = useState(0);
 
   const todayStart = startOfDay(today);
 
@@ -182,6 +200,21 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     enabled: !!selectedDay
   });
 
+  // Query for profiles (for mentions)
+  const { data: profiles } = useQuery({
+    queryKey: ['profiles_for_mention'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, avatar_url')
+        .eq('status', 'active')
+        .limit(20);
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
   // Mutation to add comment
   const addCommentMutation = useMutation({
     mutationFn: async ({ content, file }: { content: string, file: File | null }) => {
@@ -303,6 +336,73 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
     if (commentText.trim() || commentFile) {
       addCommentMutation.mutate({ content: commentText, file: commentFile });
     }
+  };
+
+  // Mention handling
+  const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    const newCursorPos = e.target.selectionStart;
+    setCommentText(text);
+    setCursorPos(newCursorPos);
+
+    // Detect if we are typing a mention
+    const textBeforeCursor = text.slice(0, newCursorPos);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+
+    if (mentionMatch) {
+      setMentionOpen(true);
+      setMentionQuery(mentionMatch[1]);
+    } else {
+      setMentionOpen(false);
+    }
+  };
+
+  const insertMention = (profile: any) => {
+    const textBeforeCursor = commentText.slice(0, cursorPos);
+    const textAfterCursor = commentText.slice(cursorPos);
+    
+    // Replace the part starting with @ until cursor with the mention syntax
+    // The mention syntax expected by backend is @[Name](uuid)
+    const newTextBefore = textBeforeCursor.replace(/@(\w*)$/, `@[${profile.first_name || 'User'}]( ${profile.id}) `);
+    
+    const newText = newTextBefore + textAfterCursor;
+    setCommentText(newText);
+    setMentionOpen(false);
+    // Optionally focus back to textarea logic here if we had a ref
+  };
+
+  const filteredProfiles = profiles?.filter(p => {
+    if (!mentionQuery) return true;
+    const fullName = `${p.first_name || ''} ${p.last_name || ''}`.toLowerCase();
+    const email = (p.email || '').toLowerCase();
+    const query = mentionQuery.toLowerCase();
+    return fullName.includes(query) || email.includes(query);
+  });
+
+  // Helper to render mentions in comments properly
+  const renderCommentContent = (content: string) => {
+    // Regex to find @[Name](uuid)
+    const mentionRegex = /@\[([^\]]+)\]\s*\(([^)]+)\)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = mentionRegex.exec(content)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(content.slice(lastIndex, match.index));
+      }
+      // Add the mention part styled
+      parts.push(
+        <span key={match.index} className="font-medium text-primary hover:underline cursor-pointer">
+          @{match[1]}
+        </span>
+      );
+      lastIndex = mentionRegex.lastIndex;
+    }
+    if (lastIndex < content.length) {
+      parts.push(content.slice(lastIndex));
+    }
+    return parts.length > 0 ? parts : content;
   };
 
   return (
@@ -541,7 +641,7 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                               </span>
                                           </div>
                                           <div className="p-2 bg-muted/50 rounded-lg text-xs break-words relative group">
-                                              {comment.content}
+                                              {renderCommentContent(comment.content)}
                                               {comment.attachments_jsonb && comment.attachments_jsonb.length > 0 && (
                                                   <div className="mt-2 space-y-1 pt-1 border-t border-border/50">
                                                       {comment.attachments_jsonb.map((att: any, idx: number) => (
@@ -587,12 +687,45 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                   </div>
                               )}
                               <div className="relative">
-                                  <Textarea
-                                      placeholder="Write a comment..."
-                                      className="min-h-[80px] text-xs resize-none pr-20 pb-8"
-                                      value={commentText}
-                                      onChange={(e) => setCommentText(e.target.value)}
-                                  />
+                                  <Popover open={mentionOpen} onOpenChange={setMentionOpen}>
+                                    <PopoverTrigger asChild>
+                                        <div className="w-full">
+                                            <Textarea
+                                                placeholder="Write a comment... (Type @ to mention)"
+                                                className="min-h-[80px] text-xs resize-none pr-20 pb-8"
+                                                value={commentText}
+                                                onChange={handleCommentChange}
+                                            />
+                                        </div>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="p-0 w-[200px]" align="start" side="top">
+                                        <Command>
+                                            <CommandInput placeholder="Search people..." value={mentionQuery} onValueChange={setMentionQuery} className="h-8 text-xs" />
+                                            <CommandList>
+                                                <CommandEmpty>No person found.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {filteredProfiles?.map((profile) => (
+                                                        <CommandItem
+                                                            key={profile.id}
+                                                            value={`${profile.first_name} ${profile.last_name} ${profile.email}`}
+                                                            onSelect={() => insertMention(profile)}
+                                                            className="text-xs"
+                                                        >
+                                                            <Avatar className="h-6 w-6 mr-2">
+                                                                <AvatarImage src={profile.avatar_url} />
+                                                                <AvatarFallback>{profile.first_name?.[0]}</AvatarFallback>
+                                                            </Avatar>
+                                                            <div className="flex flex-col">
+                                                                <span className="font-medium">{profile.first_name} {profile.last_name}</span>
+                                                                <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{profile.email}</span>
+                                                            </div>
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                  </Popover>
                                   <div className="absolute bottom-2 right-2 flex gap-1">
                                       <Button
                                           size="icon"
