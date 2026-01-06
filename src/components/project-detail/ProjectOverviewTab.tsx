@@ -5,6 +5,7 @@ import ProjectDescription from './ProjectDescription';
 import ProjectBrief from './ProjectBrief';
 import ProjectTags from './ProjectTags';
 import ProjectReportsList from './ProjectReportsList';
+import ProjectReportCard from './ProjectReportCard';
 import { Separator } from "@/components/ui/separator";
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -101,14 +102,17 @@ const ProjectOverviewTab = ({
             }}
           />
           
-          <Separator className="my-4" />
+          <Separator className="my-6" />
           
           <div>
-            <h3 className="text-base font-semibold mb-2">Quick Reports</h3>
-            <ProjectReportsList projectId={project.id} />
+            <h3 className="text-base font-semibold mb-4">Quick Reports</h3>
+            <div className="grid gap-6">
+              <ProjectReportCard project={project} />
+              <ProjectReportsList projectId={project.id} />
+            </div>
           </div>
 
-          <Separator className="my-4" />
+          <Separator className="my-6" />
           
           <div>
             <h3 className="text-base font-semibold mb-2">Project Tags</h3>
@@ -119,7 +123,7 @@ const ProjectOverviewTab = ({
               onReactionsChange={onReactionsChange}
             />
           </div>
-          <Separator className="my-4" />
+          <Separator className="my-6" />
           <div>
             <h3 className="text-base font-semibold mb-2">Project Files</h3>
             <ProjectBrief

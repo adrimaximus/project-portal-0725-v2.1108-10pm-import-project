@@ -1,6 +1,5 @@
 import RichTextEditor from '@/components/RichTextEditor';
 import 'react-quill/dist/quill.snow.css';
-import ProjectReports from './ProjectReports';
 
 interface AIOptions {
   onGenerate: () => void;
@@ -14,10 +13,9 @@ interface ProjectDescriptionProps {
   onDescriptionChange: (value: string) => void;
   onSetIsEditing: (isEditing: boolean) => void;
   aiOptions?: AIOptions;
-  projectId?: string; // Added optional projectId to support reports
 }
 
-const ProjectDescription = ({ description, isEditing, onDescriptionChange, onSetIsEditing, aiOptions, projectId }: ProjectDescriptionProps) => {
+const ProjectDescription = ({ description, isEditing, onDescriptionChange, onSetIsEditing, aiOptions }: ProjectDescriptionProps) => {
   if (isEditing) {
     return (
       <RichTextEditor
@@ -50,8 +48,6 @@ const ProjectDescription = ({ description, isEditing, onDescriptionChange, onSet
           </div>
         )}
       </div>
-
-      {projectId && <ProjectReports projectId={projectId} />}
     </div>
   );
 };
