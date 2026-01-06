@@ -23,12 +23,6 @@ const ProjectExpensesCard = ({ project }: ProjectExpensesCardProps) => {
 
   const canCreateExpense = hasPermission('module:expense');
   
-  // Logic to determine if user should see the card at all
-  // If loading, show skeleton.
-  // If loaded and empty list:
-  //    - If user is just a member (not admin/owner) -> Hide (return null)
-  //    - If user is admin/owner -> Show (so they can add)
-  
   const isProjectAdmin = project.assignedTo.some(m => m.id === user?.id && m.role === 'admin');
   const isProjectOwner = project.created_by.id === user?.id;
   const isGlobalAdmin = user?.role === 'master admin' || user?.role === 'admin';
@@ -39,7 +33,6 @@ const ProjectExpensesCard = ({ project }: ProjectExpensesCardProps) => {
     return <Skeleton className="h-48 w-full" />;
   }
 
-  // If no expenses and user shouldn't see empty state (regular member who didn't create any)
   if ((!expenses || expenses.length === 0) && !hasPrivilegedAccess && !canCreateExpense) {
     return null;
   }
@@ -87,7 +80,7 @@ const ProjectExpensesCard = ({ project }: ProjectExpensesCardProps) => {
         <CardContent className="space-y-4 pt-4">
           <div className="text-2xl font-bold">{formatIDR(totalAmount)}</div>
           
-          <ScrollArea className="h-[200px] -mr-4 pr-4">
+          <ScrollArea className="h-[100px] -mr-4 pr-4">
             <div className="space-y-3">
               {expenses?.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-4">No expenses recorded.</p>

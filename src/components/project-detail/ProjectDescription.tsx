@@ -14,7 +14,7 @@ interface ProjectDescriptionProps {
   onDescriptionChange: (value: string) => void;
   onSetIsEditing: (isEditing: boolean) => void;
   aiOptions?: AIOptions;
-  projectId?: string; // Added optional projectId to support reports
+  projectId?: string;
 }
 
 const ProjectDescription = ({ description, isEditing, onDescriptionChange, onSetIsEditing, aiOptions, projectId }: ProjectDescriptionProps) => {
