@@ -1,15 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, User, Paperclip, MoreHorizontal, Pencil, Trash2, X, Loader2 } from "lucide-react";
+import { FileText, User, Paperclip, MoreHorizontal, Pencil, Trash2, X, Loader2, Send } from "lucide-react";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AttachmentViewerModal from "@/components/AttachmentViewerModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,10 +55,18 @@ const isImageFile = (file: any) => {
 
 const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  
+  // List State
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Edit State
+  // Create Report State
+  const [newContent, setNewContent] = useState("");
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Edit Report State
   const [editingReportId, setEditingReportId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [editAttachments, setEditAttachments] = useState<any[]>([]);
@@ -105,7 +115,6 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
   useEffect(() => {
     fetchReports();
 
-    // Subscribe to realtime changes
     const channel = supabase
       .channel("project-reports-changes")
       .on(
@@ -128,7 +137,6 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
           table: "project_report_reactions",
         },
         () => {
-          // Ideally we'd filter by report IDs but for simplicity we refetch
           fetchReports();
         }
       )
@@ -138,6 +146,81 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
       supabase.removeChannel(channel);
     };
   }, [projectId]);
+
+  // --- Create Report Logic ---
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    if (selectedFiles.length > 0) {
+      setNewFiles((prev) => [...prev, ...selectedFiles]);
+    }
+    if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setNewFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const submitReportMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("User not authenticated");
+
+      let attachments: any[] = [];
+
+      if (newFiles.length > 0) {
+        const uploadPromises = newFiles.map(async (file) => {
+          const fileName = `reports/${projectId}/${Date.now()}-${file.name.replace(/[^\x00-\x7F]/g, "")}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('project-files') 
+            .upload(fileName, file);
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('project-files')
+            .getPublicUrl(fileName);
+
+          return {
+            name: file.name,
+            url: publicUrl,
+            type: file.type,
+            size: file.size,
+            storagePath: fileName
+          };
+        });
+
+        attachments = await Promise.all(uploadPromises);
+      }
+
+      const reportContent = newContent.trim();
+
+      const { error } = await supabase
+        .from('project_reports')
+        .insert({
+          project_id: projectId,
+          created_by: user.id,
+          content: reportContent,
+          attachments: attachments
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Report submitted successfully");
+      setNewContent("");
+      setNewFiles([]);
+      queryClient.invalidateQueries({ queryKey: ['project_reports', projectId] });
+      // We don't need to manually fetchReports because of the realtime subscription
+    },
+    onError: (error) => {
+      toast.error(`Failed to submit report: ${error.message}`);
+    }
+  });
+
+  // --- Edit & View Logic ---
 
   const handleViewAttachments = (attachments: any[], reportId: string) => {
     setViewerAttachments(attachments);
@@ -164,10 +247,9 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
     try {
       let updatedAttachments = [...editAttachments];
 
-      // Upload new files if any
       if (editNewFiles.length > 0) {
         const uploadPromises = editNewFiles.map(async (file) => {
-          const fileName = `${projectId}/${Date.now()}-${file.name.replace(/[^\x00-\x7F]/g, "")}`;
+          const fileName = `reports/${projectId}/${Date.now()}-${file.name.replace(/[^\x00-\x7F]/g, "")}`;
           const { error: uploadError } = await supabase.storage
             .from('project-files')
             .upload(fileName, file);
@@ -203,7 +285,6 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
 
       toast.success("Report updated successfully");
       handleCancelEdit();
-      fetchReports();
     } catch (error: any) {
       console.error("Error updating report:", error);
       toast.error(`Failed to update report: ${error.message}`);
@@ -223,7 +304,6 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
 
       if (error) throw error;
       toast.success("Report deleted successfully");
-      fetchReports();
     } catch (error: any) {
       console.error("Error deleting report:", error);
       toast.error(`Failed to delete report: ${error.message}`);
@@ -239,14 +319,12 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
       });
 
       if (error) throw error;
-      // Realtime subscription will handle refresh
     } catch (error: any) {
       console.error("Error toggling reaction:", error);
       toast.error("Failed to add reaction");
     }
   };
 
-  // Group reactions by emoji
   const getGroupedReactions = (reactions: ReportReaction[] = []) => {
     const groups: Record<string, { count: number; hasReacted: boolean }> = {};
     reactions.forEach(r => {
@@ -261,259 +339,327 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
     return Object.entries(groups);
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-24 w-full" />
-      </div>
-    );
-  }
-
-  if (reports.length === 0) {
-    return (
-      <div className="text-sm text-muted-foreground text-center py-8 bg-muted/30 rounded-md border border-dashed">
-        No reports submitted yet.
-      </div>
-    );
-  }
-
   return (
-    <>
-      <div className="space-y-4">
-        {reports.map((report) => (
-          <Card key={report.id} className="overflow-visible bg-card/50">
-            <CardHeader className="p-4 bg-muted/30 pb-3">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8 border">
-                    <AvatarImage src={report.profiles?.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs">
-                      {report.profiles?.first_name?.[0] || <User className="h-3 w-3" />}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="text-sm font-medium leading-none mb-1">
-                      {report.profiles?.first_name 
-                        ? `${report.profiles.first_name} ${report.profiles.last_name || ""}`
-                        : report.profiles?.email || "Unknown User"}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {format(new Date(report.created_at), "MMM d, yyyy 'at' h:mm a")}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-1">
-                  {!editingReportId && (
-                    <EmojiReactionPicker onSelect={(emoji) => handleReaction(report.id, emoji)} />
-                  )}
-                  
-                  {user?.id === report.created_by && !editingReportId && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditClick(report)}>
-                          <Pencil className="h-4 w-4 mr-2" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteReport(report.id)}>
-                          <Trash2 className="h-4 w-4 mr-2" /> Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4">
-              {editingReportId === report.id ? (
-                <div className="space-y-4">
-                  <Textarea
-                    value={editContent}
-                    onChange={(e) => setEditContent(e.target.value)}
-                    className="min-h-[100px]"
-                    placeholder="Report content..."
-                  />
-                  
-                  {/* Attachment Management in Edit Mode */}
-                  {(editAttachments.length > 0 || editNewFiles.length > 0) && (
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                      {/* Existing attachments */}
-                      {editAttachments.map((att: any, idx: number) => (
-                        <div key={`existing-${idx}`} className="aspect-square relative group">
-                          {isImageFile(att) ? (
-                            <div className="w-full h-full rounded-md overflow-hidden border border-border/50 bg-background">
-                              <img src={att.url} alt={att.name} className="w-full h-full object-cover" />
-                            </div>
-                          ) : (
-                            <div className="w-full h-full rounded-md overflow-hidden border border-border/50 bg-muted/30 flex flex-col items-center justify-center p-1">
-                              <FileText className="h-6 w-6 text-muted-foreground mb-1" />
-                              <span className="text-[8px] text-muted-foreground w-full truncate text-center">{att.name}</span>
-                            </div>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => setEditAttachments(prev => prev.filter((_, i) => i !== idx))}
-                            className="absolute top-0 right-0 bg-black/50 hover:bg-destructive text-white p-0.5 rounded-bl-md opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ))}
-                      {/* New attachments */}
-                      {editNewFiles.map((file, idx) => (
-                        <div key={`new-${idx}`} className="aspect-square relative group">
-                          {file.type?.startsWith('image/') ? (
-                            <div className="w-full h-full rounded-md overflow-hidden border border-border/50 bg-background">
-                              <img src={URL.createObjectURL(file)} alt={file.name} className="w-full h-full object-cover" />
-                            </div>
-                          ) : (
-                            <div className="w-full h-full rounded-md overflow-hidden border border-border/50 bg-muted/30 flex flex-col items-center justify-center p-1">
-                              <FileText className="h-6 w-6 text-muted-foreground mb-1" />
-                              <span className="text-[8px] text-muted-foreground w-full truncate text-center">{file.name}</span>
-                            </div>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => setEditNewFiles(prev => prev.filter((_, i) => i !== idx))}
-                            className="absolute top-0 right-0 bg-black/50 hover:bg-destructive text-white p-0.5 rounded-bl-md opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+    <div className="space-y-6">
+      {/* Create Report Form */}
+      <div className="bg-card border rounded-lg shadow-sm overflow-hidden">
+        <div className="p-4 space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="new-report-content" className="sr-only">New Report</Label>
+            <Textarea 
+                id="new-report-content"
+                placeholder="What's the latest update?" 
+                className="resize-none min-h-[80px] text-sm border-0 focus-visible:ring-0 px-0 shadow-none"
+                value={newContent}
+                onChange={(e) => setNewContent(e.target.value)}
+            />
+          </div>
 
-                  <div className="flex justify-between items-center pt-2">
-                    <div className="flex items-center">
-                      <label 
-                        htmlFor={`edit-file-input-${report.id}`}
-                        className="inline-flex h-9 px-3 items-center justify-center rounded-md border border-input bg-transparent text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground cursor-pointer text-muted-foreground hover:text-primary gap-2"
-                      >
-                        <Paperclip className="h-4 w-4" />
-                        <span>Attach files</span>
-                      </label>
-                      <input 
-                        id={`edit-file-input-${report.id}`}
-                        type="file" 
-                        className="hidden" 
-                        multiple
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files.length > 0) {
-                            setEditNewFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
-                          }
-                          e.target.value = '';
-                        }} 
-                      />
+          {newFiles.length > 0 && (
+            <div className="grid grid-cols-1 gap-2 border-t pt-4">
+                {newFiles.map((file, index) => (
+                    <div key={index} className="group relative flex items-center gap-3 p-2 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-all">
+                        <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                            <Paperclip className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0 grid gap-0.5">
+                            <p className="text-xs font-medium text-foreground truncate">{file.name}</p>
+                            <p className="text-[10px] text-muted-foreground">{(file.size / 1024).toFixed(0)} KB</p>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                            onClick={() => removeFile(index)}
+                        >
+                            <X className="h-3 w-3" />
+                        </Button>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={isSubmitting}>Cancel</Button>
-                      <Button size="sm" onClick={() => handleUpdateReport(report.id)} disabled={isSubmitting}>
-                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                        Save
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                ))}
+            </div>
+          )}
+        </div>
+        
+        <div className="flex items-center justify-between p-2 bg-muted/30 border-t">
+          <div className="flex items-center gap-2">
+            <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-xs h-8 text-muted-foreground hover:text-primary"
+                onClick={() => fileInputRef.current?.click()}
+            >
+                <Paperclip className="h-3 w-3 mr-2" /> 
+                {newFiles.length > 0 ? 'Add another file' : 'Attach file'}
+            </Button>
+            <input type="file" ref={fileInputRef} className="hidden" multiple onChange={handleFileChange} />
+          </div>
+          <Button 
+              onClick={() => submitReportMutation.mutate()} 
+              disabled={(!newContent.trim() && newFiles.length === 0) || submitReportMutation.isPending}
+              size="sm"
+              className="h-8"
+          >
+              {submitReportMutation.isPending ? (
+                  <>
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                      Sending...
+                  </>
               ) : (
-                <>
-                  <div className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90 mb-3">
-                    {report.content || <span className="italic text-muted-foreground">No text content</span>}
+                  <>
+                      <Send className="mr-2 h-3 w-3" />
+                      Post Update
+                  </>
+              )}
+          </Button>
+        </div>
+      </div>
+
+      {/* Reports List */}
+      {loading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      ) : reports.length === 0 ? (
+        <div className="text-sm text-muted-foreground text-center py-8 bg-muted/30 rounded-md border border-dashed">
+          No reports submitted yet. Be the first to post an update!
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {reports.map((report) => (
+            <Card key={report.id} className="overflow-visible bg-card/50">
+              <CardHeader className="p-4 bg-muted/30 pb-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8 border">
+                      <AvatarImage src={report.profiles?.avatar_url || undefined} />
+                      <AvatarFallback className="text-xs">
+                        {report.profiles?.first_name?.[0] || <User className="h-3 w-3" />}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="text-sm font-medium leading-none mb-1">
+                        {report.profiles?.first_name 
+                          ? `${report.profiles.first_name} ${report.profiles.last_name || ""}`
+                          : report.profiles?.email || "Unknown User"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {format(new Date(report.created_at), "MMM d, yyyy 'at' h:mm a")}
+                      </div>
+                    </div>
                   </div>
                   
-                  {report.attachments && Array.isArray(report.attachments) && report.attachments.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-border/50">
-                      {report.attachments.slice(0, 4).map((file: any, index: number) => {
-                        const displayCount = 4;
-                        const totalCount = report.attachments.length;
-                        const extraCount = totalCount - (displayCount - 1);
-                        const isOverlay = index === 3 && totalCount > 4;
-                        const isImg = isImageFile(file);
-                        
-                        return (
-                          <div key={index} className="w-[60px] h-[60px] relative">
-                            {isImg ? (
-                              <div className="w-full h-full rounded-md overflow-hidden border border-border/50 bg-background hover:opacity-90 transition-opacity relative">
-                                <button 
-                                  onClick={() => handleViewAttachments(report.attachments, report.id)} 
-                                  className="w-full h-full flex items-center justify-center cursor-pointer"
-                                  type="button"
-                                >
-                                  <img 
-                                    src={file.url} 
-                                    alt={file.name} 
-                                    className="w-full h-full object-cover" 
-                                    loading="lazy"
-                                  />
-                                </button>
-                                {isOverlay && (
-                                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 pointer-events-none rounded-md">
-                                    <span className="text-xs font-medium text-white">+{extraCount}</span>
-                                  </div>
-                                )}
+                  <div className="flex items-center gap-1">
+                    {!editingReportId && (
+                      <EmojiReactionPicker onSelect={(emoji) => handleReaction(report.id, emoji)} />
+                    )}
+                    
+                    {user?.id === report.created_by && !editingReportId && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEditClick(report)}>
+                            <Pencil className="h-4 w-4 mr-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteReport(report.id)}>
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4">
+                {editingReportId === report.id ? (
+                  <div className="space-y-4">
+                    <Textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      className="min-h-[100px]"
+                      placeholder="Report content..."
+                    />
+                    
+                    {/* Attachment Management in Edit Mode */}
+                    {(editAttachments.length > 0 || editNewFiles.length > 0) && (
+                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                        {/* Existing attachments */}
+                        {editAttachments.map((att: any, idx: number) => (
+                          <div key={`existing-${idx}`} className="aspect-square relative group">
+                            {isImageFile(att) ? (
+                              <div className="w-full h-full rounded-md overflow-hidden border border-border/50 bg-background">
+                                <img src={att.url} alt={att.name} className="w-full h-full object-cover" />
                               </div>
                             ) : (
-                              <div className="w-full h-full rounded-md overflow-hidden border border-border/50 bg-muted/30 hover:opacity-90 transition-opacity relative">
-                                <button 
-                                  onClick={() => handleViewAttachments(report.attachments, report.id)}
-                                  className="flex flex-col items-center justify-center w-full h-full p-1 text-center cursor-pointer"
-                                  type="button"
-                                >
-                                  {file.type === 'application/pdf' ? (
-                                    <FileText className="h-6 w-6 text-red-500 mb-0.5" />
-                                  ) : (
-                                    <Paperclip className="h-6 w-6 text-muted-foreground mb-0.5" />
-                                  )}
-                                  <span className="text-[8px] text-muted-foreground w-full truncate px-0.5">
-                                    {file.name}
-                                  </span>
-                                </button>
-                                {isOverlay && (
-                                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 pointer-events-none rounded-md">
-                                    <span className="text-xs font-medium text-white">+{extraCount}</span>
-                                  </div>
-                                )}
+                              <div className="w-full h-full rounded-md overflow-hidden border border-border/50 bg-muted/30 flex flex-col items-center justify-center p-1">
+                                <FileText className="h-6 w-6 text-muted-foreground mb-1" />
+                                <span className="text-[8px] text-muted-foreground w-full truncate text-center">{att.name}</span>
                               </div>
                             )}
+                            <button
+                              type="button"
+                              onClick={() => setEditAttachments(prev => prev.filter((_, i) => i !== idx))}
+                              className="absolute top-0 right-0 bg-black/50 hover:bg-destructive text-white p-0.5 rounded-bl-md opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                        ))}
+                        {/* New attachments */}
+                        {editNewFiles.map((file, idx) => (
+                          <div key={`new-${idx}`} className="aspect-square relative group">
+                            {file.type?.startsWith('image/') ? (
+                              <div className="w-full h-full rounded-md overflow-hidden border border-border/50 bg-background">
+                                <img src={URL.createObjectURL(file)} alt={file.name} className="w-full h-full object-cover" />
+                              </div>
+                            ) : (
+                              <div className="w-full h-full rounded-md overflow-hidden border border-border/50 bg-muted/30 flex flex-col items-center justify-center p-1">
+                                <FileText className="h-6 w-6 text-muted-foreground mb-1" />
+                                <span className="text-[8px] text-muted-foreground w-full truncate text-center">{file.name}</span>
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setEditNewFiles(prev => prev.filter((_, i) => i !== idx))}
+                              className="absolute top-0 right-0 bg-black/50 hover:bg-destructive text-white p-0.5 rounded-bl-md opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
-                  {/* Reactions Section */}
-                  {report.project_report_reactions && report.project_report_reactions.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2 mt-4 pt-2">
-                      {getGroupedReactions(report.project_report_reactions).map(([emoji, { count, hasReacted }]) => (
-                        <Button
-                          key={emoji}
-                          variant={hasReacted ? "secondary" : "ghost"}
-                          size="sm"
-                          onClick={() => handleReaction(report.id, emoji)}
-                          className={cn(
-                            "h-7 px-2 text-xs rounded-full gap-1.5",
-                            hasReacted 
-                              ? "bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20" 
-                              : "bg-muted/50 hover:bg-muted text-muted-foreground border border-transparent"
-                          )}
+                    <div className="flex justify-between items-center pt-2">
+                      <div className="flex items-center">
+                        <label 
+                          htmlFor={`edit-file-input-${report.id}`}
+                          className="inline-flex h-9 px-3 items-center justify-center rounded-md border border-input bg-transparent text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground cursor-pointer text-muted-foreground hover:text-primary gap-2"
                         >
-                          <span>{emoji}</span>
-                          {count > 0 && <span className="font-medium">{count}</span>}
+                          <Paperclip className="h-4 w-4" />
+                          <span>Attach files</span>
+                        </label>
+                        <input 
+                          id={`edit-file-input-${report.id}`}
+                          type="file" 
+                          className="hidden" 
+                          multiple
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                              setEditNewFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
+                            }
+                            e.target.value = '';
+                          }} 
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={isSubmitting}>Cancel</Button>
+                        <Button size="sm" onClick={() => handleUpdateReport(report.id)} disabled={isSubmitting}>
+                          {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                          Save
                         </Button>
-                      ))}
+                      </div>
                     </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90 mb-3">
+                      {report.content || <span className="italic text-muted-foreground">No text content</span>}
+                    </div>
+                    
+                    {report.attachments && Array.isArray(report.attachments) && report.attachments.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-border/50">
+                        {report.attachments.slice(0, 4).map((file: any, index: number) => {
+                          const displayCount = 4;
+                          const totalCount = report.attachments.length;
+                          const extraCount = totalCount - (displayCount - 1);
+                          const isOverlay = index === 3 && totalCount > 4;
+                          const isImg = isImageFile(file);
+                          
+                          return (
+                            <div key={index} className="w-[60px] h-[60px] relative">
+                              {isImg ? (
+                                <div className="w-full h-full rounded-md overflow-hidden border border-border/50 bg-background hover:opacity-90 transition-opacity relative">
+                                  <button 
+                                    onClick={() => handleViewAttachments(report.attachments, report.id)} 
+                                    className="w-full h-full flex items-center justify-center cursor-pointer"
+                                    type="button"
+                                  >
+                                    <img 
+                                      src={file.url} 
+                                      alt={file.name} 
+                                      className="w-full h-full object-cover" 
+                                      loading="lazy"
+                                    />
+                                  </button>
+                                  {isOverlay && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 pointer-events-none rounded-md">
+                                      <span className="text-xs font-medium text-white">+{extraCount}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="w-full h-full rounded-md overflow-hidden border border-border/50 bg-muted/30 hover:opacity-90 transition-opacity relative">
+                                  <button 
+                                    onClick={() => handleViewAttachments(report.attachments, report.id)}
+                                    className="flex flex-col items-center justify-center w-full h-full p-1 text-center cursor-pointer"
+                                    type="button"
+                                  >
+                                    {file.type === 'application/pdf' ? (
+                                      <FileText className="h-6 w-6 text-red-500 mb-0.5" />
+                                    ) : (
+                                      <Paperclip className="h-6 w-6 text-muted-foreground mb-0.5" />
+                                    )}
+                                    <span className="text-[8px] text-muted-foreground w-full truncate px-0.5">
+                                      {file.name}
+                                    </span>
+                                  </button>
+                                  {isOverlay && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 pointer-events-none rounded-md">
+                                      <span className="text-xs font-medium text-white">+{extraCount}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Reactions Section */}
+                    {report.project_report_reactions && report.project_report_reactions.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-2 mt-4 pt-2">
+                        {getGroupedReactions(report.project_report_reactions).map(([emoji, { count, hasReacted }]) => (
+                          <Button
+                            key={emoji}
+                            variant={hasReacted ? "secondary" : "ghost"}
+                            size="sm"
+                            onClick={() => handleReaction(report.id, emoji)}
+                            className={cn(
+                              "h-7 px-2 text-xs rounded-full gap-1.5",
+                              hasReacted 
+                                ? "bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20" 
+                                : "bg-muted/50 hover:bg-muted text-muted-foreground border border-transparent"
+                            )}
+                          >
+                            <span>{emoji}</span>
+                            {count > 0 && <span className="font-medium">{count}</span>}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <AttachmentViewerModal
         open={isViewerOpen}
@@ -521,7 +667,7 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
         attachments={viewerAttachments}
         commentId={viewerReportId} 
       />
-    </>
+    </div>
   );
 };
 
