@@ -127,18 +127,21 @@ export const useAiChat = (currentUser: User | null) => {
     checkConnection();
   }, [checkConnection]);
 
-  const sendMessage = useCallback(async (text: string, attachmentFile: File | null, replyToMessageId?: string | null) => {
+  // Updated to handle array of files
+  const sendMessage = useCallback(async (text: string, attachmentFiles: File[], replyToMessageId?: string | null) => {
     if (!currentUser) {
       toast.error("You must be logged in to chat with the AI.");
       return;
     }
 
+    // Prepare attachment for UI (just taking the first one for now as per current UI limitation or AI limitation)
     let attachmentForUi: ChatMessageAttachment | undefined = undefined;
-    if (attachmentFile) {
+    if (attachmentFiles.length > 0) {
+      const file = attachmentFiles[0];
       attachmentForUi = {
-        name: attachmentFile.name,
-        url: URL.createObjectURL(attachmentFile),
-        type: attachmentFile.type,
+        name: file.name,
+        url: URL.createObjectURL(file),
+        type: file.type,
       };
     }
 
@@ -168,11 +171,14 @@ export const useAiChat = (currentUser: User | null) => {
     try {
       let attachmentUrl: string | null = null;
       let attachmentType: string | null = null;
-      if (attachmentFile) {
-        attachmentType = attachmentFile.type;
-        const sanitizedFileName = attachmentFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+      
+      // Upload first attachment only for AI analysis for now
+      if (attachmentFiles.length > 0) {
+        const file = attachmentFiles[0];
+        attachmentType = file.type;
+        const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
         const filePath = `ai-uploads/${currentUser.id}/${uuidv4()}-${sanitizedFileName}`;
-        const { error: uploadError } = await supabase.storage.from('chat-attachments').upload(filePath, attachmentFile);
+        const { error: uploadError } = await supabase.storage.from('chat-attachments').upload(filePath, file);
         if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
         const { data: urlData } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
         attachmentUrl = urlData.publicUrl;

@@ -22,7 +22,7 @@ interface ChatContextType {
   messages: Message[];
   isLoadingMessages: boolean;
   isSendingMessage: boolean;
-  sendMessage: (text: string, attachmentFile: File | null, replyToMessageId?: string | null) => void;
+  sendMessage: (text: string, attachments: File[], replyToMessageId?: string | null) => void;
   startNewChat: (collaborator: Collaborator) => void;
   startNewGroupChat: (collaborators: Collaborator[], groupName: string) => void;
   deleteConversation: (conversationId: string) => void;
@@ -186,7 +186,6 @@ const ChatProviderComponent = ({ children }: { children: ReactNode }) => {
   };
 
   // 1. Global subscription for persistent message updates (Background & List updates)
-  // This replaces the individual subscriptions for every conversation
   useEffect(() => {
     if (!currentUser) return;
 
@@ -214,9 +213,7 @@ const ChatProviderComponent = ({ children }: { children: ReactNode }) => {
          handleIncomingMessage(payload);
       })
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
-         // We can handle typing indicators here later if needed
-         // const userId = payload.userId;
-         // if (userId !== currentUser?.id) setIsSomeoneTyping(true);
+         // Typing indicators logic
       })
       .subscribe();
 
@@ -258,34 +255,54 @@ const ChatProviderComponent = ({ children }: { children: ReactNode }) => {
   }, [conversations, searchTerm, messageSearchResults]);
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (variables: { messageId: string, text: string, attachmentFile: File | null, replyToMessageId?: string | null }) => {
-      let attachmentUrl: string | null = null;
-      let attachmentName: string | null = null;
-      let attachmentType: string | null = null;
+    mutationFn: async (variables: { text: string, attachments: File[], replyToMessageId?: string | null }) => {
+      if (!currentUser || !selectedConversationId) throw new Error("No conversation selected");
 
-      if (variables.attachmentFile && currentUser && selectedConversationId) {
-        const file = variables.attachmentFile;
-        const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-        const filePath = `${selectedConversationId}/${uuidv4()}-${sanitizedFileName}`;
-        const { error: uploadError } = await supabase.storage.from('chat-attachments').upload(filePath, file);
-        if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
-        
-        const { data: urlData } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
-        attachmentUrl = urlData.publicUrl;
-        attachmentName = file.name;
-        attachmentType = file.type;
-      }
+      const itemsToSend = [];
       
-      await sendHybridMessage({
-        messageId: variables.messageId,
-        conversationId: selectedConversationId!,
-        senderId: currentUser!.id,
-        text: variables.text,
-        attachmentUrl,
-        attachmentName,
-        attachmentType,
-        replyToMessageId: variables.replyToMessageId,
-      });
+      if (variables.attachments.length === 0) {
+        // Text only
+        itemsToSend.push({ text: variables.text, file: null });
+      } else {
+        // Text with first file, then subsequent files
+        variables.attachments.forEach((file, index) => {
+          itemsToSend.push({
+            text: index === 0 ? variables.text : '', // Attach text to first file only
+            file
+          });
+        });
+      }
+
+      for (const item of itemsToSend) {
+        let attachmentUrl: string | null = null;
+        let attachmentName: string | null = null;
+        let attachmentType: string | null = null;
+
+        if (item.file) {
+          const file = item.file;
+          const sanitizedFileName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+          const filePath = `${selectedConversationId}/${uuidv4()}-${sanitizedFileName}`;
+          const { error: uploadError } = await supabase.storage.from('chat-attachments').upload(filePath, file);
+          if (uploadError) throw new Error(`Failed to upload attachment: ${uploadError.message}`);
+          
+          const { data: urlData } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
+          attachmentUrl = urlData.publicUrl;
+          attachmentName = file.name;
+          attachmentType = file.type;
+        }
+
+        const messageId = uuidv4();
+        await sendHybridMessage({
+          messageId,
+          conversationId: selectedConversationId,
+          senderId: currentUser.id,
+          text: item.text,
+          attachmentUrl,
+          attachmentName,
+          attachmentType,
+          replyToMessageId: variables.replyToMessageId,
+        });
+      }
     },
     onMutate: async (newMessageData) => {
       if (!currentUser || !selectedConversationId) return;
@@ -293,33 +310,51 @@ const ChatProviderComponent = ({ children }: { children: ReactNode }) => {
       await queryClient.cancelQueries({ queryKey: ['messages', selectedConversationId] });
       const previousMessages = queryClient.getQueryData<Message[]>(['messages', selectedConversationId]);
 
-      queryClient.setQueryData<Message[]>(['messages', selectedConversationId], (old) => {
-        const optimisticMessage: Message = {
-          id: newMessageData.messageId,
+      // Optimistic update for all items
+      const optimisticMessages: Message[] = [];
+      
+      if (newMessageData.attachments.length === 0) {
+        optimisticMessages.push({
+          id: uuidv4(),
           text: newMessageData.text,
           timestamp: new Date().toISOString(),
           sender: currentUser,
-          attachment: newMessageData.attachmentFile ? {
-            name: newMessageData.attachmentFile.name,
-            url: URL.createObjectURL(newMessageData.attachmentFile),
-            type: newMessageData.attachmentFile.type,
-          } : undefined,
           reply_to_message_id: newMessageData.replyToMessageId,
-        };
-        
-        if (newMessageData.replyToMessageId) {
-            const repliedMsg = (previousMessages || []).find(m => m.id === newMessageData.replyToMessageId);
-            if (repliedMsg) {
-                optimisticMessage.repliedMessage = {
-                    content: repliedMsg.text,
-                    senderName: repliedMsg.sender.name,
-                    isDeleted: false,
-                    attachment: repliedMsg.attachment,
-                };
-            }
-        }
+        });
+      } else {
+        newMessageData.attachments.forEach((file, index) => {
+          optimisticMessages.push({
+            id: uuidv4(),
+            text: index === 0 ? newMessageData.text : '',
+            timestamp: new Date().toISOString(),
+            sender: currentUser,
+            attachment: {
+              name: file.name,
+              url: URL.createObjectURL(file),
+              type: file.type,
+            },
+            reply_to_message_id: newMessageData.replyToMessageId,
+          });
+        });
+      }
 
-        return [...(old || []), optimisticMessage];
+      // Populate reply data for optimistic messages
+      if (newMessageData.replyToMessageId) {
+        const repliedMsg = (previousMessages || []).find(m => m.id === newMessageData.replyToMessageId);
+        if (repliedMsg) {
+          optimisticMessages.forEach(msg => {
+             msg.repliedMessage = {
+                content: repliedMsg.text,
+                senderName: repliedMsg.sender.name,
+                isDeleted: false,
+                attachment: repliedMsg.attachment,
+            };
+          });
+        }
+      }
+
+      queryClient.setQueryData<Message[]>(['messages', selectedConversationId], (old) => {
+        return [...(old || []), ...optimisticMessages];
       });
 
       return { previousMessages };
@@ -557,9 +592,8 @@ const ChatProviderComponent = ({ children }: { children: ReactNode }) => {
     return conversation ? { ...conversation, messages } : null;
   }, [selectedConversationId, conversations, messages]);
 
-  const sendMessage = (text: string, attachmentFile: File | null, replyToMessageId?: string | null) => {
-    const messageId = uuidv4();
-    sendMessageMutation.mutate({ messageId, text, attachmentFile, replyToMessageId });
+  const sendMessage = (text: string, attachments: File[], replyToMessageId?: string | null) => {
+    sendMessageMutation.mutate({ text, attachments, replyToMessageId });
   };
 
   const toggleReaction = (messageId: string, emoji: string) => {
