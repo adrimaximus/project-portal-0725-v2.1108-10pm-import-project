@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import ProjectDescription from './ProjectDescription';
 import ProjectBrief from './ProjectBrief';
 import ProjectReportsList from './ProjectReportsList';
+import ProjectExpensesCard from './ProjectExpensesCard';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { FileText, BarChart3 } from 'lucide-react';
@@ -118,6 +119,9 @@ const ProjectOverviewTab = ({
           </div>
         </CardContent>
       </Card>
+
+      {/* Expenses Card - Positioned here to match width layout */}
+      <ProjectExpensesCard project={project} />
 
       {/* Quick Reports Card */}
       <Card className="border-none shadow-sm bg-card/80 backdrop-blur-sm">

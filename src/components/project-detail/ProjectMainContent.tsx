@@ -15,7 +15,6 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { CommentInputHandle } from '../CommentInput';
-import ProjectExpensesCard from './ProjectExpensesCard';
 
 interface ProjectMainContentProps {
   project: Project;
@@ -253,8 +252,6 @@ const ProjectMainContent = ({
             isUploading={isUploading}
             onSaveChanges={onSaveChanges}
           />
-          
-          <ProjectExpensesCard project={project} />
         </TabsContent>
         <TabsContent value="tasks" className="mt-4">
           <ProjectTasks
