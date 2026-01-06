@@ -1,11 +1,11 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getProjectBySlug } from '@/lib/projectsApi';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Task, Project, ProjectStatus } from '@/types';
+import { Task, UpsertTaskPayload, Project, ProjectStatus, Reaction, Comment as CommentType } from '@/types';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useProjectMutations } from '@/hooks/useProjectMutations';
 import {
@@ -27,14 +27,13 @@ import ProjectMainContent from '@/components/project-detail/ProjectMainContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { useUnreadTasks } from '@/hooks/useUnreadTasks';
-import { useTasks } from '@/hooks/useTasks';
 
-const ProjectDetail = () => {
+const ProjectDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const { onOpen: onOpenTaskModal } = useTaskModal();
   const { unreadTaskIds } = useUnreadTasks();
 
@@ -58,13 +57,6 @@ const ProjectDetail = () => {
     enabled: !!slug,
   });
 
-  const { data: tasks = [] } = useTasks({
-    projectIds: project ? [project.id] : undefined,
-    hideCompleted: false,
-    sortConfig: { key: 'kanban_order', direction: 'asc' },
-    enabled: !!project,
-  });
-
   const { 
     updateProject, 
     addFiles, 
@@ -76,20 +68,14 @@ const ProjectDetail = () => {
   const { 
     deleteTask, 
     toggleTaskCompletion, 
-  } = useTaskMutations(() => {
-    queryClient.invalidateQueries({ queryKey: ['project', slug] });
-    queryClient.invalidateQueries({ queryKey: ['tasks'] });
-  });
+  } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', slug] }));
 
   useEffect(() => {
     if (project) {
       const channel = supabase
         .channel(`project-updates-${project.id}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'projects', filter: `id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `project_id=eq.${project.id}` }, () => {
-            queryClient.invalidateQueries({ queryKey: ['project', slug] });
-            queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'project_activities', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'project_files', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
@@ -169,11 +155,7 @@ const ProjectDetail = () => {
   const handleToggleTaskCompletion = (task: Task, completed: boolean) => toggleTaskCompletion({ task, completed });
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center h-full pt-[30vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
   if (error) {
     return <div className="text-destructive p-4">Error loading project: {error.message}</div>;
@@ -182,11 +164,8 @@ const ProjectDetail = () => {
     return <div className="p-4">Project not found.</div>;
   }
 
-  const projectToDisplay = isEditing && editedProject 
-    ? { ...editedProject, tasks } 
-    : { ...project, tasks };
-
-  const hasOpenTasks = tasks.some(task => !task.completed);
+  const projectToDisplay = isEditing && editedProject ? editedProject : project;
+  const hasOpenTasks = project.tasks?.some(task => !task.completed) ?? false;
 
   return (
     <>
@@ -241,8 +220,8 @@ const ProjectDetail = () => {
               />
             </div>
             <div className="lg:col-span-1 space-y-6">
-              <ProjectProgressCard project={projectToDisplay} />
-              <ProjectTeamCard project={projectToDisplay} />
+              <ProjectProgressCard project={project} />
+              <ProjectTeamCard project={project} />
             </div>
           </div>
         </div>
@@ -263,4 +242,4 @@ const ProjectDetail = () => {
   );
 };
 
-export default ProjectDetail;
+export default ProjectDetailPage;
