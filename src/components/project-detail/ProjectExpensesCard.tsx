@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Receipt, AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import { Plus, Receipt, AlertCircle, CheckCircle2, Clock, ChevronDown } from "lucide-react";
 import { useProjectExpenses } from "@/hooks/useProjectExpenses";
 import { Badge } from "@/components/ui/badge";
 import AddExpenseDialog from "@/components/billing/AddExpenseDialog";
@@ -19,6 +19,7 @@ const ProjectExpensesCard = ({ project }: ProjectExpensesCardProps) => {
   const { data: expenses, isLoading } = useProjectExpenses(project.id);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const [isExpanded, setIsExpanded] = useState(true);
   const { user, hasPermission } = useAuth();
 
   const canCreateExpense = hasPermission('module:expense');
@@ -28,6 +29,12 @@ const ProjectExpensesCard = ({ project }: ProjectExpensesCardProps) => {
   const isGlobalAdmin = user?.role === 'master admin' || user?.role === 'admin';
   
   const hasPrivilegedAccess = isProjectAdmin || isProjectOwner || isGlobalAdmin;
+
+  useEffect(() => {
+    if (!isLoading && expenses) {
+      setIsExpanded(expenses.length > 0);
+    }
+  }, [expenses, isLoading]);
 
   if (isLoading) {
     return <Skeleton className="h-48 w-full" />;
@@ -65,50 +72,68 @@ const ProjectExpensesCard = ({ project }: ProjectExpensesCardProps) => {
 
   return (
     <>
-      <Card className="w-full border-none shadow-sm bg-card/80 backdrop-blur-sm">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <Card className="w-full border-none shadow-sm bg-card/80 backdrop-blur-sm transition-all duration-300">
+        <CardHeader 
+          className="flex flex-row items-center justify-between space-y-0 pb-2 cursor-pointer hover:bg-muted/30 transition-colors rounded-t-lg"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Receipt className="h-4 w-4" />
             Expenses
           </CardTitle>
-          {canCreateExpense && (
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsAddOpen(true)}>
-              <Plus className="h-4 w-4" />
+          <div className="flex items-center gap-1">
+            {canCreateExpense && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsAddOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
             </Button>
-          )}
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4 pt-4">
-          <div className="text-2xl font-bold">{formatIDR(totalAmount)}</div>
-          
-          <ScrollArea className="h-[100px] -mr-4 pr-4">
-            <div className="space-y-3">
-              {expenses?.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">No expenses recorded.</p>
-              ) : (
-                expenses?.map((expense) => (
-                  <div 
-                    key={expense.id} 
-                    className="flex items-center justify-between text-sm p-2 rounded-md hover:bg-muted/50 cursor-pointer border border-transparent hover:border-border transition-colors"
-                    onClick={() => setSelectedExpense(expense)}
-                  >
-                    <div className="flex flex-col gap-1 overflow-hidden">
-                      <span className="font-medium truncate">{expense.beneficiary}</span>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={`text-[10px] px-1 py-0 h-4 gap-1 ${getStatusColor(expense.status_expense)}`}>
-                          {getStatusIcon(expense.status_expense)}
-                          {expense.status_expense}
-                        </Badge>
+        {isExpanded && (
+          <CardContent className="space-y-4 pt-4 animate-in slide-in-from-top-2 duration-200">
+            <div className="text-2xl font-bold">{formatIDR(totalAmount)}</div>
+            
+            <ScrollArea className="h-[100px] -mr-4 pr-4">
+              <div className="space-y-3">
+                {expenses?.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">No expenses recorded.</p>
+                ) : (
+                  expenses?.map((expense) => (
+                    <div 
+                      key={expense.id} 
+                      className="flex items-center justify-between text-sm p-2 rounded-md hover:bg-muted/50 cursor-pointer border border-transparent hover:border-border transition-colors"
+                      onClick={() => setSelectedExpense(expense)}
+                    >
+                      <div className="flex flex-col gap-1 overflow-hidden">
+                        <span className="font-medium truncate">{expense.beneficiary}</span>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={`text-[10px] px-1 py-0 h-4 gap-1 ${getStatusColor(expense.status_expense)}`}>
+                            {getStatusIcon(expense.status_expense)}
+                            {expense.status_expense}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="font-medium tabular-nums ml-2">
+                        {formatIDR(expense.tf_amount)}
                       </div>
                     </div>
-                    <div className="font-medium tabular-nums ml-2">
-                      {formatIDR(expense.tf_amount)}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        )}
       </Card>
 
       <AddExpenseDialog 
