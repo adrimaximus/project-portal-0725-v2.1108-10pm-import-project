@@ -15,7 +15,7 @@ const ProjectReports = ({ projectId }: ProjectReportsProps) => {
     queryKey: ['project_reports', projectId],
     queryFn: async () => {
       // Fetch comments that have attachments (treated as reports)
-      // and are not marked as tickets (if applicable)
+      // OR are explicitly marked as 'report' via attachment_type
       const { data, error } = await supabase
         .from('comments')
         .select(`
@@ -24,6 +24,7 @@ const ProjectReports = ({ projectId }: ProjectReportsProps) => {
           created_at,
           attachments_jsonb,
           author_id,
+          attachment_type,
           profiles:author_id (
             first_name,
             last_name,
@@ -32,7 +33,10 @@ const ProjectReports = ({ projectId }: ProjectReportsProps) => {
           )
         `)
         .eq('project_id', projectId)
-        .neq('attachments_jsonb', '[]') // Only get comments with attachments
+        // This OR condition captures:
+        // 1. New reports (marked with attachment_type = 'report')
+        // 2. Old reports/File uploads (where attachments_jsonb is not empty)
+        .or('attachment_type.eq.report,attachments_jsonb.neq.[]')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

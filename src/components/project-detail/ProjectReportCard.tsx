@@ -87,6 +87,7 @@ const ProjectReportCard = ({ project }: ProjectReportCardProps) => {
       const commentText = content.trim() || (files.length > 0 ? `Submitted a report with ${files.length} file(s).` : "Submitted a report.");
 
       // Insert into comments as a report/update
+      // We set attachment_type to 'report' to easily filter these in the Reports section
       const { error } = await supabase
         .from('comments')
         .insert({
@@ -94,7 +95,8 @@ const ProjectReportCard = ({ project }: ProjectReportCardProps) => {
           author_id: user.id,
           text: commentText,
           attachments_jsonb: attachments,
-          is_ticket: false 
+          is_ticket: false,
+          attachment_type: 'report' 
         });
 
       if (error) throw error;
