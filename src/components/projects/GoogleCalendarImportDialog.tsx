@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Calendar as CalendarIcon } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
+import { toast } from "sonner";
+import { Project } from "@/types";
 import { formatInJakarta } from "@/lib/utils";
 import { Separator } from "../ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface CalendarEvent {
   id: string;
@@ -28,16 +29,11 @@ interface GoogleCalendarImportDialogProps {
 
 export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImporting }: GoogleCalendarImportDialogProps) => {
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
-  const currentYear = new Date().getFullYear();
-  const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
 
   const { data: events = [], isLoading: isLoadingEvents, error } = useQuery<CalendarEvent[]>({
-    queryKey: ['googleCalendarEvents', selectedYear],
+    queryKey: ['googleCalendarEvents'],
     queryFn: async () => {
-      // Pass the selected year to the edge function to fetch events for that specific year
-      const { data, error } = await supabase.functions.invoke('get-google-calendar-events', {
-        body: { year: parseInt(selectedYear) }
-      });
+      const { data, error } = await supabase.functions.invoke('get-google-calendar-events');
       if (error) throw error;
       return data || [];
     },
@@ -75,6 +71,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     const groups = filteredEvents.reduce((acc: Record<string, CalendarEvent[]>, event) => {
       const dateVal = event.start?.date || event.start?.dateTime;
       if (!dateVal) {
+        console.warn("Skipping event with no start date:", event);
         return acc;
       }
       const dateStr = dateVal.substring(0, 10);
@@ -84,6 +81,8 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
           acc[dateStr] = [];
         }
         acc[dateStr].push(event);
+      } else {
+        console.warn("Skipping event with invalid date string:", dateStr, event);
       }
 
       return acc;
@@ -136,7 +135,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
         return "All-day";
       }
 
-      return "Time not specified";
+      return "Time not specified"; // Fallback
     } catch (e) {
       console.error("Error formatting event time:", e, event);
       return "Invalid time";
@@ -150,41 +149,21 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Import Events</DialogTitle>
-            <div className="flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                <Select value={selectedYear} onValueChange={setSelectedYear}>
-                    <SelectTrigger className="w-[100px] h-8 text-xs">
-                        <SelectValue placeholder="Year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value={(currentYear - 1).toString()}>{currentYear - 1}</SelectItem>
-                        <SelectItem value={currentYear.toString()}>{currentYear}</SelectItem>
-                        <SelectItem value={(currentYear + 1).toString()}>{currentYear + 1}</SelectItem>
-                        <SelectItem value={(currentYear + 2).toString()}>{currentYear + 2}</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-          </div>
-          <DialogDescription>
-            Select events to import from your Google Calendar for {selectedYear}.
-          </DialogDescription>
+          <DialogTitle>Import Events from Google Calendar</DialogTitle>
+          <DialogDescription>Select the events you want to import as new projects. Events already imported will not be shown.</DialogDescription>
         </DialogHeader>
         <div className="relative h-96">
           {isOverallLoading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/50 z-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="mt-2 text-sm text-muted-foreground">Loading events for {selectedYear}...</p>
+              <p className="mt-2 text-sm text-muted-foreground">Loading events...</p>
             </div>
           )}
           {error && (
             <div className="text-destructive text-center p-4">{error.message}</div>
           )}
           {!isOverallLoading && !error && filteredEvents.length === 0 && (
-            <div className="text-center p-4 text-muted-foreground">
-                No events found for {selectedYear} that haven't been imported yet.
-            </div>
+            <div className="text-center p-4 text-muted-foreground">No upcoming events found to import.</div>
           )}
           {!isOverallLoading && !error && filteredEvents.length > 0 && (
             <div className="h-full flex flex-col border rounded-md">
@@ -208,7 +187,7 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
                       <div key={dateStr}>
                         {index > 0 && <Separator className="my-4" />}
                         <h3 className="font-semibold text-sm mb-2 px-2 text-muted-foreground">
-                          {format(displayDate, 'EEEE, MMMM d, yyyy')}
+                          {format(displayDate, 'EEEE, MMMM d')}
                         </h3>
                         <div className="space-y-1">
                           {eventsOnDay.map(event => (
