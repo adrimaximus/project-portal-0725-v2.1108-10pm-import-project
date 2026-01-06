@@ -14,18 +14,16 @@ const ProjectReports = ({ projectId }: ProjectReportsProps) => {
   const { data: reports, isLoading } = useQuery({
     queryKey: ['project_reports', projectId],
     queryFn: async () => {
-      // Fetch comments that have attachments (treated as reports)
-      // OR are explicitly marked as 'report' via attachment_type
+      // Fetch from the dedicated project_reports table
       const { data, error } = await supabase
-        .from('comments')
+        .from('project_reports')
         .select(`
           id,
-          text,
+          content,
           created_at,
-          attachments_jsonb,
-          author_id,
-          attachment_type,
-          profiles:author_id (
+          attachments,
+          created_by,
+          profiles:created_by (
             first_name,
             last_name,
             email,
@@ -33,10 +31,6 @@ const ProjectReports = ({ projectId }: ProjectReportsProps) => {
           )
         `)
         .eq('project_id', projectId)
-        // This OR condition captures:
-        // 1. New reports (marked with attachment_type = 'report')
-        // 2. Old reports/File uploads (where attachments_jsonb is not empty)
-        .or('attachment_type.eq.report,attachments_jsonb.neq.[]')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -50,7 +44,7 @@ const ProjectReports = ({ projectId }: ProjectReportsProps) => {
   }
 
   if (!reports || reports.length === 0) {
-    return null; // Don't show the section if no reports exist
+    return null; 
   }
 
   return (
@@ -70,6 +64,16 @@ const ProjectReports = ({ projectId }: ProjectReportsProps) => {
           const authorName = author 
             ? `${author.first_name || ''} ${author.last_name || ''}`.trim() || author.email 
             : 'Unknown User';
+          
+          // Parse attachments if it's a string, otherwise use as is
+          let files = report.attachments;
+          if (typeof files === 'string') {
+            try {
+              files = JSON.parse(files);
+            } catch (e) {
+              files = [];
+            }
+          }
 
           return (
             <div key={report.id} className="flex gap-4">
@@ -88,13 +92,15 @@ const ProjectReports = ({ projectId }: ProjectReportsProps) => {
                   </div>
                 </div>
 
-                <div className="text-sm text-foreground/90 bg-muted/30 p-3 rounded-lg border">
-                  <p className="whitespace-pre-wrap">{report.text}</p>
-                </div>
+                {report.content && (
+                  <div className="text-sm text-foreground/90 bg-muted/30 p-3 rounded-lg border">
+                    <p className="whitespace-pre-wrap">{report.content}</p>
+                  </div>
+                )}
 
-                {report.attachments_jsonb && report.attachments_jsonb.length > 0 && (
+                {files && files.length > 0 && (
                   <div className="flex flex-wrap gap-2 pt-1">
-                    {report.attachments_jsonb.map((file: any, idx: number) => (
+                    {files.map((file: any, idx: number) => (
                       <div 
                         key={idx} 
                         className="flex items-center gap-2 p-2 rounded-md border bg-card hover:bg-accent/5 transition-colors group"

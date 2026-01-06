@@ -43,9 +43,11 @@ const ProjectReportCard = ({ project }: ProjectReportCardProps) => {
 
       if (files.length > 0) {
         const uploadPromises = files.map(async (file) => {
-          const fileName = `${project.id}/${Date.now()}-${file.name.replace(/[^\x00-\x7F]/g, "")}`;
+          // We still use the 'project-files' bucket for storage, 
+          // but we DO NOT insert into the 'project_files' TABLE.
+          // This keeps it out of the Brief/Attachments list.
+          const fileName = `reports/${project.id}/${Date.now()}-${file.name.replace(/[^\x00-\x7F]/g, "")}`;
           
-          // Using 'project-files' bucket. Ensure this bucket exists and has proper RLS policies.
           const { error: uploadError } = await supabase.storage
             .from('project-files') 
             .upload(fileName, file);
@@ -55,21 +57,6 @@ const ProjectReportCard = ({ project }: ProjectReportCardProps) => {
           const { data: { publicUrl } } = supabase.storage
             .from('project-files')
             .getPublicUrl(fileName);
-
-          // Insert into project_files table to track it globally and generate activity
-          const { error: dbError } = await supabase
-            .from('project_files')
-            .insert({
-              project_id: project.id,
-              user_id: user.id,
-              name: file.name,
-              size: file.size,
-              type: file.type,
-              url: publicUrl,
-              storage_path: fileName
-            });
-
-          if (dbError) throw dbError;
 
           return {
             name: file.name,
@@ -83,20 +70,16 @@ const ProjectReportCard = ({ project }: ProjectReportCardProps) => {
         attachments = await Promise.all(uploadPromises);
       }
 
-      // Ensure text is not empty for the activity log to be meaningful
-      const commentText = content.trim() || (files.length > 0 ? `Submitted a report with ${files.length} file(s).` : "Submitted a report.");
+      const reportContent = content.trim();
 
-      // Insert into comments as a report/update
-      // We set attachment_type to 'report' to easily filter these in the Reports section
+      // Insert into dedicated project_reports table
       const { error } = await supabase
-        .from('comments')
+        .from('project_reports')
         .insert({
           project_id: project.id,
-          author_id: user.id,
-          text: commentText,
-          attachments_jsonb: attachments,
-          is_ticket: false,
-          attachment_type: 'report' 
+          created_by: user.id,
+          content: reportContent,
+          attachments: attachments
         });
 
       if (error) throw error;
@@ -105,12 +88,8 @@ const ProjectReportCard = ({ project }: ProjectReportCardProps) => {
       toast.success("Report submitted successfully");
       setContent("");
       setFiles([]);
-      // Invalidate queries broadly to ensure all related feeds update
-      queryClient.invalidateQueries({ queryKey: ['project_comments', project.id] });
-      queryClient.invalidateQueries({ queryKey: ['project_reports', project.id] }); // Update the reports list
-      queryClient.invalidateQueries({ queryKey: ['project_activities', project.id] });
-      queryClient.invalidateQueries({ queryKey: ['project_files', project.id] });
-      queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
+      // Invalidate the specific reports query
+      queryClient.invalidateQueries({ queryKey: ['project_reports', project.id] });
     },
     onError: (error) => {
       toast.error(`Failed to submit report: ${error.message}`);
