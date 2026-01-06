@@ -303,23 +303,30 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
                     </div>
                   </div>
                 </div>
-                {user?.id === report.created_by && !editingReportId && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEditClick(report)}>
-                        <Pencil className="h-4 w-4 mr-2" /> Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteReport(report.id)}>
-                        <Trash2 className="h-4 w-4 mr-2" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                
+                <div className="flex items-center gap-1">
+                  {!editingReportId && (
+                    <EmojiReactionPicker onSelect={(emoji) => handleReaction(report.id, emoji)} />
+                  )}
+                  
+                  {user?.id === report.created_by && !editingReportId && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEditClick(report)}>
+                          <Pencil className="h-4 w-4 mr-2" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteReport(report.id)}>
+                          <Trash2 className="h-4 w-4 mr-2" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-4">
@@ -480,26 +487,27 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
                   )}
 
                   {/* Reactions Section */}
-                  <div className="flex flex-wrap items-center gap-2 mt-4 pt-2">
-                    <EmojiReactionPicker onSelect={(emoji) => handleReaction(report.id, emoji)} />
-                    {getGroupedReactions(report.project_report_reactions).map(([emoji, { count, hasReacted }]) => (
-                      <Button
-                        key={emoji}
-                        variant={hasReacted ? "secondary" : "ghost"}
-                        size="sm"
-                        onClick={() => handleReaction(report.id, emoji)}
-                        className={cn(
-                          "h-7 px-2 text-xs rounded-full gap-1.5",
-                          hasReacted 
-                            ? "bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20" 
-                            : "bg-muted/50 hover:bg-muted text-muted-foreground border border-transparent"
-                        )}
-                      >
-                        <span>{emoji}</span>
-                        {count > 0 && <span className="font-medium">{count}</span>}
-                      </Button>
-                    ))}
-                  </div>
+                  {report.project_report_reactions && report.project_report_reactions.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 mt-4 pt-2">
+                      {getGroupedReactions(report.project_report_reactions).map(([emoji, { count, hasReacted }]) => (
+                        <Button
+                          key={emoji}
+                          variant={hasReacted ? "secondary" : "ghost"}
+                          size="sm"
+                          onClick={() => handleReaction(report.id, emoji)}
+                          className={cn(
+                            "h-7 px-2 text-xs rounded-full gap-1.5",
+                            hasReacted 
+                              ? "bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20" 
+                              : "bg-muted/50 hover:bg-muted text-muted-foreground border border-transparent"
+                          )}
+                        >
+                          <span>{emoji}</span>
+                          {count > 0 && <span className="font-medium">{count}</span>}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 </>
               )}
             </CardContent>
