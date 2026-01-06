@@ -111,6 +111,16 @@ const ProjectOverviewTab = ({
                 prompt: 'Generate with AI'
               }}
             />
+            <div className="mt-6">
+              <ProjectBrief
+                files={project.briefFiles || []}
+                isEditing={isEditing}
+                onFilesChange={onFilesAdd}
+                onFileDelete={onFileDelete}
+                onSetIsEditing={onSetIsEditing}
+                isUploading={isUploading}
+              />
+            </div>
           </CardContent>
         </Card>
 
@@ -147,26 +157,6 @@ const ProjectOverviewTab = ({
               isEditing={isEditing}
               onTagsChange={onTagsChange}
               onReactionsChange={onReactionsChange}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Files Card */}
-        <Card className="border-none shadow-sm bg-card/80 backdrop-blur-sm">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 text-primary">
-              <Paperclip className="w-5 h-5" />
-              <CardTitle className="text-lg">Files</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ProjectBrief
-              files={project.briefFiles || []}
-              isEditing={isEditing}
-              onFilesChange={onFilesAdd}
-              onFileDelete={onFileDelete}
-              onSetIsEditing={onSetIsEditing}
-              isUploading={isUploading}
             />
           </CardContent>
         </Card>

@@ -45,7 +45,7 @@ const ProjectBrief = ({ files, isEditing, onSetIsEditing, onFilesChange, onFileD
         <CardHeader className="flex flex-row items-center justify-between py-3 px-4">
           <div className="flex items-center gap-2">
             <Paperclip className="h-4 w-4" />
-            <h3 className="font-semibold">Brief & Attachments</h3>
+            <h3 className="font-semibold">Brief Attachments</h3>
           </div>
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onSetIsEditing(false)}>
             <X className="h-4 w-4" />
@@ -99,7 +99,7 @@ const ProjectBrief = ({ files, isEditing, onSetIsEditing, onFilesChange, onFileD
     >
       <div className="flex items-center gap-2 mb-2">
         <Paperclip className="h-4 w-4" />
-        <h3 className="font-semibold">Brief & Attachments</h3>
+        <h3 className="font-semibold">Brief Attachments</h3>
       </div>
       {files && files.length > 0 ? (
         <div className="space-y-2">
