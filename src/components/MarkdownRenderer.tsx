@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import { cn } from '@/lib/utils';
+import { Lock } from 'lucide-react';
 
 interface MarkdownRendererProps {
   children: string;
@@ -11,7 +12,10 @@ interface MarkdownRendererProps {
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className }) => {
   // Pre-process mentions: @[Name](id) -> [@Name](mention:id)
-  const processedContent = children.replace(/@\[(.*?)\]\((.*?)\)/g, '[@$1](mention:$2)');
+  // Pre-process private tag: #private -> [🔒 Private](private:tag)
+  const processedContent = children
+    .replace(/@\[(.*?)\]\((.*?)\)/g, '[@$1](mention:$2)')
+    .replace(/#private/g, '[Private](private:tag)');
 
   return (
     <div className={cn("markdown-content text-sm leading-relaxed", className)}>
@@ -29,6 +33,14 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className
             if (href?.startsWith('mention:')) {
               return (
                 <span className="font-semibold text-primary hover:underline cursor-pointer bg-primary/10 rounded-sm px-1">
+                  {children}
+                </span>
+              );
+            }
+            if (href?.startsWith('private:')) {
+              return (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 select-none align-middle mr-1">
+                  <Lock className="w-2.5 h-2.5" />
                   {children}
                 </span>
               );
