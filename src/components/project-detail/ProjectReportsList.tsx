@@ -449,9 +449,32 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 flex-wrap justify-end">
                     {!editingReportId && (
                       <EmojiReactionPicker onSelect={(emoji) => handleReaction(report.id, emoji)} />
+                    )}
+
+                    {/* Reactions Section Moved to Header */}
+                    {report.project_report_reactions && report.project_report_reactions.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1">
+                        {getGroupedReactions(report.project_report_reactions).map(([emoji, { count, hasReacted }]) => (
+                          <Button
+                            key={emoji}
+                            variant={hasReacted ? "secondary" : "ghost"}
+                            size="sm"
+                            onClick={() => handleReaction(report.id, emoji)}
+                            className={cn(
+                              "h-7 px-2 text-xs rounded-full gap-1.5",
+                              hasReacted 
+                                ? "bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20" 
+                                : "bg-muted/50 hover:bg-muted text-muted-foreground border border-transparent"
+                            )}
+                          >
+                            <span>{emoji}</span>
+                            {count > 0 && <span className="font-medium">{count}</span>}
+                          </Button>
+                        ))}
+                      </div>
                     )}
                     
                     {user?.id === report.created_by && !editingReportId && (
@@ -628,29 +651,6 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
                             </div>
                           );
                         })}
-                      </div>
-                    )}
-
-                    {/* Reactions Section */}
-                    {report.project_report_reactions && report.project_report_reactions.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-2 mt-4 pt-2">
-                        {getGroupedReactions(report.project_report_reactions).map(([emoji, { count, hasReacted }]) => (
-                          <Button
-                            key={emoji}
-                            variant={hasReacted ? "secondary" : "ghost"}
-                            size="sm"
-                            onClick={() => handleReaction(report.id, emoji)}
-                            className={cn(
-                              "h-7 px-2 text-xs rounded-full gap-1.5",
-                              hasReacted 
-                                ? "bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20" 
-                                : "bg-muted/50 hover:bg-muted text-muted-foreground border border-transparent"
-                            )}
-                          >
-                            <span>{emoji}</span>
-                            {count > 0 && <span className="font-medium">{count}</span>}
-                          </Button>
-                        ))}
                       </div>
                     )}
                   </>
