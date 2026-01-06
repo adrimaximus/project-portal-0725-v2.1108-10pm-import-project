@@ -7,6 +7,8 @@ import { format, getMonth } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProjectStatuses } from '@/hooks/useProjectStatuses';
 import { usePaymentStatuses } from '@/hooks/usePaymentStatuses';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 type ChartType = 'quantity' | 'value' | 'project_status' | 'payment_status' | 'company_quantity' | 'company_value';
 
@@ -18,11 +20,9 @@ const CustomTooltip = ({ active, payload, label, chartType }: any) => {
   if (label === '___SEPARATOR___') return null;
 
   if (active && payload && payload.length) {
-    // Helper to format currency
     const fmt = (val: number) => `Rp\u00A0${new Intl.NumberFormat('id-ID').format(val)}`;
 
     if (chartType === 'value') {
-      // Specialized tooltip for Value Breakdown
       return (
         <div className="rounded-lg border bg-background p-2 shadow-sm text-sm min-w-[150px]">
           <p className="font-bold mb-2 border-b pb-1">{label}</p>
@@ -47,7 +47,6 @@ const CustomTooltip = ({ active, payload, label, chartType }: any) => {
       );
     }
 
-    // Default tooltip for other types
     return (
       <div className="rounded-lg border bg-background p-2 shadow-sm text-sm">
         <p className="font-bold mb-2">{label}</p>
@@ -132,13 +131,33 @@ const RoundedBar = (props: any) => {
   }
 };
 
-const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
+const MonthlyProgressChart = ({ projects: initialProjects }: MonthlyProgressChartProps) => {
   const { hasPermission } = useAuth();
   const canViewValue = hasPermission('projects:view_value');
   const [chartType, setChartType] = useState<ChartType>('quantity');
   
   const { data: projectStatuses = [], isLoading: isLoadingProjectStatuses } = useProjectStatuses();
   const { data: paymentStatuses = [], isLoading: isLoadingPaymentStatuses } = usePaymentStatuses();
+
+  // Independently fetch all projects to ensure stats are accurate and not limited by parent pagination
+  const { data: allProjects } = useQuery({
+    queryKey: ['all_projects_for_chart'],
+    queryFn: async () => {
+        // Use RPC or select to get broader dataset. RPC is better for complex joins/filtering logic.
+        // Assuming get_dashboard_projects handles RLS correctly.
+        const { data, error } = await supabase.rpc('get_dashboard_projects', {
+            p_limit: 1000, // Fetch a large number for comprehensive stats
+            p_offset: 0,
+            p_search_term: '',
+        });
+        if (error) throw error;
+        // Map the result to match Project type interface loosely if needed, or cast
+        return data as unknown as Project[];
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  const projectsToUse = allProjects || initialProjects;
 
   useEffect(() => {
     if (!canViewValue && (chartType === 'value' || chartType === 'company_value')) {
@@ -147,10 +166,12 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
   }, [canViewValue, chartType]);
 
   const chartData = useMemo(() => {
+    if (!projectsToUse) return [];
+
     if (chartType === 'company_quantity' || chartType === 'company_value') {
       const companies = new Map<string, { name: string; quantity: number; value: number }>();
 
-      projects.forEach(project => {
+      projectsToUse.forEach(project => {
         const p = project as any;
         const companyName = p.client_company_name || 'No Company';
         
@@ -166,18 +187,14 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
       const allCompanies = Array.from(companies.values());
       const sortMetric = chartType === 'company_value' ? 'value' : 'quantity';
 
-      // Sort by metric descending
       const sortedByMetric = [...allCompanies].sort((a, b) => b[sortMetric] - a[sortMetric]);
 
-      // Split into top 5 and rest
       const top5 = sortedByMetric.slice(0, 5);
       const rest = sortedByMetric.slice(5);
 
-      // Sort rest alphabetically
       const restSorted = rest.sort((a, b) => a.name.localeCompare(b.name));
 
       if (restSorted.length > 0) {
-        // Add a separator
         return [...top5, { name: '___SEPARATOR___', quantity: 0, value: 0, isSeparator: true }, ...restSorted];
       }
 
@@ -205,7 +222,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
       return { ...base, ...projectStatusCounts, ...paymentStatusCounts };
     });
 
-    projects.forEach(project => {
+    projectsToUse.forEach(project => {
       if (project.start_date) {
         const monthIndex = getMonth(new Date(project.start_date));
         if (months[monthIndex]) {
@@ -213,7 +230,6 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
           const budget = project.budget || 0;
           months[monthIndex].value += budget;
 
-          // Financial Breakdown
           if (project.payment_status === 'Paid') {
             months[monthIndex].paid += budget;
           } else if (project.payment_status === 'Overdue') {
@@ -234,7 +250,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
     });
 
     return months;
-  }, [projects, chartType, projectStatuses, paymentStatuses]);
+  }, [projectsToUse, chartType, projectStatuses, paymentStatuses]);
 
   const isCompanyView = chartType.startsWith('company_');
 

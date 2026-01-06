@@ -83,13 +83,16 @@ const ProjectReportCard = ({ project }: ProjectReportCardProps) => {
         attachments = await Promise.all(uploadPromises);
       }
 
+      // Ensure text is not empty for the activity log to be meaningful
+      const commentText = content.trim() || (files.length > 0 ? `Submitted a report with ${files.length} file(s).` : "Submitted a report.");
+
       // Insert into comments as a report/update
       const { error } = await supabase
         .from('comments')
         .insert({
           project_id: project.id,
           author_id: user.id,
-          text: content,
+          text: commentText,
           attachments_jsonb: attachments,
           is_ticket: false 
         });
@@ -100,10 +103,10 @@ const ProjectReportCard = ({ project }: ProjectReportCardProps) => {
       toast.success("Report submitted successfully");
       setContent("");
       setFiles([]);
-      // Invalidate queries to refresh the UI (e.g. Activity feed, Comments list)
-      queryClient.invalidateQueries({ queryKey: ['project_comments', project.id] });
-      queryClient.invalidateQueries({ queryKey: ['project_activities', project.id] });
-      queryClient.invalidateQueries({ queryKey: ['project_files', project.id] });
+      // Invalidate queries broadly to ensure all related feeds update
+      queryClient.invalidateQueries({ queryKey: ['project_comments'] });
+      queryClient.invalidateQueries({ queryKey: ['project_activities'] });
+      queryClient.invalidateQueries({ queryKey: ['project_files'] });
       queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
     },
     onError: (error) => {
