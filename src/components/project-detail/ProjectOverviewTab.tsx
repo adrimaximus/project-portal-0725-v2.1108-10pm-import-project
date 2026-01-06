@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Project, Tag, Reaction } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import ProjectDescription from './ProjectDescription';
 import ProjectBrief from './ProjectBrief';
 import ProjectTags from './ProjectTags';
 import ProjectReportsList from './ProjectReportsList';
-import { Separator } from "@/components/ui/separator";
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { FileText, BarChart3, Tag as TagIcon, Paperclip } from 'lucide-react';
 
 interface ProjectOverviewTabProps {
   project: Project;
@@ -85,43 +85,81 @@ const ProjectOverviewTab = ({
   };
   
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="p-4 pb-2"><CardTitle>Description & Brief</CardTitle></CardHeader>
-        <CardContent className="p-4 pt-0">
-          <ProjectDescription
-            description={project.description}
-            isEditing={isEditing}
-            onDescriptionChange={onDescriptionChange}
-            onSetIsEditing={onSetIsEditing}
-            aiOptions={{
-              onGenerate: handleGenerateBrief,
-              isGenerating: isGenerating,
-              prompt: 'Generate with AI from project details'
-            }}
-          />
-          
-          <Separator className="my-4" />
-          
-          <div>
-            <h3 className="text-base font-semibold mb-2">Quick Reports</h3>
-            <ProjectReportsList projectId={project.id} />
-          </div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+      {/* Left Main Column (2/3) */}
+      <div className="lg:col-span-2 space-y-6">
+        {/* Project Description Card */}
+        <Card className="border-none shadow-sm bg-card/80 backdrop-blur-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2 text-primary">
+              <FileText className="w-5 h-5" />
+              <CardTitle className="text-lg">Project Brief</CardTitle>
+            </div>
+            <CardDescription>
+              Comprehensive overview and goals for this project.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ProjectDescription
+              description={project.description}
+              isEditing={isEditing}
+              onDescriptionChange={onDescriptionChange}
+              onSetIsEditing={onSetIsEditing}
+              aiOptions={{
+                onGenerate: handleGenerateBrief,
+                isGenerating: isGenerating,
+                prompt: 'Generate with AI'
+              }}
+            />
+          </CardContent>
+        </Card>
 
-          <Separator className="my-4" />
-          
-          <div>
-            <h3 className="text-base font-semibold mb-2">Project Tags</h3>
+        {/* Quick Reports Card */}
+        <Card className="border-none shadow-sm bg-card/80 backdrop-blur-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2 text-primary">
+              <BarChart3 className="w-5 h-5" />
+              <CardTitle className="text-lg">Quick Reports</CardTitle>
+            </div>
+            <CardDescription>
+              Recent updates, progress notes, and field reports.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ProjectReportsList projectId={project.id} />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Right Sidebar Column (1/3) */}
+      <div className="space-y-6">
+        {/* Tags & Reactions Card */}
+        <Card className="border-none shadow-sm bg-card/80 backdrop-blur-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2 text-primary">
+              <TagIcon className="w-5 h-5" />
+              <CardTitle className="text-lg">Tags & Reactions</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
             <ProjectTags
               project={project}
               isEditing={isEditing}
               onTagsChange={onTagsChange}
               onReactionsChange={onReactionsChange}
             />
-          </div>
-          <Separator className="my-4" />
-          <div>
-            <h3 className="text-base font-semibold mb-2">Project Files</h3>
+          </CardContent>
+        </Card>
+
+        {/* Files Card */}
+        <Card className="border-none shadow-sm bg-card/80 backdrop-blur-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2 text-primary">
+              <Paperclip className="w-5 h-5" />
+              <CardTitle className="text-lg">Files</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
             <ProjectBrief
               files={project.briefFiles || []}
               isEditing={isEditing}
@@ -130,9 +168,9 @@ const ProjectOverviewTab = ({
               onSetIsEditing={onSetIsEditing}
               isUploading={isUploading}
             />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
