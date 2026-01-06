@@ -143,13 +143,13 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
         const uploadPromises = editNewFiles.map(async (file) => {
           const fileName = `${projectId}/${Date.now()}-${file.name.replace(/[^\x00-\x7F]/g, "")}`;
           const { error: uploadError } = await supabase.storage
-            .from('project-attachments')
+            .from('project-files')
             .upload(fileName, file);
           
           if (uploadError) throw uploadError;
           
           const { data: { publicUrl } } = supabase.storage
-            .from('project-attachments')
+            .from('project-files')
             .getPublicUrl(fileName);
             
           return {
