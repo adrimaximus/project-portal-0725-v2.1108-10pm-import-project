@@ -12,10 +12,11 @@ interface MarkdownRendererProps {
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className }) => {
   // Pre-process mentions: @[Name](id) -> [@Name](mention:id)
-  // Pre-process private tag: #private -> [🔒 Private](private:tag)
+  // Pre-process private tag: #private -> [#private](private:tag)
+  // We keep the '#' in the label part of the markdown link
   const processedContent = children
     .replace(/@\[(.*?)\]\((.*?)\)/g, '[@$1](mention:$2)')
-    .replace(/#private/g, '[Private](private:tag)');
+    .replace(/#private/g, '[#private](private:tag)');
 
   return (
     <div className={cn("markdown-content text-sm leading-relaxed", className)}>
@@ -38,8 +39,10 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, className
               );
             }
             if (href?.startsWith('private:')) {
+              // Render as a badge (span), not a link.
+              // cursor-default ensures it doesn't look clickable.
               return (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 select-none align-middle mr-1">
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 select-none align-middle mr-1 cursor-default">
                   <Lock className="w-2.5 h-2.5" />
                   {children}
                 </span>
