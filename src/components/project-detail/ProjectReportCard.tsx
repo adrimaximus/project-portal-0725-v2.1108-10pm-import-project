@@ -56,6 +56,21 @@ const ProjectReportCard = ({ project }: ProjectReportCardProps) => {
             .from('project-files')
             .getPublicUrl(fileName);
 
+          // Insert into project_files table to track it globally and generate activity
+          const { error: dbError } = await supabase
+            .from('project_files')
+            .insert({
+              project_id: project.id,
+              user_id: user.id,
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              url: publicUrl,
+              storage_path: fileName
+            });
+
+          if (dbError) throw dbError;
+
           return {
             name: file.name,
             url: publicUrl,
@@ -88,6 +103,7 @@ const ProjectReportCard = ({ project }: ProjectReportCardProps) => {
       // Invalidate queries to refresh the UI (e.g. Activity feed, Comments list)
       queryClient.invalidateQueries({ queryKey: ['project_comments', project.id] });
       queryClient.invalidateQueries({ queryKey: ['project_activities', project.id] });
+      queryClient.invalidateQueries({ queryKey: ['project_files', project.id] });
       queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
     },
     onError: (error) => {
