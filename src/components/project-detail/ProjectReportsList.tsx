@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Download, User } from "lucide-react";
+import { FileText, User } from "lucide-react";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -23,6 +23,13 @@ interface Report {
 interface ProjectReportsListProps {
   projectId: string;
 }
+
+const isImageFile = (file: any) => {
+  if (file.type?.startsWith("image/")) return true;
+  const name = file.name || "";
+  const ext = name.split(".").pop()?.toLowerCase();
+  return ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(ext || "");
+};
 
 const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
   const [reports, setReports] = useState<Report[]>([]);
@@ -132,19 +139,33 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
             
             {report.attachments && Array.isArray(report.attachments) && report.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-border/50">
-                {report.attachments.map((file: any, index: number) => (
-                  <a
-                    key={index}
-                    href={file.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-xs bg-background hover:bg-muted p-2 rounded-md border transition-colors group"
-                  >
-                    <FileText className="h-3.5 w-3.5 text-primary/70 group-hover:text-primary" />
-                    <span className="truncate max-w-[200px] font-medium">{file.name}</span>
-                    <Download className="h-3 w-3 text-muted-foreground group-hover:text-foreground ml-1" />
-                  </a>
-                ))}
+                {report.attachments.map((file: any, index: number) => {
+                  const isImg = isImageFile(file);
+                  return (
+                    <a
+                      key={index}
+                      href={file.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group relative block h-24 w-24 overflow-hidden rounded-lg border bg-muted/20 hover:opacity-90 transition-all"
+                    >
+                      {isImg ? (
+                        <img
+                          src={file.url}
+                          alt={file.name}
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center">
+                          <FileText className="h-8 w-8 text-muted-foreground/50 mb-1" />
+                          <span className="w-full truncate text-[10px] text-muted-foreground">
+                            {file.name}
+                          </span>
+                        </div>
+                      )}
+                    </a>
+                  );
+                })}
               </div>
             )}
           </CardContent>
