@@ -3,11 +3,10 @@ import { Project, Tag, Reaction } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import ProjectDescription from './ProjectDescription';
 import ProjectBrief from './ProjectBrief';
-import ProjectTags from './ProjectTags';
 import ProjectReportsList from './ProjectReportsList';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { FileText, BarChart3, Tag as TagIcon, Paperclip } from 'lucide-react';
+import { FileText, BarChart3 } from 'lucide-react';
 
 interface ProjectOverviewTabProps {
   project: Project;
@@ -29,8 +28,6 @@ const ProjectOverviewTab = ({
   onDescriptionChange, 
   onFilesAdd, 
   onFileDelete,
-  onTagsChange,
-  onReactionsChange,
   onSetIsEditing,
   isUploading,
   onSaveChanges,
@@ -85,82 +82,58 @@ const ProjectOverviewTab = ({
   };
   
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
-      {/* Left Main Column (2/3) */}
-      <div className="lg:col-span-2 space-y-6">
-        {/* Project Description Card */}
-        <Card className="border-none shadow-sm bg-card/80 backdrop-blur-sm">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 text-primary">
-              <FileText className="w-5 h-5" />
-              <CardTitle className="text-lg">Project Brief</CardTitle>
-            </div>
-            <CardDescription>
-              Comprehensive overview and goals for this project.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ProjectDescription
-              description={project.description}
+    <div className="flex flex-col gap-6 animate-fade-in max-w-5xl mx-auto w-full">
+      {/* Project Description Card */}
+      <Card className="border-none shadow-sm bg-card/80 backdrop-blur-sm">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2 text-primary">
+            <FileText className="w-5 h-5" />
+            <CardTitle className="text-lg">Project Brief</CardTitle>
+          </div>
+          <CardDescription>
+            Comprehensive overview and goals for this project.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ProjectDescription
+            description={project.description}
+            isEditing={isEditing}
+            onDescriptionChange={onDescriptionChange}
+            onSetIsEditing={onSetIsEditing}
+            aiOptions={{
+              onGenerate: handleGenerateBrief,
+              isGenerating: isGenerating,
+              prompt: 'Generate with AI'
+            }}
+          />
+          <div className="mt-6">
+            <ProjectBrief
+              files={project.briefFiles || []}
               isEditing={isEditing}
-              onDescriptionChange={onDescriptionChange}
+              onFilesChange={onFilesAdd}
+              onFileDelete={onFileDelete}
               onSetIsEditing={onSetIsEditing}
-              aiOptions={{
-                onGenerate: handleGenerateBrief,
-                isGenerating: isGenerating,
-                prompt: 'Generate with AI'
-              }}
+              isUploading={isUploading}
             />
-            <div className="mt-6">
-              <ProjectBrief
-                files={project.briefFiles || []}
-                isEditing={isEditing}
-                onFilesChange={onFilesAdd}
-                onFileDelete={onFileDelete}
-                onSetIsEditing={onSetIsEditing}
-                isUploading={isUploading}
-              />
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Quick Reports Card */}
-        <Card className="border-none shadow-sm bg-card/80 backdrop-blur-sm">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 text-primary">
-              <BarChart3 className="w-5 h-5" />
-              <CardTitle className="text-lg">Quick Reports</CardTitle>
-            </div>
-            <CardDescription>
-              Recent updates, progress notes, and field reports.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ProjectReportsList projectId={project.id} />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Right Sidebar Column (1/3) */}
-      <div className="space-y-6">
-        {/* Tags & Reactions Card */}
-        <Card className="border-none shadow-sm bg-card/80 backdrop-blur-sm">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 text-primary">
-              <TagIcon className="w-5 h-5" />
-              <CardTitle className="text-lg">Tags & Reactions</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ProjectTags
-              project={project}
-              isEditing={isEditing}
-              onTagsChange={onTagsChange}
-              onReactionsChange={onReactionsChange}
-            />
-          </CardContent>
-        </Card>
-      </div>
+      {/* Quick Reports Card */}
+      <Card className="border-none shadow-sm bg-card/80 backdrop-blur-sm">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2 text-primary">
+            <BarChart3 className="w-5 h-5" />
+            <CardTitle className="text-lg">Quick Reports</CardTitle>
+          </div>
+          <CardDescription>
+            Recent updates, progress notes, and field reports.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ProjectReportsList projectId={project.id} />
+        </CardContent>
+      </Card>
     </div>
   );
 };
