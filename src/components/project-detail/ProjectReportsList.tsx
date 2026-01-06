@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +16,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import EmojiReactionPicker from "@/components/EmojiReactionPicker";
+import { cn } from "@/lib/utils";
+
+interface ReportReaction {
+  id: string;
+  emoji: string;
+  user_id: string;
+}
 
 interface Report {
   id: string;
@@ -29,6 +37,7 @@ interface Report {
     email: string;
     avatar_url: string | null;
   };
+  project_report_reactions?: ReportReaction[];
 }
 
 interface ProjectReportsListProps {
@@ -70,6 +79,11 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
             last_name,
             email,
             avatar_url
+          ),
+          project_report_reactions (
+            id,
+            emoji,
+            user_id
           )
         `)
         .eq("project_id", projectId)
@@ -103,6 +117,18 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
           filter: `project_id=eq.${projectId}`,
         },
         () => {
+          fetchReports();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "project_report_reactions",
+        },
+        () => {
+          // Ideally we'd filter by report IDs but for simplicity we refetch
           fetchReports();
         }
       )
@@ -177,7 +203,7 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
 
       toast.success("Report updated successfully");
       handleCancelEdit();
-      fetchReports(); // Manually fetch to ensure UI updates immediately
+      fetchReports();
     } catch (error: any) {
       console.error("Error updating report:", error);
       toast.error(`Failed to update report: ${error.message}`);
@@ -197,11 +223,42 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
 
       if (error) throw error;
       toast.success("Report deleted successfully");
-      fetchReports(); // Manually fetch to ensure UI updates immediately
+      fetchReports();
     } catch (error: any) {
       console.error("Error deleting report:", error);
       toast.error(`Failed to delete report: ${error.message}`);
     }
+  };
+
+  const handleReaction = async (reportId: string, emoji: string) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase.rpc('toggle_report_reaction', {
+        p_report_id: reportId,
+        p_emoji: emoji
+      });
+
+      if (error) throw error;
+      // Realtime subscription will handle refresh
+    } catch (error: any) {
+      console.error("Error toggling reaction:", error);
+      toast.error("Failed to add reaction");
+    }
+  };
+
+  // Group reactions by emoji
+  const getGroupedReactions = (reactions: ReportReaction[] = []) => {
+    const groups: Record<string, { count: number; hasReacted: boolean }> = {};
+    reactions.forEach(r => {
+      if (!groups[r.emoji]) {
+        groups[r.emoji] = { count: 0, hasReacted: false };
+      }
+      groups[r.emoji].count++;
+      if (r.user_id === user?.id) {
+        groups[r.emoji].hasReacted = true;
+      }
+    });
+    return Object.entries(groups);
   };
 
   if (loading) {
@@ -421,6 +478,28 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
                       })}
                     </div>
                   )}
+
+                  {/* Reactions Section */}
+                  <div className="flex flex-wrap items-center gap-2 mt-4 pt-2">
+                    <EmojiReactionPicker onSelect={(emoji) => handleReaction(report.id, emoji)} />
+                    {getGroupedReactions(report.project_report_reactions).map(([emoji, { count, hasReacted }]) => (
+                      <Button
+                        key={emoji}
+                        variant={hasReacted ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => handleReaction(report.id, emoji)}
+                        className={cn(
+                          "h-7 px-2 text-xs rounded-full gap-1.5",
+                          hasReacted 
+                            ? "bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20" 
+                            : "bg-muted/50 hover:bg-muted text-muted-foreground border border-transparent"
+                        )}
+                      >
+                        <span>{emoji}</span>
+                        {count > 0 && <span className="font-medium">{count}</span>}
+                      </Button>
+                    ))}
+                  </div>
                 </>
               )}
             </CardContent>
