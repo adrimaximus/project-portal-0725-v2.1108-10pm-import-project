@@ -137,7 +137,7 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
   const canViewValue = hasPermission('projects:view_value');
   const [chartType, setChartType] = useState<ChartType>('quantity');
   
-  const { data: projectStatuses = [] } = useProjectStatuses();
+  const { data: projectStatuses = [], isLoading: isLoadingProjectStatuses } = useProjectStatuses();
   const { data: paymentStatuses = [], isLoading: isLoadingPaymentStatuses } = usePaymentStatuses();
 
   useEffect(() => {
@@ -325,7 +325,8 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
         );
       }
       case 'project_status':
-        if (projectStatuses.length === 0) return <div className="flex items-center justify-center h-full">Loading...</div>;
+        if (isLoadingProjectStatuses) return <div className="flex items-center justify-center h-full">Loading...</div>;
+        if (projectStatuses.length === 0) return <div className="flex items-center justify-center h-full">No statuses defined</div>;
 
         return (
           <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -349,9 +350,9 @@ const MonthlyProgressChart = ({ projects }: MonthlyProgressChartProps) => {
           </BarChart>
         );
       case 'payment_status':
-        if (isLoadingPaymentStatuses || paymentStatuses.length === 0) {
-          return <div className="flex items-center justify-center h-full">Loading statuses...</div>;
-        }
+        if (isLoadingPaymentStatuses) return <div className="flex items-center justify-center h-full">Loading...</div>;
+        if (paymentStatuses.length === 0) return <div className="flex items-center justify-center h-full">No statuses defined</div>;
+
         return (
           <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
