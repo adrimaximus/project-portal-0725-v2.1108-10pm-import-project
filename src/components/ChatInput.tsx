@@ -1,7 +1,7 @@
 import { useRef, useState, forwardRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
-import { Paperclip, Send, X, Loader2, UploadCloud, Smile, Camera, Mic, Check, Pencil, FileText } from "lucide-react";
+import { Paperclip, Send, X, Loader2, UploadCloud, Smile, Camera, Mic, Check, Pencil, FileText, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Message } from "@/types";
 import VoiceMessageRecorder from "./VoiceMessageRecorder";
@@ -39,11 +39,32 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   const storageKey = `chat-draft:${conversationId}`;
   const [text, setText] = useState('');
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const lastTypingSentAtRef = useRef<number>(0);
   const { selectedConversation, projectSuggestions, taskSuggestions, billSuggestions } = useChatContext();
   const { theme } = useTheme();
   const { user: currentUser } = useAuth();
   const mentionsInputRef = useRef<any>(null);
+
+  // Generate previews safely in a useEffect to avoid render-cycle errors and memory leaks
+  useEffect(() => {
+    const newPreviews = attachmentFiles.map(file => {
+      try {
+        return URL.createObjectURL(file);
+      } catch (e) {
+        console.warn("Failed to create object URL for file", file.name, e);
+        return "";
+      }
+    });
+    setPreviews(newPreviews);
+
+    // Cleanup function to revoke URLs
+    return () => {
+      newPreviews.forEach(url => {
+        if (url) URL.revokeObjectURL(url);
+      });
+    };
+  }, [attachmentFiles]);
 
   useEffect(() => {
     if (editingMessage) {
@@ -255,42 +276,39 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
       </div>
       
       {attachmentFiles.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-2 px-1">
+        <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-border/50">
           {attachmentFiles.map((file, index) => {
             const isImg = file.type.startsWith('image/');
-            const previewUrl = URL.createObjectURL(file);
+            const previewUrl = previews[index];
             
             return (
-              <div key={index} className="w-[60px] h-[60px] relative group">
-                <div className={cn(
-                  "w-full h-full rounded-md overflow-hidden border border-border/50 bg-background relative",
-                  !isImg && "bg-muted/30 flex flex-col items-center justify-center p-1"
-                )}>
-                  {isImg ? (
-                    <img 
-                      src={previewUrl} 
-                      alt={file.name} 
-                      className="w-full h-full object-cover" 
-                      onLoad={() => URL.revokeObjectURL(previewUrl)}
-                    />
-                  ) : (
-                    <>
-                      {file.type === 'application/pdf' ? (
-                        <FileText className="h-6 w-6 text-red-500 mb-0.5" />
-                      ) : (
-                        <Paperclip className="h-6 w-6 text-muted-foreground mb-0.5" />
-                      )}
-                      <span className="text-[8px] text-muted-foreground w-full truncate px-0.5 text-center">
-                        {file.name}
-                      </span>
-                    </>
-                  )}
-                </div>
+              <div key={index} className="w-[60px] h-[60px] relative group bg-background rounded-md border border-border overflow-hidden">
+                {isImg && previewUrl ? (
+                  <img 
+                    src={previewUrl} 
+                    alt={file.name} 
+                    className="w-full h-full object-cover" 
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center p-1 bg-muted/20">
+                    {file.type === 'application/pdf' ? (
+                      <FileText className="h-6 w-6 text-red-500 mb-0.5" />
+                    ) : (
+                      <Paperclip className="h-6 w-6 text-muted-foreground mb-0.5" />
+                    )}
+                    <span className="text-[8px] text-muted-foreground w-full truncate px-0.5 text-center">
+                      {file.name.slice(0, 8)}...
+                    </span>
+                  </div>
+                )}
                 
                 <button
                   type="button"
-                  onClick={() => removeFile(index)}
-                  className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeFile(index);
+                  }}
+                  className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-destructive/90"
                 >
                   <X className="h-3 w-3" />
                 </button>
