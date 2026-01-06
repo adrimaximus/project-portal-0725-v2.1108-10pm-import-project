@@ -22,9 +22,15 @@ const ProjectReportCard = ({ project }: ProjectReportCardProps) => {
   const queryClient = useQueryClient();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFiles((prev) => [...prev, ...Array.from(e.target.files || [])]);
+    // CRITICAL FIX: Capture files immediately into a local variable
+    // accessing e.target.files inside the setFiles callback later would fail
+    // because we reset the input value synchronously below.
+    const selectedFiles = Array.from(e.target.files || []);
+
+    if (selectedFiles.length > 0) {
+      setFiles((prev) => [...prev, ...selectedFiles]);
     }
+    
     // Reset input so the same file can be selected again if needed
     if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -43,9 +49,7 @@ const ProjectReportCard = ({ project }: ProjectReportCardProps) => {
 
       if (files.length > 0) {
         const uploadPromises = files.map(async (file) => {
-          // We still use the 'project-files' bucket for storage, 
-          // but we DO NOT insert into the 'project_files' TABLE.
-          // This keeps it out of the Brief/Attachments list.
+          // Upload to 'project-files' bucket
           const fileName = `reports/${project.id}/${Date.now()}-${file.name.replace(/[^\x00-\x7F]/g, "")}`;
           
           const { error: uploadError } = await supabase.storage
