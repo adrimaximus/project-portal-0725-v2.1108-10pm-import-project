@@ -110,6 +110,8 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
       'application/vnd.ms-excel': ['.xls'],
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/vnd.ms-powerpoint': ['.ppt'],
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
       'text/csv': ['.csv'],
       'application/zip': ['.zip'],
       'application/x-zip-compressed': ['.zip'],
@@ -185,6 +187,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   const getFileIcon = (file: File) => {
     if (file.type.includes('pdf')) return <FileText className="h-6 w-6 text-red-500 mb-0.5" />;
     if (file.type.includes('spreadsheet') || file.type.includes('excel') || file.type.includes('csv')) return <FileSpreadsheet className="h-6 w-6 text-green-500 mb-0.5" />;
+    if (file.type.includes('presentation') || file.type.includes('powerpoint')) return <FileText className="h-6 w-6 text-orange-500 mb-0.5" />;
     if (file.type.includes('zip') || file.type.includes('compressed') || file.type.includes('rar')) return <FileArchive className="h-6 w-6 text-yellow-500 mb-0.5" />;
     if (file.type.includes('word') || file.type.includes('document')) return <FileText className="h-6 w-6 text-blue-500 mb-0.5" />;
     return <File className="h-6 w-6 text-muted-foreground mb-0.5" />;
