@@ -93,11 +93,13 @@ serve(async (req) => {
 
     // 4. Fetch events from each selected calendar
     const timeMin = new Date().toISOString();
-    const timeMax = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // Next 30 days
+    // Expand window to 2 years to catch future events like 2026
+    const timeMax = new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toISOString(); 
 
     const eventPromises = selectedCalendarIds.map(async (calendarId: string) => {
       try {
-        const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=50`, {
+        // Increased maxResults to 2500 (Google API page limit) to accommodate the larger time window
+        const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=2500`, {
           headers: { Authorization: `Bearer ${access_token}` },
         });
         if (!res.ok) {
