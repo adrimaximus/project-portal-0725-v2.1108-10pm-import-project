@@ -104,9 +104,10 @@ const ProjectReportCard = ({ project }: ProjectReportCardProps) => {
       setContent("");
       setFiles([]);
       // Invalidate queries broadly to ensure all related feeds update
-      queryClient.invalidateQueries({ queryKey: ['project_comments'] });
-      queryClient.invalidateQueries({ queryKey: ['project_activities'] });
-      queryClient.invalidateQueries({ queryKey: ['project_files'] });
+      queryClient.invalidateQueries({ queryKey: ['project_comments', project.id] });
+      queryClient.invalidateQueries({ queryKey: ['project_reports', project.id] }); // Update the reports list
+      queryClient.invalidateQueries({ queryKey: ['project_activities', project.id] });
+      queryClient.invalidateQueries({ queryKey: ['project_files', project.id] });
       queryClient.invalidateQueries({ queryKey: ['project', project.slug] });
     },
     onError: (error) => {
