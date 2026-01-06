@@ -103,7 +103,7 @@ const ProjectDetail = () => {
 
   const enterEditMode = () => {
     if (project) {
-      setEditedProject(JSON.parse(JSON.stringify(project))); // Deep copy
+      setEditedProject(JSON.parse(JSON.stringify(project)));
       setIsEditing(true);
       setHasChanges(false);
     }

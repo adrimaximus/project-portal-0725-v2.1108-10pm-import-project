@@ -7,15 +7,11 @@ import ProjectTasks from '../projects/ProjectTasks';
 import ProjectActivityFeed from './ProjectActivityFeed';
 import { LayoutGrid, ListChecks, MessageSquare, Activity } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import { addHours } from 'date-fns';
 import { toast } from 'sonner';
 import { useCommentManager } from '@/hooks/useCommentManager';
 import ProjectComments from '@/components/project-detail/ProjectComments';
-import { useProfiles } from '@/hooks/useProfiles';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { CommentInputHandle } from '../CommentInput';
-import ProjectExpensesCard from './ProjectExpensesCard';
 
 interface ProjectMainContentProps {
   project: Project;
@@ -83,13 +79,9 @@ const ProjectMainContent = ({
   const [newAttachments, setNewAttachments] = useState<File[]>([]);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   
-  // Determine users for mentions. Priority: Project Members + Owner
-  // This ensures @all only notifies people relevant to this project
   const projectUsers = useMemo(() => {
       const users: User[] = [...project.assignedTo];
-      // Add owner if not already in list
       if (project.created_by && !users.some(u => u.id === project.created_by.id)) {
-          // Map Owner to User type (Owner is subset, we add missing fields as optional/defaults)
           users.push({
               ...project.created_by,
               first_name: project.created_by.name?.split(' ')[0],
@@ -253,8 +245,6 @@ const ProjectMainContent = ({
             isUploading={isUploading}
             onSaveChanges={onSaveChanges}
           />
-          
-          <ProjectExpensesCard project={project} />
         </TabsContent>
         <TabsContent value="tasks" className="mt-4">
           <ProjectTasks
@@ -301,7 +291,7 @@ const ProjectMainContent = ({
             editFileInputRef={editFileInputRef}
             initialMention={initialMention}
             onMentionConsumed={handleMentionConsumed}
-            allUsers={projectUsers} // Pass the scoped list of project members
+            allUsers={projectUsers}
             onGoToReply={handleScrollToMessage}
             highlightedCommentId={highlightedCommentId}
             onHighlightComplete={onCommentHighlightComplete}
