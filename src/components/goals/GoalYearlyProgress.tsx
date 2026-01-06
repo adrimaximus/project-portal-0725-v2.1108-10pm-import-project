@@ -22,11 +22,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -1047,26 +1042,8 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                   </div>
                               )}
                               <div className="relative">
-                                  <Popover open={mentionOpen} onOpenChange={setMentionOpen}>
-                                    <PopoverTrigger asChild>
-                                        <div className="w-full">
-                                            <Textarea
-                                                ref={commentTextareaRef}
-                                                placeholder="Write a comment... (Type @ to mention)"
-                                                className="min-h-[80px] text-xs resize-none pr-20 pb-8"
-                                                value={commentText}
-                                                onChange={handleCommentChange}
-                                                onKeyDown={handleKeyDown}
-                                            />
-                                        </div>
-                                    </PopoverTrigger>
-                                    <PopoverContent 
-                                        className="p-0 w-[200px]" 
-                                        align="start" 
-                                        side="top"
-                                        onOpenAutoFocus={(e) => e.preventDefault()}
-                                        onCloseAutoFocus={(e) => e.preventDefault()}
-                                    >
+                                  {mentionOpen && (
+                                    <div className="absolute bottom-full left-0 mb-2 w-[200px] z-50 rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95">
                                         <Command shouldFilter={false}>
                                             <CommandList>
                                                 <CommandEmpty>No person found.</CommandEmpty>
@@ -1091,8 +1068,20 @@ const GoalYearlyProgress = ({ goal, onToggleCompletion, onUpdateCompletion }: Go
                                                 </CommandGroup>
                                             </CommandList>
                                         </Command>
-                                    </PopoverContent>
-                                  </Popover>
+                                    </div>
+                                  )}
+                                  
+                                  <div className="w-full">
+                                      <Textarea
+                                          ref={commentTextareaRef}
+                                          placeholder="Write a comment... (Type @ to mention)"
+                                          className="min-h-[80px] text-xs resize-none pr-20 pb-8"
+                                          value={commentText}
+                                          onChange={handleCommentChange}
+                                          onKeyDown={handleKeyDown}
+                                      />
+                                  </div>
+                                  
                                   <div className="absolute bottom-2 right-2 flex gap-1">
                                       <Button
                                           size="icon"
