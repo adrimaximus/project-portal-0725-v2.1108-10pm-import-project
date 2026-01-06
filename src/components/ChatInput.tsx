@@ -1,7 +1,7 @@
-import { useRef, useState, forwardRef, useImperativeHandle, useEffect } from 'react';
+import { useRef, useState, forwardRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
-import { Paperclip, Send, X, Loader2, UploadCloud, Smile, Camera, Mic, Check, Pencil } from "lucide-react";
+import { Paperclip, Send, X, Loader2, UploadCloud, Smile, Camera, Mic, Check, Pencil, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Message } from "@/types";
 import VoiceMessageRecorder from "./VoiceMessageRecorder";
@@ -16,7 +16,7 @@ import SafeLocalStorage from '@/lib/localStorage';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface ChatInputProps {
-  onSendMessage: (text: string, attachment: File | null, replyToMessageId?: string | null) => void;
+  onSendMessage: (text: string, attachments: File[], replyToMessageId?: string | null) => void;
   onTyping?: () => void;
   isSending: boolean;
   conversationId: string;
@@ -38,7 +38,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
 }, ref) => {
   const storageKey = `chat-draft:${conversationId}`;
   const [text, setText] = useState('');
-  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const lastTypingSentAtRef = useRef<number>(0);
   const { selectedConversation, projectSuggestions, taskSuggestions, billSuggestions } = useChatContext();
   const { theme } = useTheme();
@@ -73,7 +73,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
 
   const onDrop = (acceptedFiles: File[]) => {
     if (acceptedFiles && acceptedFiles.length > 0) {
-      setAttachmentFile(acceptedFiles[0]);
+      setAttachmentFiles(prev => [...prev, ...acceptedFiles]);
     }
   };
 
@@ -81,7 +81,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     onDrop,
     noClick: true,
     noKeyboard: true,
-    multiple: false,
+    multiple: true,
     accept: {
       'image/*': ['.jpeg', '.png', '.gif', '.webp'],
       'application/pdf': ['.pdf'],
@@ -101,7 +101,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
   };
 
   const handleSend = async () => {
-    if (!text.trim() && !attachmentFile) return;
+    if (!text.trim() && attachmentFiles.length === 0) return;
 
     let finalText = text;
 
@@ -117,14 +117,14 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
        finalText = finalText.replace(/@\[[^\]]+\]\(all\)/g, allMentions);
     }
 
-    onSendMessage(finalText, attachmentFile, replyTo?.id);
+    onSendMessage(finalText, attachmentFiles, replyTo?.id);
     setText("");
-    setAttachmentFile(null);
+    setAttachmentFiles([]);
     SafeLocalStorage.removeItem(storageKey);
   };
 
   const handleSendVoiceMessage = (file: File) => {
-    onSendMessage("", file, replyTo?.id);
+    onSendMessage("", [file], replyTo?.id);
     onCancelReply();
   };
 
@@ -150,6 +150,10 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     handleTextChange(newText);
   };
 
+  const removeFile = (index: number) => {
+    setAttachmentFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
   return (
     <div {...getRootProps()} className="border-t p-2 md:p-4 flex-shrink-0 relative bg-background safe-area-bottom">
       <input {...getInputProps()} />
@@ -157,7 +161,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
       {isDragActive && (
         <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center z-10 border-2 border-dashed border-primary rounded-lg m-4">
           <UploadCloud className="h-10 w-10 text-primary" />
-          <p className="mt-2 text-lg font-medium text-primary">Drop file to attach</p>
+          <p className="mt-2 text-lg font-medium text-primary">Drop files to attach</p>
         </div>
       )}
 
@@ -241,7 +245,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
             </Button>
           </div>
         </div>
-        {text.trim() || attachmentFile ? (
+        {text.trim() || attachmentFiles.length > 0 ? (
           <Button size="icon" onClick={handleSend} disabled={isSending} className="h-10 w-10 flex-shrink-0">
             {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : (editingMessage ? <Check className="h-5 w-5" /> : <Send className="h-5 w-5" />)}
           </Button>
@@ -249,13 +253,50 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
           <VoiceMessageRecorder onSend={handleSendVoiceMessage} disabled={isSending} />
         )}
       </div>
-      {attachmentFile && (
-        <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground bg-muted p-2 rounded-md">
-          <Paperclip className="h-4 w-4" />
-          <span className="truncate flex-1">{attachmentFile.name}</span>
-          <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto flex-shrink-0" onClick={() => setAttachmentFile(null)} disabled={isSending}>
-            <X className="h-4 w-4" />
-          </Button>
+      
+      {attachmentFiles.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-2 px-1">
+          {attachmentFiles.map((file, index) => {
+            const isImg = file.type.startsWith('image/');
+            const previewUrl = URL.createObjectURL(file);
+            
+            return (
+              <div key={index} className="w-[60px] h-[60px] relative group">
+                <div className={cn(
+                  "w-full h-full rounded-md overflow-hidden border border-border/50 bg-background relative",
+                  !isImg && "bg-muted/30 flex flex-col items-center justify-center p-1"
+                )}>
+                  {isImg ? (
+                    <img 
+                      src={previewUrl} 
+                      alt={file.name} 
+                      className="w-full h-full object-cover" 
+                      onLoad={() => URL.revokeObjectURL(previewUrl)}
+                    />
+                  ) : (
+                    <>
+                      {file.type === 'application/pdf' ? (
+                        <FileText className="h-6 w-6 text-red-500 mb-0.5" />
+                      ) : (
+                        <Paperclip className="h-6 w-6 text-muted-foreground mb-0.5" />
+                      )}
+                      <span className="text-[8px] text-muted-foreground w-full truncate px-0.5 text-center">
+                        {file.name}
+                      </span>
+                    </>
+                  )}
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={() => removeFile(index)}
+                  className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
