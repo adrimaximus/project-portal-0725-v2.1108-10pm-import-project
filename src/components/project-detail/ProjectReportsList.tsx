@@ -177,7 +177,7 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
 
       toast.success("Report updated successfully");
       handleCancelEdit();
-      // Realtime subscription will handle refresh
+      fetchReports(); // Manually fetch to ensure UI updates immediately
     } catch (error: any) {
       console.error("Error updating report:", error);
       toast.error(`Failed to update report: ${error.message}`);
@@ -197,6 +197,7 @@ const ProjectReportsList = ({ projectId }: ProjectReportsListProps) => {
 
       if (error) throw error;
       toast.success("Report deleted successfully");
+      fetchReports(); // Manually fetch to ensure UI updates immediately
     } catch (error: any) {
       console.error("Error deleting report:", error);
       toast.error(`Failed to delete report: ${error.message}`);
