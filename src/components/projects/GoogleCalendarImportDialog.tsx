@@ -232,7 +232,7 @@ export const GoogleCalendarImportDialog = (
                                 <label
                                     htmlFor="select-all"
                                     className="text-sm font-medium leading-none cursor-pointer">Select All ({selectedEvents.length}/ {filteredEvents.length})
-                                                      </label>
+                                                                                          </label>
                             </div>
                         </div>
                         <ScrollArea className="flex-grow rounded-[32px] bg-[#ffffff]">
