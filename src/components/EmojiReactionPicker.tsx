@@ -25,10 +25,8 @@ const EmojiReactionPicker = ({ onSelect }: EmojiReactionPickerProps) => {
     }
   };
 
-  const handleSelect = (emoji: string, e?: React.MouseEvent | any) => {
-    // Prevent event bubbling to avoid triggering parent handlers (like closing parent popovers or navigation)
+  const handleSelect = (emoji: string, e?: React.MouseEvent) => {
     if (e) {
-      e.preventDefault();
       e.stopPropagation();
     }
     
@@ -45,7 +43,6 @@ const EmojiReactionPicker = ({ onSelect }: EmojiReactionPickerProps) => {
           size="icon" 
           className="h-7 w-7 text-muted-foreground hover:text-foreground"
           type="button"
-          onClick={(e) => e.stopPropagation()}
         >
           <SmilePlus className="h-4 w-4" />
         </Button>
