@@ -1,7 +1,7 @@
 import { useRef, useState, forwardRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from "./ui/button";
-import { Paperclip, Send, X, Loader2, UploadCloud, Smile, Camera, Mic, Check, Pencil, FileText, Image as ImageIcon } from "lucide-react";
+import { Paperclip, Send, X, Loader2, UploadCloud, Smile, Camera, Mic, Check, Pencil, FileText, Image as ImageIcon, FileSpreadsheet, FileArchive, File } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Message } from "@/types";
 import VoiceMessageRecorder from "./VoiceMessageRecorder";
@@ -104,10 +104,17 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
     noKeyboard: true,
     multiple: true,
     accept: {
-      'image/*': ['.jpeg', '.png', '.gif', '.webp'],
+      'image/*': ['.jpeg', '.png', '.gif', '.webp', '.jpg'],
       'application/pdf': ['.pdf'],
       'application/msword': ['.doc'],
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'text/csv': ['.csv'],
+      'application/zip': ['.zip'],
+      'application/x-zip-compressed': ['.zip'],
+      'application/x-rar-compressed': ['.rar'],
+      'text/plain': ['.txt'],
     }
   });
 
@@ -173,6 +180,14 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
 
   const removeFile = (index: number) => {
     setAttachmentFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const getFileIcon = (file: File) => {
+    if (file.type.includes('pdf')) return <FileText className="h-6 w-6 text-red-500 mb-0.5" />;
+    if (file.type.includes('spreadsheet') || file.type.includes('excel') || file.type.includes('csv')) return <FileSpreadsheet className="h-6 w-6 text-green-500 mb-0.5" />;
+    if (file.type.includes('zip') || file.type.includes('compressed') || file.type.includes('rar')) return <FileArchive className="h-6 w-6 text-yellow-500 mb-0.5" />;
+    if (file.type.includes('word') || file.type.includes('document')) return <FileText className="h-6 w-6 text-blue-500 mb-0.5" />;
+    return <File className="h-6 w-6 text-muted-foreground mb-0.5" />;
   };
 
   return (
@@ -291,11 +306,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center p-1 bg-muted/20">
-                    {file.type === 'application/pdf' ? (
-                      <FileText className="h-6 w-6 text-red-500 mb-0.5" />
-                    ) : (
-                      <Paperclip className="h-6 w-6 text-muted-foreground mb-0.5" />
-                    )}
+                    {getFileIcon(file)}
                     <span className="text-[8px] text-muted-foreground w-full truncate px-0.5 text-center">
                       {file.name.slice(0, 8)}...
                     </span>
