@@ -29,11 +29,11 @@ const ProjectOverviewTab = ({
   isEditing, 
   onDescriptionChange, 
   onFilesAdd, 
-  onFileDelete,
-  onTagsChange,
-  onReactionsChange,
-  onSetIsEditing,
-  isUploading,
+  onFileDelete, 
+  onTagsChange, 
+  onReactionsChange, 
+  onSetIsEditing, 
+  isUploading, 
   onSaveChanges,
 }: ProjectOverviewTabProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
