@@ -65,7 +65,7 @@ const ProjectExpensesCard = ({ project }: ProjectExpensesCardProps) => {
 
   return (
     <>
-      <Card>
+      <Card className="w-full border-none shadow-sm bg-card/80 backdrop-blur-sm">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Receipt className="h-4 w-4" />
