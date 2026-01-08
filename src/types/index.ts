@@ -106,6 +106,23 @@ export interface Project {
   active_task_count: number;
   active_ticket_count: number;
   total_task_count: number;
+  // Client details returned from RPC
+  client_name?: string | null;
+  client_avatar_url?: string | null;
+  client_company_logo_url?: string | null;
+  client_company_name?: string | null;
+  client_company_custom_properties?: Json | null;
+  // Relations
+  assignedTo: AssignedUser[];
+  tasks?: Task[];
+  comments?: Comment[];
+  briefFiles?: any[];
+  activities?: any[];
+  tags?: Tag[];
+  invoice_attachments?: InvoiceAttachment[];
+  created_by_profile?: Owner; // Sometimes mapped
+  // UI helpers
+  people?: Person[];
 }
 
 export interface CustomProperty {
@@ -462,7 +479,7 @@ export interface Invoice {
 }
 
 export interface Member extends AssignedUser {}
-export interface Owner extends Owner {}
+// Owner is already defined
 
 export interface AdvancedFiltersState {
   ownerIds: string[];

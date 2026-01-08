@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Project as BaseProject, PROJECT_STATUS_OPTIONS, Person, Company, ProjectStatus } from "@/types";
+import { Project, PROJECT_STATUS_OPTIONS, Person, Company, ProjectStatus } from "@/types";
 import { Calendar, Wallet, Briefcase, MapPin, ListTodo, CreditCard, User, Building, ChevronsUpDown, Plus } from "lucide-react";
 import { isSameDay, subDays } from "date-fns";
 import { DateRange } from "react-day-picker";
@@ -26,16 +26,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Extend types to include the new optional company_id field for a robust relationship.
+// Type alias for local use if needed, but Project from types should now be sufficient for most needs
 type LocalPerson = Person & { company_id?: string | null };
-type Project = BaseProject & {
-  people?: LocalPerson[];
+
+// Extended Project type for local form handling
+type ExtendedProject = Project & {
   person_ids?: string[];
-  client_company_id?: string | null;
+  people?: LocalPerson[];
 };
 
 interface ProjectDetailsCardProps {
-  project: Project;
+  project: ExtendedProject;
   isEditing: boolean;
   onFieldChange: (field: keyof Project, value: any) => void;
   onStatusChange?: (newStatus: ProjectStatus) => void;
@@ -63,7 +64,6 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
     };
   }, [project]);
 
-  // Remove 'enabled: isEditing' to allow data fetching for quick-edit dropdown
   const { data: allPeople, isLoading: isLoadingPeople } = useQuery<LocalPerson[]>({
     queryKey: ['allPeople'],
     queryFn: async () => {
@@ -113,7 +113,6 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
         clientId = value;
       }
 
-      // Use atomic RPC function to prevent race conditions and partial updates
       const { error } = await supabase.rpc('set_project_client', {
         p_project_id: project.id,
         p_client_type: clientType,
@@ -164,27 +163,22 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
       setNewClientName('');
       setNewClientEmail('');
       
-      // Refresh lists
       await queryClient.invalidateQueries({ queryKey: ['allPeople'] });
       await queryClient.invalidateQueries({ queryKey: ['allCompanies'] });
 
-      // If we are editing, update the field
       if (isEditing) {
         if (result.type === 'person') {
-          // We need to fetch the full object from the cache or use the returned data
-          // For simplicity in edit mode, we mimic what handleClientChange does
           const personId = result.data.id;
-          const selectedPerson = { ...result.data, company_id: null } as LocalPerson; // Minimal required
-          onFieldChange('person_ids', [personId]);
-          onFieldChange('people', [selectedPerson]);
+          const selectedPerson = { ...result.data, company_id: null } as LocalPerson;
+          onFieldChange('person_ids' as any, [personId]);
+          onFieldChange('people' as any, [selectedPerson]);
           onFieldChange('client_company_id', null);
         } else {
-          onFieldChange('person_ids', []);
-          onFieldChange('people', []);
+          onFieldChange('person_ids' as any, []);
+          onFieldChange('people' as any, []);
           onFieldChange('client_company_id', result.data.id);
         }
       } else {
-        // If not in editing mode (direct update via dropdown)
         if (result.type === 'person') {
           updateClientMutation.mutate(result.data.id);
         } else {
@@ -199,8 +193,6 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
 
   const handleDateChange = (range: DateRange | undefined) => {
     const startDate = range?.from ? range.from.toISOString() : undefined;
-    // Fix: Allow due_date to be undefined if user has only selected 'from' date.
-    // This allows the range picker to wait for the second click.
     const endDate = range?.to ? range.to.toISOString() : undefined;
 
     onFieldChange('start_date', startDate);
@@ -219,15 +211,15 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
 
     if (value.startsWith('company-')) {
       const companyId = value.replace('company-', '');
-      onFieldChange('person_ids', []);
-      onFieldChange('people', []);
+      onFieldChange('person_ids' as any, []);
+      onFieldChange('people' as any, []);
       onFieldChange('client_company_id', companyId);
     } else {
       const personId = value;
       const selectedPerson = allPeople?.find(p => p.id === personId);
       if (selectedPerson) {
-        onFieldChange('person_ids', [personId]);
-        onFieldChange('people', [selectedPerson]);
+        onFieldChange('person_ids' as any, [personId]);
+        onFieldChange('people' as any, [selectedPerson]);
         onFieldChange('client_company_id', null);
       }
     }
@@ -295,15 +287,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
   const currentPaymentStatus = paymentStatuses.find(s => s.name === project.payment_status);
   const paymentBgColor = currentPaymentStatus?.color || '#94a3b8';
   const paymentTextColor = getTextColor(paymentBgColor);
-  
-  // Robust selected value logic that checks:
-  // 1. person_ids (from edit state)
-  // 2. people array (from API data for existing projects)
-  // 3. client_company_id (for companies)
-  const selectedValue = 
-    project.person_ids?.[0] || 
-    project.people?.[0]?.id || 
-    (project.client_company_id ? `company-${project.client_company_id}` : '');
+  const selectedValue = project.person_ids?.[0] || (project.client_company_id ? `company-${project.client_company_id}` : '');
 
   const renderClientSelectContent = () => (
     <SelectContent className="max-h-72">
@@ -451,7 +435,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
                   <p className="font-medium">Status</p>
                   {isEditing ? (
                     <Select
-                      value={project.status}
+                      value={project.status || ''}
                       onValueChange={(value) => onFieldChange('status', value)}
                     >
                       <SelectTrigger>
@@ -485,7 +469,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
                     </Select>
                   ) : (
                     <div className="pt-1">
-                      <StatusBadge status={project.status} onStatusChange={onStatusChange} hasOpenTasks={hasOpenTasks} />
+                      <StatusBadge status={project.status || 'Requested'} onStatusChange={onStatusChange} hasOpenTasks={hasOpenTasks} />
                     </div>
                   )}
                 </div>
