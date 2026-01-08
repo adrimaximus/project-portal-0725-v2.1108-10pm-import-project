@@ -295,7 +295,15 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
   const currentPaymentStatus = paymentStatuses.find(s => s.name === project.payment_status);
   const paymentBgColor = currentPaymentStatus?.color || '#94a3b8';
   const paymentTextColor = getTextColor(paymentBgColor);
-  const selectedValue = project.person_ids?.[0] || (project.client_company_id ? `company-${project.client_company_id}` : '');
+  
+  // Robust selected value logic that checks:
+  // 1. person_ids (from edit state)
+  // 2. people array (from API data for existing projects)
+  // 3. client_company_id (for companies)
+  const selectedValue = 
+    project.person_ids?.[0] || 
+    project.people?.[0]?.id || 
+    (project.client_company_id ? `company-${project.client_company_id}` : '');
 
   const renderClientSelectContent = () => (
     <SelectContent className="max-h-72">
