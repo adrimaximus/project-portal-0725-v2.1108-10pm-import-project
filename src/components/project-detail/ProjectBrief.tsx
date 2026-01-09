@@ -22,6 +22,7 @@ interface ProjectBriefProps {
   onFilesChange: (files: File[]) => void;
   onFileDelete: (filePath: string) => void;
   isUploading: boolean;
+  uploadProgress?: number;
 }
 
 const formatFileSize = (bytes: number) => {
@@ -32,7 +33,15 @@ const formatFileSize = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-const ProjectBrief = ({ files, isEditing, onSetIsEditing, onFilesChange, onFileDelete, isUploading }: ProjectBriefProps) => {
+const ProjectBrief = ({ 
+  files, 
+  isEditing, 
+  onSetIsEditing, 
+  onFilesChange, 
+  onFileDelete, 
+  isUploading,
+  uploadProgress = 0
+}: ProjectBriefProps) => {
   const onDrop = useCallback((acceptedFiles: File[]) => {
     onFilesChange(acceptedFiles);
   }, [onFilesChange]);
@@ -58,10 +67,21 @@ const ProjectBrief = ({ files, isEditing, onSetIsEditing, onFilesChange, onFileD
             isUploading && 'cursor-not-allowed opacity-50'
           )}>
             <input {...getInputProps()} />
-            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+            <div className="flex flex-col items-center gap-2 text-muted-foreground w-full">
               <UploadCloud className="h-8 w-8" />
               {isUploading ? (
-                <p>Uploading files...</p>
+                <div className="w-full max-w-[240px] space-y-2">
+                  <div className="flex justify-between text-xs font-medium">
+                    <span>Uploading...</span>
+                    <span>{Math.round(uploadProgress)}%</span>
+                  </div>
+                  <div className="h-2 w-full bg-secondary/50 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary transition-all duration-300 ease-in-out" 
+                      style={{ width: `${Math.max(5, uploadProgress)}%` }}
+                    />
+                  </div>
+                </div>
               ) : isDragActive ? (
                 <p>Drop the files here ...</p>
               ) : (
