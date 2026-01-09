@@ -1,11 +1,11 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getProjectBySlug } from '@/lib/projectsApi';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Task, Project, ProjectStatus } from '@/types';
+import { Task, Project, Comment as CommentType } from '@/types';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useProjectMutations } from '@/hooks/useProjectMutations';
 import {
@@ -43,6 +43,10 @@ const ProjectDetail = () => {
   const [hasChanges, setHasChanges] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
+  // Upload progress state
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const progressIntervalRef = useRef<number | null>(null);
 
   const highlightedCommentId = searchParams.get('comment');
 
@@ -80,6 +84,29 @@ const ProjectDetail = () => {
     queryClient.invalidateQueries({ queryKey: ['project', slug] });
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
   });
+
+  // Simulated upload progress effect
+  useEffect(() => {
+    if (addFiles.isPending) {
+      setUploadProgress(0);
+      progressIntervalRef.current = window.setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev >= 90) return prev;
+          const remaining = 90 - prev;
+          const jump = Math.random() * Math.min(10, remaining);
+          return prev + jump;
+        });
+      }, 500);
+    } else {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      setUploadProgress(100);
+      const timer = setTimeout(() => setUploadProgress(0), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [addFiles.isPending]);
 
   useEffect(() => {
     if (project) {
@@ -235,6 +262,7 @@ const ProjectDetail = () => {
                 onCommentHighlightComplete={onCommentHighlightComplete}
                 onSetIsEditing={() => enterEditMode()}
                 isUploading={addFiles.isPending}
+                uploadProgress={uploadProgress}
                 onSaveChanges={handleSaveChanges}
                 onOpenTaskModal={onOpenTaskModal}
                 unreadTaskIds={unreadTaskIds}
