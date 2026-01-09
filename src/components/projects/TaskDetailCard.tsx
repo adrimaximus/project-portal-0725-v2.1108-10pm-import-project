@@ -21,6 +21,7 @@ import {
   CheckCircle,
   Tag,
   User as UserIcon,
+  ExternalLink,
 } from 'lucide-react';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import {
@@ -45,6 +46,8 @@ import { Input } from '../ui/input';
 import InteractiveText from '../InteractiveText';
 import AttachmentViewerModal from '../AttachmentViewerModal';
 import CommentReactions from '../CommentReactions';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TaskDetailCardProps {
   task: Task;
@@ -110,6 +113,19 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(task.title);
   const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
+
+  const { data: availableProjects } = useQuery({
+    queryKey: ['available-projects'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, name, slug')
+        .order('name');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
 
   // Only allow mentioning users assigned to the task
   // This ensures @all only notifies task assignees
@@ -330,9 +346,40 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
           <div className="grid grid-cols-2 gap-4 sm:gap-6">
             <div className="flex items-start gap-3">
               <Briefcase className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="font-medium">Project</p>
-                <Link to={`/projects/${task.project_slug}`} className="text-primary hover:underline">{task.project_name}</Link>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={task.project_id}
+                    onValueChange={(newProjectId) => {
+                      if (newProjectId !== task.project_id) {
+                        updateTask({ taskId: task.id, updates: { project_id: newProjectId } });
+                      }
+                    }}
+                    disabled={isUpdatingTask}
+                  >
+                    <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none justify-start">
+                      <SelectValue className="text-primary hover:underline text-left truncate block max-w-[200px]">
+                        {task.project_name}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableProjects?.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Link 
+                    to={`/projects/${task.project_slug}`} 
+                    className="text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
+                    title="Go to project page"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
               </div>
             </div>
             <div className="flex items-start gap-3">
