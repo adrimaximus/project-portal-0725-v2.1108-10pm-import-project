@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getProjectBySlug } from '@/lib/projectsApi';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Task, UpsertTaskPayload, Project, ProjectStatus, Reaction, Comment as CommentType } from '@/types';
+import { Task, Project, Comment as CommentType } from '@/types';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useProjectMutations } from '@/hooks/useProjectMutations';
 import {
@@ -43,6 +43,8 @@ const ProjectDetail = () => {
   const [hasChanges, setHasChanges] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
+  // Upload progress state
   const [uploadProgress, setUploadProgress] = useState(0);
   const progressIntervalRef = useRef<number | null>(null);
 
@@ -75,6 +77,20 @@ const ProjectDetail = () => {
     updateProjectStatus,
   } = useProjectMutations(slug);
   
+  // Wrap addFiles to show toast on success
+  const addFilesWithNotification = {
+    ...addFiles,
+    mutate: (variables: any, options?: any) => {
+        addFiles.mutate(variables, {
+            ...options,
+            onSuccess: (data, vars, context) => {
+                toast.success("Files uploaded successfully");
+                options?.onSuccess?.(data, vars, context);
+            }
+        });
+    }
+  };
+
   const { 
     deleteTask, 
     toggleTaskCompletion, 
@@ -82,6 +98,17 @@ const ProjectDetail = () => {
     queryClient.invalidateQueries({ queryKey: ['project', slug] });
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
   });
+
+  // Sync files from server state to edited state when project updates (e.g. after upload)
+  useEffect(() => {
+    if (isEditing && project && editedProject) {
+      const serverFiles = JSON.stringify(project.briefFiles || []);
+      const localFiles = JSON.stringify(editedProject.briefFiles || []);
+      if (serverFiles !== localFiles) {
+        setEditedProject((prev) => prev ? { ...prev, briefFiles: project.briefFiles } : null);
+      }
+    }
+  }, [project?.briefFiles, isEditing]);
 
   // Simulated upload progress effect
   useEffect(() => {
@@ -245,7 +272,7 @@ const ProjectDetail = () => {
                 project={projectToDisplay}
                 isEditing={isEditing}
                 onFieldChange={handleFieldChange}
-                mutations={{ addFiles, deleteFile }}
+                mutations={{ addFiles: addFilesWithNotification, deleteFile }}
                 defaultTab={searchParams.get('tab') || 'overview'}
                 onEditTask={(task) => onOpenTaskModal(task, undefined, project)}
                 onDeleteTask={setTaskToDelete}
