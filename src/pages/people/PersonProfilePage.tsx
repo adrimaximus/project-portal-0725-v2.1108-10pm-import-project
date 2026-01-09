@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, MoreVertical, Phone, Twitter, User as UserIcon, Users, Trash2, Loader2, MessageSquare, Landmark } from 'lucide-react';
+import { ArrowLeft, Briefcase, Cake, Edit, Instagram, Linkedin, Mail, MapPin, MoreVertical, Phone, Twitter, User as UserIcon, Users, Trash2, Loader2, MessageSquare, Landmark, UserPlus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatInJakarta, generatePastelColor, getInitials, getAvatarUrl, formatPhoneNumberForApi } from '@/lib/utils';
 import PeopleFormDialog from '@/components/people/PersonFormDialog';
@@ -201,6 +201,35 @@ const PersonProfilePage = () => {
     }
   };
 
+  const handleInviteToApp = async () => {
+    const email = person?.email || person?.contact?.emails?.[0];
+    
+    if (!email) {
+      toast.error("Please add an email address to this contact first.");
+      return;
+    }
+
+    const toastId = toast.loading("Sending invitation...");
+    try {
+      const { error } = await supabase.functions.invoke('invite-user', {
+        body: { 
+          email, 
+          personId: person?.id,
+          redirectTo: window.location.origin 
+        }
+      });
+
+      if (error) throw error;
+
+      toast.dismiss(toastId);
+      toast.success(`Invitation sent to ${email}`);
+    } catch (error: any) {
+      console.error('Error inviting user:', error);
+      toast.dismiss(toastId);
+      toast.error("Failed to send invitation. Please try again.");
+    }
+  };
+
   const renderCustomPropertyValue = (prop: CustomProperty, value: any) => {
     if (value === null || typeof value === 'undefined' || value === '') {
       return <span className="text-muted-foreground">-</span>;
@@ -304,6 +333,11 @@ const PersonProfilePage = () => {
                       <DropdownMenuItem onSelect={() => setIsFormOpen(true)}>
                         <Edit className="mr-2 h-4 w-4" /> Edit Profile
                       </DropdownMenuItem>
+                      {!person.user_id && (
+                        <DropdownMenuItem onSelect={handleInviteToApp}>
+                          <UserPlus className="mr-2 h-4 w-4" /> Invite to App
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-destructive">
                         <Trash2 className="mr-2 h-4 w-4" /> Delete Profile
                       </DropdownMenuItem>
