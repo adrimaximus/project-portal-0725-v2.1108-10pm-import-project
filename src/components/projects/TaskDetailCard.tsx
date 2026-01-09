@@ -22,6 +22,7 @@ import {
   Tag,
   User as UserIcon,
   ExternalLink,
+  Check,
 } from 'lucide-react';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import {
@@ -48,6 +49,19 @@ import AttachmentViewerModal from '../AttachmentViewerModal';
 import CommentReactions from '../CommentReactions';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface TaskDetailCardProps {
   task: Task;
@@ -113,6 +127,7 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(task.title);
   const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
+  const [openProjectSelect, setOpenProjectSelect] = useState(false);
 
   const { data: availableProjects } = useQuery({
     queryKey: ['available-projects'],
@@ -349,28 +364,49 @@ const TaskDetailCard: React.FC<TaskDetailCardProps> = ({ task, onClose, onEdit, 
               <div className="min-w-0 flex-1">
                 <p className="font-medium">Project</p>
                 <div className="flex items-center gap-2">
-                  <Select
-                    value={task.project_id}
-                    onValueChange={(newProjectId) => {
-                      if (newProjectId !== task.project_id) {
-                        updateTask({ taskId: task.id, updates: { project_id: newProjectId } });
-                      }
-                    }}
-                    disabled={isUpdatingTask}
-                  >
-                    <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none justify-start">
-                      <SelectValue className="text-primary hover:underline text-left truncate block max-w-[200px]">
-                        {task.project_name}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableProjects?.map((project) => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={openProjectSelect} onOpenChange={setOpenProjectSelect}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        role="combobox"
+                        aria-expanded={openProjectSelect}
+                        className="h-auto p-0 border-0 focus:ring-0 focus-visible:ring-0 w-auto bg-transparent shadow-none justify-start font-normal text-primary hover:bg-transparent hover:underline text-left truncate block max-w-[200px]"
+                        disabled={isUpdatingTask}
+                      >
+                        {availableProjects?.find((p) => p.id === task.project_id)?.name || task.project_name}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[300px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search project..." />
+                        <CommandList>
+                          <CommandEmpty>No project found.</CommandEmpty>
+                          <CommandGroup>
+                            {availableProjects?.map((project) => (
+                              <CommandItem
+                                key={project.id}
+                                value={project.name}
+                                onSelect={() => {
+                                  if (project.id !== task.project_id) {
+                                    updateTask({ taskId: task.id, updates: { project_id: project.id } });
+                                  }
+                                  setOpenProjectSelect(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    task.project_id === project.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {project.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   
                   <Link 
                     to={`/projects/${task.project_slug}`} 
