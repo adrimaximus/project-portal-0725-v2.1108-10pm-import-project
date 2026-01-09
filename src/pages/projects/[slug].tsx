@@ -77,6 +77,48 @@ const ProjectDetail = () => {
     updateProjectStatus,
   } = useProjectMutations(slug);
   
+  // Wrapper for addFiles to handle notifications and query invalidation
+  const addFilesWithNotification = {
+    ...addFiles,
+    mutate: (variables: any) => {
+        addFiles.mutate(variables, {
+            onSuccess: async () => {
+                toast.success("Files uploaded successfully");
+                await queryClient.invalidateQueries({ queryKey: ['project', slug] });
+            },
+            onError: (err) => {
+                toast.error(`Upload failed: ${err.message}`);
+            }
+        });
+    }
+  };
+
+  // Wrapper for deleteFile to handle optimistic updates and notifications
+  const deleteFileWithOptimisticUpdate = {
+    ...deleteFile,
+    mutate: (fileId: string) => {
+        // Optimistic update for local state if editing
+        if (isEditing && editedProject) {
+            setEditedProject(prev => prev ? {
+                ...prev,
+                briefFiles: (prev.briefFiles || []).filter(f => f.id !== fileId)
+            } : null);
+        }
+
+        deleteFile.mutate(fileId, {
+            onSuccess: async () => {
+                toast.success("File deleted successfully");
+                await queryClient.invalidateQueries({ queryKey: ['project', slug] });
+            },
+            onError: () => {
+                toast.error("Failed to delete file");
+                // Re-fetch to restore state if delete failed
+                queryClient.invalidateQueries({ queryKey: ['project', slug] });
+            }
+        });
+    }
+  };
+
   const { 
     deleteTask, 
     toggleTaskCompletion, 
@@ -84,6 +126,20 @@ const ProjectDetail = () => {
     queryClient.invalidateQueries({ queryKey: ['project', slug] });
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
   });
+
+  // Sync files from server state to edited state when project updates (e.g. after upload)
+  useEffect(() => {
+    if (isEditing && project && editedProject) {
+      const serverFiles = JSON.stringify(project.briefFiles || []);
+      const localFiles = JSON.stringify(editedProject.briefFiles || []);
+      
+      // Only update if server has different files and we are not in the middle of a delete action that hasn't synced yet
+      // This simple check ensures we pull in new uploads
+      if (serverFiles !== localFiles) {
+         setEditedProject((prev) => prev ? { ...prev, briefFiles: project.briefFiles } : null);
+      }
+    }
+  }, [project?.briefFiles, isEditing]);
 
   // Simulated upload progress effect
   useEffect(() => {
@@ -247,7 +303,7 @@ const ProjectDetail = () => {
                 project={projectToDisplay}
                 isEditing={isEditing}
                 onFieldChange={handleFieldChange}
-                mutations={{ addFiles, deleteFile }}
+                mutations={{ addFiles: addFilesWithNotification, deleteFile: deleteFileWithOptimisticUpdate }}
                 defaultTab={searchParams.get('tab') || 'overview'}
                 onEditTask={(task) => onOpenTaskModal(task, undefined, project)}
                 onDeleteTask={setTaskToDelete}
