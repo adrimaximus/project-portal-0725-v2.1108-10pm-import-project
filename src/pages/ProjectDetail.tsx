@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,13 +27,14 @@ import ProjectMainContent from '@/components/project-detail/ProjectMainContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTaskModal } from '@/contexts/TaskModalContext';
 import { useUnreadTasks } from '@/hooks/useUnreadTasks';
+import { useTasks } from '@/hooks/useTasks';
 
-const ProjectDetailPage = () => {
+const ProjectDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user, hasPermission } = useAuth();
+  const { hasPermission } = useAuth();
   const { onOpen: onOpenTaskModal } = useTaskModal();
   const { unreadTaskIds } = useUnreadTasks();
 
@@ -42,6 +43,8 @@ const ProjectDetailPage = () => {
   const [hasChanges, setHasChanges] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const progressIntervalRef = useRef<number | null>(null);
 
   const highlightedCommentId = searchParams.get('comment');
 
@@ -57,6 +60,13 @@ const ProjectDetailPage = () => {
     enabled: !!slug,
   });
 
+  const { data: tasks = [] } = useTasks({
+    projectIds: project ? [project.id] : undefined,
+    hideCompleted: false,
+    sortConfig: { key: 'kanban_order', direction: 'asc' },
+    enabled: !!project,
+  });
+
   const { 
     updateProject, 
     addFiles, 
@@ -68,14 +78,43 @@ const ProjectDetailPage = () => {
   const { 
     deleteTask, 
     toggleTaskCompletion, 
-  } = useTaskMutations(() => queryClient.invalidateQueries({ queryKey: ['project', slug] }));
+  } = useTaskMutations(() => {
+    queryClient.invalidateQueries({ queryKey: ['project', slug] });
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
+  });
+
+  // Simulated upload progress effect
+  useEffect(() => {
+    if (addFiles.isPending) {
+      setUploadProgress(0);
+      progressIntervalRef.current = window.setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev >= 90) return prev;
+          const remaining = 90 - prev;
+          const jump = Math.random() * Math.min(10, remaining);
+          return prev + jump;
+        });
+      }, 500);
+    } else {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      setUploadProgress(100);
+      const timer = setTimeout(() => setUploadProgress(0), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [addFiles.isPending]);
 
   useEffect(() => {
     if (project) {
       const channel = supabase
         .channel(`project-updates-${project.id}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'projects', filter: `id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `project_id=eq.${project.id}` }, () => {
+            queryClient.invalidateQueries({ queryKey: ['project', slug] });
+            queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'project_activities', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'project_files', filter: `project_id=eq.${project.id}` }, () => queryClient.invalidateQueries({ queryKey: ['project', slug] }))
@@ -155,7 +194,11 @@ const ProjectDetailPage = () => {
   const handleToggleTaskCompletion = (task: Task, completed: boolean) => toggleTaskCompletion({ task, completed });
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    return (
+      <div className="flex justify-center h-full pt-[30vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
   if (error) {
     return <div className="text-destructive p-4">Error loading project: {error.message}</div>;
@@ -164,8 +207,11 @@ const ProjectDetailPage = () => {
     return <div className="p-4">Project not found.</div>;
   }
 
-  const projectToDisplay = isEditing && editedProject ? editedProject : project;
-  const hasOpenTasks = project.tasks?.some(task => !task.completed) ?? false;
+  const projectToDisplay = isEditing && editedProject 
+    ? { ...editedProject, tasks } 
+    : { ...project, tasks };
+
+  const hasOpenTasks = tasks.some(task => !task.completed);
 
   return (
     <>
@@ -214,14 +260,15 @@ const ProjectDetailPage = () => {
                 onCommentHighlightComplete={onCommentHighlightComplete}
                 onSetIsEditing={() => enterEditMode()}
                 isUploading={addFiles.isPending}
+                uploadProgress={uploadProgress}
                 onSaveChanges={handleSaveChanges}
                 onOpenTaskModal={onOpenTaskModal}
                 unreadTaskIds={unreadTaskIds}
               />
             </div>
             <div className="lg:col-span-1 space-y-6">
-              <ProjectProgressCard project={project} />
-              <ProjectTeamCard project={project} />
+              <ProjectProgressCard project={projectToDisplay} />
+              <ProjectTeamCard project={projectToDisplay} />
             </div>
           </div>
         </div>
@@ -242,4 +289,4 @@ const ProjectDetailPage = () => {
   );
 };
 
-export default ProjectDetailPage;
+export default ProjectDetail;

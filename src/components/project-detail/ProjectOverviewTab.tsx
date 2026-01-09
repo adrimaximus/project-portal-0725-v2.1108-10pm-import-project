@@ -20,6 +20,7 @@ interface ProjectOverviewTabProps {
   onReactionsChange: (reactions: Reaction[]) => void;
   onSetIsEditing: (isEditing: boolean) => void;
   isUploading: boolean;
+  uploadProgress?: number;
   onSaveChanges: () => void;
 }
 
@@ -28,9 +29,10 @@ const ProjectOverviewTab = ({
   isEditing, 
   onDescriptionChange, 
   onFilesAdd, 
-  onFileDelete,
+  onFileDelete, 
   onSetIsEditing,
   isUploading,
+  uploadProgress,
   onSaveChanges,
 }: ProjectOverviewTabProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -115,6 +117,7 @@ const ProjectOverviewTab = ({
               onFileDelete={onFileDelete}
               onSetIsEditing={onSetIsEditing}
               isUploading={isUploading}
+              uploadProgress={uploadProgress}
             />
           </div>
         </CardContent>

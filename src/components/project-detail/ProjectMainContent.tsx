@@ -34,6 +34,7 @@ interface ProjectMainContentProps {
   onCommentHighlightComplete?: () => void;
   onSetIsEditing: (isEditing: boolean) => void;
   isUploading: boolean;
+  uploadProgress?: number;
   onSaveChanges: () => void;
   onOpenTaskModal: (task?: Task | null, initialData?: Partial<UpsertTaskPayload>, project?: Project | null) => void;
   unreadTaskIds: string[];
@@ -54,6 +55,7 @@ const ProjectMainContent = ({
   onCommentHighlightComplete,
   onSetIsEditing,
   isUploading,
+  uploadProgress,
   onSaveChanges,
   onOpenTaskModal,
   unreadTaskIds,
@@ -250,6 +252,7 @@ const ProjectMainContent = ({
             onReactionsChange={(reactions) => onFieldChange('reactions', reactions)}
             onSetIsEditing={onSetIsEditing}
             isUploading={isUploading}
+            uploadProgress={uploadProgress}
             onSaveChanges={onSaveChanges}
           />
         </TabsContent>
