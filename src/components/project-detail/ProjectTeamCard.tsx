@@ -66,7 +66,7 @@ const ProjectTeamCard = ({ project }: ProjectTeamCardProps) => {
 
   const updateTeamMutation = useMutation({
     mutationFn: async (newTeam: AssignedUser[]) => {
-      // IMPORTANT: Pass p_client_company_id to prevent it from being reset to NULL
+      // IMPORTANT: Pass p_client_company_id to prevent it from being reset to NULL by the RPC
       const { error } = await supabase.rpc('update_project_details', {
         p_project_id: project.id,
         p_members: newTeam,
