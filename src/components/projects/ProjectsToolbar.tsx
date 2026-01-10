@@ -177,7 +177,7 @@ const ProjectsToolbar = ({
           {/* Right Section: Filters, Search, Date & Actions */}
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-stretch sm:items-center">
             
-            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
+            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
               {/* Mobile View Switcher */}
               <div className="sm:hidden flex items-center gap-2 relative">
                 <TooltipProvider>

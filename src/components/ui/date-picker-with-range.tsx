@@ -14,14 +14,16 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
+interface DatePickerWithRangeProps extends React.HTMLAttributes<HTMLDivElement> {
+  date: DateRange | undefined
+  onDateChange?: (date: DateRange | undefined) => void
+}
+
 export function DatePickerWithRange({
   className,
   date,
   onDateChange,
-}: React.HTMLAttributes<HTMLDivElement> & { 
-  date: DateRange | undefined, 
-  onDateChange: (date: DateRange | undefined) => void 
-}) {
+}: DatePickerWithRangeProps) {
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover>
@@ -30,7 +32,7 @@ export function DatePickerWithRange({
             id="date"
             variant={"outline"}
             className={cn(
-              "w-full sm:w-[240px] justify-start text-left font-normal h-9 px-3",
+              "w-full sm:w-[260px] justify-start text-left font-normal",
               !date && "text-muted-foreground"
             )}
           >
@@ -49,13 +51,22 @@ export function DatePickerWithRange({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="end">
+        <PopoverContent className="w-auto p-0" align="start">
           <Calendar
-            initialFocus
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={onDateChange}
+            onSelect={(newDate) => {
+              // Set jam ke 12:00 siang untuk menghindari masalah timezone shifting (mundur sehari)
+              // saat dikonversi ke ISO String / UTC oleh sistem.
+              if (newDate?.from) {
+                newDate.from.setHours(12, 0, 0, 0);
+              }
+              if (newDate?.to) {
+                newDate.to.setHours(12, 0, 0, 0);
+              }
+              onDateChange?.(newDate);
+            }}
             numberOfMonths={2}
           />
         </PopoverContent>
