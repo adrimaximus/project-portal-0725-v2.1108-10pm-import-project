@@ -87,58 +87,58 @@ const ProjectsToolbar = ({
   const [isViewSwitcherOpen, setIsViewSwitcherOpen] = useState(false);
 
   if (!hasMounted) {
-    return <div className="p-4 border-t h-[73px]" />; // Placeholder to prevent layout shift
+    return <div className="p-2 border-b h-[57px]" />; 
   }
 
   return (
-    <div className="w-full border-t bg-background">
-      <div className="flex flex-col gap-3 p-3 sm:p-4">
+    <div className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
+      <div className="flex flex-col gap-2 p-2">
         
         {/* Main Toolbar Row */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-2">
           
           {/* Left Section: View Switcher & Primary Controls */}
-          <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto gap-4">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center w-full lg:w-auto gap-2 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-1">
               {/* Desktop View Switcher */}
               <TooltipProvider>
                 <ToggleGroup type="single" value={view} onValueChange={onViewChange} aria-label="Project view" className="hidden sm:flex">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="list" aria-label="List view"><List className="h-4 w-4" /></ToggleGroupItem>
+                      <ToggleGroupItem value="list" aria-label="List view" size="sm" className="h-8 w-8 p-0"><List className="h-4 w-4" /></ToggleGroupItem>
                     </TooltipTrigger>
-                    <TooltipContent><p>List view</p></TooltipContent>
+                    <TooltipContent>List view</TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="table" aria-label="Grid view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
+                      <ToggleGroupItem value="table" aria-label="Grid view" size="sm" className="h-8 w-8 p-0"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
                     </TooltipTrigger>
-                    <TooltipContent><p>Grid view</p></TooltipContent>
+                    <TooltipContent>Grid view</TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="kanban" aria-label="Kanban view"><KanbanSquare className="h-4 w-4" /></ToggleGroupItem>
+                      <ToggleGroupItem value="kanban" aria-label="Kanban view" size="sm" className="h-8 w-8 p-0"><KanbanSquare className="h-4 w-4" /></ToggleGroupItem>
                     </TooltipTrigger>
-                    <TooltipContent><p>Kanban view</p></TooltipContent>
+                    <TooltipContent>Kanban view</TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="tasks" aria-label="Tasks list view"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
+                      <ToggleGroupItem value="tasks" aria-label="Tasks list view" size="sm" className="h-8 w-8 p-0"><ListChecks className="h-4 w-4" /></ToggleGroupItem>
                     </TooltipTrigger>
-                    <TooltipContent><p>Tasks list view</p></TooltipContent>
+                    <TooltipContent>Tasks list view</TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
+                      <ToggleGroupItem value="tasks-kanban" aria-label="Tasks kanban view" size="sm" className="h-8 w-8 p-0"><CheckSquare className="h-4 w-4" /></ToggleGroupItem>
                     </TooltipTrigger>
-                    <TooltipContent><p>Tasks kanban view</p></TooltipContent>
+                    <TooltipContent>Tasks kanban view</TooltipContent>
                   </Tooltip>
                 </ToggleGroup>
               </TooltipProvider>
 
               {view === 'kanban' && (
                 <Select value={kanbanGroupBy} onValueChange={onKanbanGroupByChange}>
-                  <SelectTrigger className="w-[110px] sm:w-[130px] h-9"><SelectValue placeholder="Group by..." /></SelectTrigger>
+                  <SelectTrigger className="w-[100px] h-8 text-xs"><SelectValue placeholder="Group by" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="status">Status</SelectItem>
                     <SelectItem value="payment_status">Payment</SelectItem>
@@ -149,11 +149,11 @@ const ProjectsToolbar = ({
 
             {/* Desktop Task Controls */}
             {isTaskView && (
-              <div className="hidden sm:flex items-center gap-3">
-                <Separator orientation="vertical" className="h-6" />
-                <div className="flex items-center space-x-2">
-                  <label htmlFor="hide-completed-desktop" className="flex items-center space-x-2 cursor-pointer whitespace-nowrap text-sm">
-                    <Switch id="hide-completed-desktop" checked={hideCompletedTasks} onCheckedChange={onToggleHideCompleted} />
+              <div className="hidden sm:flex items-center gap-2">
+                <Separator orientation="vertical" className="h-5" />
+                <div className="flex items-center">
+                  <label htmlFor="hide-completed-desktop" className="flex items-center space-x-1.5 cursor-pointer whitespace-nowrap text-xs font-medium px-2 py-1 rounded-md hover:bg-accent/50 transition-colors">
+                    <Switch id="hide-completed-desktop" checked={hideCompletedTasks} onCheckedChange={onToggleHideCompleted} className="scale-75 origin-left" />
                     <span>Hide Done</span>
                   </label>
                 </div>
@@ -163,11 +163,11 @@ const ProjectsToolbar = ({
                     size="sm" 
                     onClick={onMarkAllRead} 
                     disabled={isMarkingAllRead}
-                    className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 h-8 px-2"
+                    className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 h-7 px-2"
                   >
-                    <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse"></span>
                     {unreadTaskCount} new
-                    <CheckCircle2 className="h-3.5 w-3.5 ml-1" />
+                    <CheckCircle2 className="h-3 w-3 ml-0.5" />
                   </Button>
                 )}
               </div>
@@ -175,19 +175,19 @@ const ProjectsToolbar = ({
           </div>
 
           {/* Right Section: Filters, Search, Date & Actions */}
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-stretch sm:items-center">
+          <div className="flex items-center gap-2 w-full lg:w-auto lg:justify-end overflow-x-auto no-scrollbar">
             
-            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+            <div className="flex items-center gap-2 flex-shrink-0">
               {/* Mobile View Switcher */}
               <div className="sm:hidden flex items-center gap-2 relative">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" onClick={() => setIsViewSwitcherOpen(!isViewSwitcherOpen)}>
+                      <Button variant="outline" size="icon" onClick={() => setIsViewSwitcherOpen(!isViewSwitcherOpen)} className="h-8 w-8">
                         <View className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent><p>Change view</p></TooltipContent>
+                    <TooltipContent>Change view</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
                 {isViewSwitcherOpen && (
@@ -201,13 +201,13 @@ const ProjectsToolbar = ({
                         setIsViewSwitcherOpen(false);
                       }}
                       aria-label="Project view"
-                      className="absolute top-10 left-0 z-30 bg-popover border rounded-md shadow-md p-1 flex-col items-start"
+                      className="absolute top-9 left-0 z-30 bg-popover border rounded-md shadow-md p-1 flex-col items-start min-w-[140px]"
                     >
-                      <ToggleGroupItem value="list" className="w-full justify-start"><List className="h-4 w-4 mr-2" /> List</ToggleGroupItem>
-                      <ToggleGroupItem value="table" className="w-full justify-start"><LayoutGrid className="h-4 w-4 mr-2" /> Grid</ToggleGroupItem>
-                      <ToggleGroupItem value="kanban" className="w-full justify-start"><KanbanSquare className="h-4 w-4 mr-2" /> Kanban</ToggleGroupItem>
-                      <ToggleGroupItem value="tasks" className="w-full justify-start"><ListChecks className="h-4 w-4 mr-2" /> Tasks List</ToggleGroupItem>
-                      <ToggleGroupItem value="tasks-kanban" className="w-full justify-start"><CheckSquare className="h-4 w-4 mr-2" /> Tasks Board</ToggleGroupItem>
+                      <ToggleGroupItem value="list" className="w-full justify-start h-8 text-xs"><List className="h-3.5 w-3.5 mr-2" /> List</ToggleGroupItem>
+                      <ToggleGroupItem value="table" className="w-full justify-start h-8 text-xs"><LayoutGrid className="h-3.5 w-3.5 mr-2" /> Grid</ToggleGroupItem>
+                      <ToggleGroupItem value="kanban" className="w-full justify-start h-8 text-xs"><KanbanSquare className="h-3.5 w-3.5 mr-2" /> Kanban</ToggleGroupItem>
+                      <ToggleGroupItem value="tasks" className="w-full justify-start h-8 text-xs"><ListChecks className="h-3.5 w-3.5 mr-2" /> Tasks List</ToggleGroupItem>
+                      <ToggleGroupItem value="tasks-kanban" className="w-full justify-start h-8 text-xs"><CheckSquare className="h-3.5 w-3.5 mr-2" /> Tasks Board</ToggleGroupItem>
                     </ToggleGroup>
                   </>
                 )}
@@ -220,24 +220,26 @@ const ProjectsToolbar = ({
                 allOwners={allOwners}
               />
               
-              <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
+              <div className="flex-shrink-0">
+                <DatePickerWithRange date={dateRange} setDate={onDateRangeChange} className="w-auto" />
+              </div>
 
-              <div className={cn("relative transition-all duration-300 ease-in-out", isSearchOpen ? "flex-1 sm:w-48" : "w-auto")}>
+              <div className={cn("relative transition-all duration-300 ease-in-out", isSearchOpen ? "flex-1 w-32 sm:w-48" : "w-auto")}>
                 {isSearchOpen ? (
                   <div className="relative w-full">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
                       placeholder="Search..."
                       value={searchTerm}
                       onChange={(e) => onSearchChange(e.target.value)}
                       onBlur={() => !searchTerm && setIsSearchOpen(false)}
                       autoFocus
-                      className="pl-8 w-full h-9"
+                      className="pl-8 w-full h-8 text-xs"
                     />
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:text-foreground"
+                      className="absolute right-0 top-0 h-8 w-8 text-muted-foreground hover:text-foreground"
                       onClick={() => {
                         onSearchChange("");
                         setIsSearchOpen(false);
@@ -250,40 +252,40 @@ const ProjectsToolbar = ({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="outline" size="icon" onClick={() => setIsSearchOpen(true)} className="h-9 w-9">
+                        <Button variant="outline" size="icon" onClick={() => setIsSearchOpen(true)} className="h-8 w-8">
                           <Search className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent><p>Search</p></TooltipContent>
+                      <TooltipContent>Search</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 )}
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2 ml-auto sm:ml-0">
+              <div className="flex items-center gap-1 ml-auto sm:ml-0">
                 {isTaskView ? (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button size="icon" variant="default" onClick={onNewTaskClick} className="h-9 w-9">
+                        <Button size="icon" variant="default" onClick={onNewTaskClick} className="h-8 w-8">
                           <ListPlus className="h-4 w-4" />
                           <span className="sr-only">Task</span>
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent><p>New Task</p></TooltipContent>
+                      <TooltipContent>New Task</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 ) : (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button size="icon" variant="default" onClick={onNewProjectClick} className="h-9 w-9">
+                        <Button size="icon" variant="default" onClick={onNewProjectClick} className="h-8 w-8">
                           <PlusCircle className="h-4 w-4" />
                           <span className="sr-only">Project</span>
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent><p>New Project</p></TooltipContent>
+                      <TooltipContent>New Project</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 )}
@@ -294,20 +296,20 @@ const ProjectsToolbar = ({
                     {isGCalConnected ? (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button variant="outline" size="icon" onClick={onImportClick} className="h-9 w-9">
+                          <Button variant="outline" size="icon" onClick={onImportClick} className="h-8 w-8">
                             <Download className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent><p>Import from Google Calendar</p></TooltipContent>
+                        <TooltipContent>Import GCal</TooltipContent>
                       </Tooltip>
                     ) : (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button variant="outline" size="icon" onClick={onRefreshClick} className="h-9 w-9">
+                          <Button variant="outline" size="icon" onClick={onRefreshClick} className="h-8 w-8">
                             <RefreshCw className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent><p>Refresh Data</p></TooltipContent>
+                        <TooltipContent>Refresh</TooltipContent>
                       </Tooltip>
                     )}
                   </TooltipProvider>
@@ -317,7 +319,7 @@ const ProjectsToolbar = ({
                 <div className="sm:hidden">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="icon" className="h-9 w-9">
+                      <Button variant="outline" size="icon" className="h-8 w-8">
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -343,10 +345,10 @@ const ProjectsToolbar = ({
 
         {/* Mobile-Only Task Filters (Row 2) */}
         {isTaskView && (
-          <div className="sm:hidden flex items-center justify-between pt-2 border-t border-dashed">
-            <label htmlFor="hide-completed-mobile" className="flex items-center space-x-2 cursor-pointer text-sm font-medium text-muted-foreground">
+          <div className="sm:hidden flex items-center justify-between pt-1 border-t border-dashed">
+            <label htmlFor="hide-completed-mobile" className="flex items-center space-x-2 cursor-pointer text-xs font-medium text-muted-foreground">
               <Switch id="hide-completed-mobile" checked={hideCompletedTasks} onCheckedChange={onToggleHideCompleted} className="scale-75 origin-left" />
-              <span>Hide Completed</span>
+              <span>Hide Done</span>
             </label>
             
             {unreadTaskCount > 0 && (
@@ -355,9 +357,9 @@ const ProjectsToolbar = ({
                 size="sm" 
                 onClick={onMarkAllRead} 
                 disabled={isMarkingAllRead}
-                className="text-xs h-7 px-2 text-muted-foreground"
+                className="text-xs h-6 px-2 text-muted-foreground"
               >
-                <span className="h-1.5 w-1.5 rounded-full bg-red-500 mr-1.5"></span>
+                <span className="h-1.5 w-1.5 rounded-full bg-orange-500 mr-1.5 animate-pulse"></span>
                 Mark {unreadTaskCount} read
               </Button>
             )}
