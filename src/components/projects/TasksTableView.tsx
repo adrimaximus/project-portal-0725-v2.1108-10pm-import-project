@@ -1,3 +1,4 @@
+text-xs/[10px]), padding, and avatar sizes for a more compact view.">
 import React, { useMemo, useState, useEffect } from 'react';
 import { Task as ProjectTask, User, TaskStatus, TaskPriority } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -68,38 +69,42 @@ const TaskListItem = ({ task, onToggleTaskCompletion, onTaskClick, isUnread, all
   }
 
   return (
-    <div className="flex items-start gap-3 p-3 border-b w-full max-w-full overflow-hidden" onClick={() => onTaskClick(task)}>
+    <div className="flex items-start gap-2.5 p-2.5 border-b w-full max-w-full overflow-hidden active:bg-muted/50 transition-colors" onClick={() => onTaskClick(task)}>
       <Checkbox
         id={`task-mobile-${task.id}`}
         checked={task.completed}
         onCheckedChange={(checked) => onToggleTaskCompletion(task, !!checked)}
-        className="mt-1 flex-shrink-0"
+        className="mt-0.5 flex-shrink-0 h-4 w-4"
         onClick={(e) => e.stopPropagation()}
         disabled={isToggling}
       />
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          {isUnread && <div className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />}
-          <div className={cn("break-words min-w-0 flex-1", isUnread ? "font-semibold" : "font-normal", task.completed && "line-through text-muted-foreground")}>
+        <div className="flex items-start gap-1.5 mb-0.5">
+          {isUnread && <div className="h-1.5 w-1.5 rounded-full bg-red-500 flex-shrink-0 mt-1.5" />}
+          <div className={cn("break-words min-w-0 flex-1 text-sm leading-snug", isUnread ? "font-semibold" : "font-normal", task.completed && "line-through text-muted-foreground")}>
             <InteractiveText text={task.title} members={allUsers} />
           </div>
         </div>
-        <p className="text-sm text-muted-foreground truncate">{task.project_name}</p>
-        <div className="flex items-center gap-2 mt-2 border-t pt-2 flex-wrap">
+        <p className="text-xs text-muted-foreground truncate">{task.project_name}</p>
+        
+        <div className="flex items-center gap-2 mt-1.5 pt-1.5 border-t border-border/50 flex-wrap">
           {task.priority && (
-            <Badge className={cn(getPriorityStyles(task.priority).tw, 'text-xs')}>{task.priority}</Badge>
+            <Badge className={cn(getPriorityStyles(task.priority).tw, 'text-[10px] px-1.5 py-0 h-5 font-normal')}>{task.priority}</Badge>
           )}
-          {dueDateText && <span className={`text-xs font-medium ${dueDateColor} whitespace-nowrap`}>{dueDateText}</span>}
-          {task.updated_at && (
-            <span className="text-xs text-muted-foreground whitespace-nowrap">Upd: {format(new Date(task.updated_at), 'MMM d')}</span>
-          )}
-          <div className="flex -space-x-2">
-            {task.assignedTo?.slice(0, 3).map(user => (
-              <Avatar key={user.id} className="h-6 w-6 border-2 border-background">
-                <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
-                <AvatarFallback style={generatePastelColor(user.id)}>{getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}</AvatarFallback>
-              </Avatar>
-            ))}
+          {dueDateText && <span className={`text-[10px] font-medium ${dueDateColor} whitespace-nowrap`}>{dueDateText}</span>}
+          
+          <div className="flex items-center gap-2 ml-auto">
+            {task.updated_at && (
+              <span className="text-[10px] text-muted-foreground/70 whitespace-nowrap hidden xs:inline">Upd: {format(new Date(task.updated_at), 'dd/MM')}</span>
+            )}
+            <div className="flex -space-x-1.5">
+              {task.assignedTo?.slice(0, 3).map(user => (
+                <Avatar key={user.id} className="h-5 w-5 border border-background">
+                  <AvatarImage src={getAvatarUrl(user.avatar_url, user.id)} />
+                  <AvatarFallback className="text-[8px]" style={generatePastelColor(user.id)}>{getInitials([user.first_name, user.last_name].filter(Boolean).join(' '), user.email || undefined)}</AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
           </div>
         </div>
       </div>
