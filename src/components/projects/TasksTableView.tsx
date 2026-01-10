@@ -1,6 +1,5 @@
-text-xs/[10px]), padding, and avatar sizes for a more compact view.">
-import React, { useMemo, useState, useEffect } from 'react';
-import { Task as ProjectTask, User, TaskStatus, TaskPriority } from '@/types';
+import React, { useState } from 'react';
+import { Task as ProjectTask, User, TaskStatus } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -176,12 +175,10 @@ const DueDateSelector = ({ task, onDueDateChange }: { task: ProjectTask, onDueDa
     task.due_date ? new Date(task.due_date) : undefined
   );
   
-  // State for time selection
   const [hours, setHours] = useState("12");
   const [minutes, setMinutes] = useState("00");
   const [ampm, setAmpm] = useState<"AM" | "PM">("PM");
 
-  // Sync state when task.due_date changes or popover opens
   useEffect(() => {
     if (task.due_date) {
       const d = new Date(task.due_date);
@@ -199,7 +196,6 @@ const DueDateSelector = ({ task, onDueDateChange }: { task: ProjectTask, onDueDa
         return;
       }
     }
-    // Default values if no date
     setSelectedDate(undefined);
     setHours("12");
     setMinutes("00");
@@ -216,11 +212,9 @@ const DueDateSelector = ({ task, onDueDateChange }: { task: ProjectTask, onDueDa
       let h = parseInt(hours, 10);
       let m = parseInt(minutes, 10);
 
-      // Validate inputs
       if (isNaN(h)) h = 12;
       if (isNaN(m)) m = 0;
 
-      // Convert to 24-hour format for Date object
       if (ampm === 'PM' && h < 12) h += 12;
       if (ampm === 'AM' && h === 12) h = 0;
 
@@ -374,7 +368,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleR
         </Link>
       </TableCell>
       <TableCell onClick={(e) => e.stopPropagation()}>
-        <Select value={task.status} onValueChange={(newStatus: TaskStatus) => onStatusChange(task, newStatus)}>
+        <Select value={task.status || undefined} onValueChange={(newStatus: TaskStatus) => onStatusChange(task, newStatus)}>
           <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
             <SelectValue>
               <Badge variant="outline" className={cn(getTaskStatusStyles(task.status).tw, 'border-transparent font-normal')}>
@@ -388,7 +382,7 @@ const TaskRow = ({ task, onToggleTaskCompletion, onEdit, onDelete, handleToggleR
         </Select>
       </TableCell>
       <TableCell onClick={(e) => e.stopPropagation()}>
-        <Select value={task.priority} onValueChange={(newPriority) => onPriorityChange(task, newPriority)}>
+        <Select value={task.priority || undefined} onValueChange={(newPriority) => onPriorityChange(task, newPriority)}>
           <SelectTrigger className="h-auto p-0 border-0 focus:ring-0 focus:ring-offset-0 w-auto bg-transparent shadow-none">
             <SelectValue>
               <Badge className={cn(getPriorityStyles(task.priority).tw, 'border-transparent font-normal hover:bg-opacity-80 transition-colors')}>
