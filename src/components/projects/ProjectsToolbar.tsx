@@ -91,7 +91,7 @@ const ProjectsToolbar = ({
   }
 
   return (
-    <div className="w-full border-t bg-background sticky top-0 z-30 backdrop-blur-sm bg-background/80 shadow-sm transition-all duration-200">
+    <div className="w-full border-t bg-background">
       <div className="flex flex-col gap-3 p-3 sm:p-4">
         
         {/* Main Toolbar Row */}
@@ -149,37 +149,25 @@ const ProjectsToolbar = ({
 
             {/* Desktop Task Controls */}
             {isTaskView && (
-              <div className="hidden sm:flex items-center gap-2">
-                <Separator orientation="vertical" className="h-6 mx-2" />
-                
-                <Button 
-                  variant={hideCompletedTasks ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={onToggleHideCompleted}
-                  className={cn(
-                    "text-xs h-8 px-3 rounded-full transition-all border", 
-                    hideCompletedTasks 
-                      ? "bg-secondary text-secondary-foreground border-transparent" 
-                      : "text-muted-foreground border-transparent hover:border-border"
-                  )}
-                >
-                  <CheckCircle2 className={cn("h-3.5 w-3.5 mr-1.5", hideCompletedTasks ? "text-primary" : "opacity-50")} />
-                  {hideCompletedTasks ? "Hidden" : "Hide Done"}
-                </Button>
-
+              <div className="hidden sm:flex items-center gap-3">
+                <Separator orientation="vertical" className="h-6" />
+                <div className="flex items-center space-x-2">
+                  <label htmlFor="hide-completed-desktop" className="flex items-center space-x-2 cursor-pointer whitespace-nowrap text-sm">
+                    <Switch id="hide-completed-desktop" checked={hideCompletedTasks} onCheckedChange={onToggleHideCompleted} />
+                    <span>Hide Done</span>
+                  </label>
+                </div>
                 {unreadTaskCount > 0 && (
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={onMarkAllRead} 
                     disabled={isMarkingAllRead}
-                    className="text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-950/30 flex items-center gap-1.5 h-8 px-3 rounded-full ml-1"
+                    className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 h-8 px-2"
                   >
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
-                    </span>
-                    {unreadTaskCount} unread
+                    <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+                    {unreadTaskCount} new
+                    <CheckCircle2 className="h-3.5 w-3.5 ml-1" />
                   </Button>
                 )}
               </div>
@@ -232,6 +220,8 @@ const ProjectsToolbar = ({
                 allOwners={allOwners}
               />
               
+              <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
+
               <div className={cn("relative transition-all duration-300 ease-in-out", isSearchOpen ? "flex-1 sm:w-48" : "w-auto")}>
                 {isSearchOpen ? (
                   <div className="relative w-full">
@@ -270,10 +260,8 @@ const ProjectsToolbar = ({
                 )}
               </div>
 
-              {/* Action Buttons & Date Picker Group */}
+              {/* Action Buttons */}
               <div className="flex items-center gap-2 ml-auto sm:ml-0">
-                <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
-
                 {isTaskView ? (
                   <TooltipProvider>
                     <Tooltip>
