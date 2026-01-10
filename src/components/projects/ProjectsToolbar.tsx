@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { DatePickerWithRange } from "@/components/ui/date-picker-with-range";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Search, List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Download, RefreshCw, ListPlus, View, CheckCircle2, X, MoreVertical } from "lucide-react";
+import { Search, List, LayoutGrid, KanbanSquare, ListChecks, CheckSquare, PlusCircle, Download, RefreshCw, ListPlus, View, X, MoreVertical } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -157,19 +157,6 @@ const ProjectsToolbar = ({
                     <span>Hide Done</span>
                   </label>
                 </div>
-                {unreadTaskCount > 0 && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={onMarkAllRead} 
-                    disabled={isMarkingAllRead}
-                    className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 h-7 px-2"
-                  >
-                    <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse"></span>
-                    {unreadTaskCount} new
-                    <CheckCircle2 className="h-3 w-3 ml-0.5" />
-                  </Button>
-                )}
               </div>
             )}
           </div>
