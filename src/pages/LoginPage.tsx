@@ -128,19 +128,25 @@ const LoginPage = () => {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
+      console.log("Initiating Google Login...");
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback${window.location.search}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
       if (error) {
+        console.error("Supabase OAuth Error:", error);
         toast.error(error.message);
         setGoogleLoading(false);
       }
     } catch (error: any) {
       toast.error("An unexpected error occurred with Google sign-in.");
-      console.error("Google login error:", error);
+      console.error("Google login exception:", error);
       setGoogleLoading(false);
     }
   };
