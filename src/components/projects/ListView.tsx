@@ -7,7 +7,7 @@ import { MoreHorizontal, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn, formatInJakarta, generatePastelColor, getAvatarUrl } from '@/lib/utils';
 import { isSameDay, isBefore, startOfToday, subDays } from 'date-fns';
-import { Progress } from "../ui/progress";
+import { Progress } from "@/components/ui/progress";
 import StatusBadge from "../StatusBadge";
 import { useProjectStatuses } from "@/hooks/useProjectStatuses";
 
@@ -175,7 +175,6 @@ const ListView = ({ projects, onDeleteProject }: { projects: Project[], onDelete
   const [visibleUpcomingCount, setVisibleUpcomingCount] = useState(10);
   const [visiblePastCount, setVisiblePastCount] = useState(5);
   
-  // Fetch statuses here to pass down to DayEntry
   const { data: statuses = [] } = useProjectStatuses();
 
   const { upcomingDayEntries, pastDayEntries } = useMemo(() => {
