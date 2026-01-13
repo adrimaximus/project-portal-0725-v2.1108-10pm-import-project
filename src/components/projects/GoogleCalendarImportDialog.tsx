@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -29,6 +29,7 @@ interface GoogleCalendarImportDialogProps {
 
 export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImporting }: GoogleCalendarImportDialogProps) => {
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
+  const queryClient = useQueryClient();
 
   const { data: events = [], isLoading: isLoadingEvents, error } = useQuery<CalendarEvent[]>({
     queryKey: ['googleCalendarEvents'],
@@ -51,6 +52,14 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     enabled: open,
   });
 
+  // Ensure we check for latest projects from other admins when opening the dialog
+  useEffect(() => {
+    if (open) {
+      queryClient.invalidateQueries({ queryKey: ['projectsForGCalImport'] });
+      setSelectedEvents([]);
+    }
+  }, [open, queryClient]);
+
   const isOverallLoading = isLoadingEvents || isLoadingProjects;
 
   const filteredEvents = useMemo(() => {
@@ -58,12 +67,6 @@ export const GoogleCalendarImportDialog = ({ open, onOpenChange, onImport, isImp
     const existingEventIds = new Set(projects.map(p => p.origin_event_id).filter(Boolean));
     return events.filter(event => event.id && !existingEventIds.has(event.id));
   }, [events, projects, isOverallLoading]);
-
-  useEffect(() => {
-    if (open) {
-      setSelectedEvents([]);
-    }
-  }, [open]);
 
   const groupedEvents = useMemo(() => {
     if (!filteredEvents || filteredEvents.length === 0) return [];
