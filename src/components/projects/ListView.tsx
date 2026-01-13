@@ -93,6 +93,11 @@ const ProjectListItem = ({
                   <AvatarFallback style={generatePastelColor(user.id)}>{user.initials}</AvatarFallback>
                 </Avatar>
               ))}
+              {project.assignedTo.length > 3 && (
+                <div className="h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-muted flex items-center justify-center text-[9px] sm:text-[10px] border-2 border-card font-medium z-10 text-muted-foreground">
+                  +{project.assignedTo.length - 3}
+                </div>
+              )}
             </div>
           </div>
           <div onClick={(e) => e.stopPropagation()} className="sm:relative">
