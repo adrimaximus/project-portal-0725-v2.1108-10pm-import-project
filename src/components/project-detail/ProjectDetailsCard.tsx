@@ -54,6 +54,7 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
   const [newClientType, setNewClientType] = useState<'person' | 'company'>('person');
   const [newClientName, setNewClientName] = useState('');
   const [newClientEmail, setNewClientEmail] = useState('');
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
 
   const clientInfo = useMemo(() => {
     return {
@@ -81,6 +82,23 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
         return data;
     },
   });
+
+  const filteredPeople = useMemo(() => {
+    if (!allPeople) return [];
+    if (!clientSearchTerm) return allPeople;
+    const lowerTerm = clientSearchTerm.toLowerCase();
+    return allPeople.filter(p => 
+      p.full_name.toLowerCase().includes(lowerTerm) || 
+      (p.company && p.company.toLowerCase().includes(lowerTerm))
+    );
+  }, [allPeople, clientSearchTerm]);
+
+  const filteredCompanies = useMemo(() => {
+    if (!allCompanies) return [];
+    if (!clientSearchTerm) return allCompanies;
+    const lowerTerm = clientSearchTerm.toLowerCase();
+    return allCompanies.filter(c => c.name.toLowerCase().includes(lowerTerm));
+  }, [allCompanies, clientSearchTerm]);
 
   const updatePaymentStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
@@ -291,6 +309,15 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
 
   const renderClientSelectContent = () => (
     <SelectContent className="max-h-72">
+      <div className="p-2 sticky top-0 bg-popover z-10">
+        <Input 
+          placeholder="Search..." 
+          value={clientSearchTerm}
+          onChange={(e) => setClientSearchTerm(e.target.value)}
+          onKeyDown={(e) => e.stopPropagation()}
+          className="h-8"
+        />
+      </div>
       <SelectGroup>
         <SelectItem value="create-new" className="cursor-pointer font-medium text-primary focus:text-primary focus:bg-primary/10">
           <div className="flex items-center gap-2">
@@ -304,25 +331,28 @@ const ProjectDetailsCard = ({ project, isEditing, onFieldChange, onStatusChange,
         <SelectItem value="loading" disabled>Loading...</SelectItem>
       ) : (
         <>
-          {allCompanies && allCompanies.length > 0 && (
+          {filteredCompanies && filteredCompanies.length > 0 && (
             <SelectGroup>
               <SelectLabel>Companies</SelectLabel>
-              {allCompanies.map(company => (
+              {filteredCompanies.map(company => (
                 <SelectItem key={`company-${company.id}`} value={`company-${company.id}`}>
                   {company.name}
                 </SelectItem>
               ))}
             </SelectGroup>
           )}
-          {allPeople && allPeople.length > 0 && (
+          {filteredPeople && filteredPeople.length > 0 && (
             <SelectGroup>
               <SelectLabel>People</SelectLabel>
-              {allPeople.map(person => (
+              {filteredPeople.map(person => (
                 <SelectItem key={person.id} value={person.id}>
                   {person.full_name} {person.company && `(${person.company})`}
                 </SelectItem>
               ))}
             </SelectGroup>
+          )}
+          {filteredCompanies?.length === 0 && filteredPeople?.length === 0 && (
+             <div className="p-2 text-sm text-muted-foreground text-center">No results found</div>
           )}
         </>
       )}
