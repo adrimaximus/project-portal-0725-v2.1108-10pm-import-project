@@ -9,7 +9,6 @@ import { useProjectStatuses } from '@/hooks/useProjectStatuses';
 import { usePaymentStatuses } from '@/hooks/usePaymentStatuses';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import { DateRange } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
@@ -140,6 +139,7 @@ const MonthlyProgressChart = ({ projects: initialProjects }: MonthlyProgressChar
   const { hasPermission } = useAuth();
   const canViewValue = hasPermission('projects:view_value');
   const [chartType, setChartType] = useState<ChartType>('quantity');
+  // Date range state is kept for potential future use or external control, but picker is removed from UI
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   
   const { data: projectStatuses = [], isLoading: isLoadingProjectStatuses } = useProjectStatuses();
@@ -512,9 +512,7 @@ const MonthlyProgressChart = ({ projects: initialProjects }: MonthlyProgressChar
                 >
                   <Download className="h-4 w-4" />
                 </Button>
-                <div className="flex-1 sm:w-auto">
-                  <DatePickerWithRange date={dateRange} setDate={setDateRange} />
-                </div>
+                {/* DatePickerWithRange removed as requested */}
               </div>
               
               <Select value={chartType} onValueChange={(value) => setChartType(value as ChartType)}>
