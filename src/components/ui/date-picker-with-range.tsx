@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { addDays, format } from "date-fns"
+import { format } from "date-fns"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { DateRange } from "react-day-picker"
 
@@ -18,10 +18,9 @@ export function DatePickerWithRange({
   className,
   date,
   setDate,
-}: {
-  className?: string
-  date: DateRange | undefined
-  setDate: (date: DateRange | undefined) => void
+}: React.HTMLAttributes<HTMLDivElement> & {
+  date?: DateRange
+  setDate?: (date: DateRange | undefined) => void
 }) {
   return (
     <div className={cn("grid gap-2", className)}>
@@ -31,11 +30,11 @@ export function DatePickerWithRange({
             id="date"
             variant={"outline"}
             className={cn(
-              "w-[240px] justify-start text-left font-normal",
+              "w-full justify-start text-left font-normal truncate",
               !date && "text-muted-foreground"
             )}
           >
-            <CalendarIcon className="mr-2 h-4 w-4" />
+            <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
             {date?.from ? (
               date.to ? (
                 <>
