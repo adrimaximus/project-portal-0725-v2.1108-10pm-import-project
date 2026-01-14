@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { addDays, format } from "date-fns"
+import { format } from "date-fns"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { DateRange } from "react-day-picker"
 
@@ -18,19 +18,24 @@ export function DatePickerWithRange({
   className,
   date,
   setDate,
-}: {
-  className?: string
+}: React.HTMLAttributes<HTMLDivElement> & {
   date?: DateRange
   setDate?: (date: DateRange | undefined) => void
 }) {
-  const [internalDate, setInternalDate] = React.useState<DateRange | undefined>({
-    from: new Date(2023, 0, 20),
-    to: addDays(new Date(2023, 0, 20), 20),
-  })
+  const [internalDate, setInternalDate] = React.useState<DateRange | undefined>()
 
-  // Use props if provided, otherwise internal state
-  const selectedDate = date !== undefined ? date : internalDate
-  const onSelect = setDate || setInternalDate
+  // Logic to handle controlled vs uncontrolled state
+  // If setDate is provided, we treat it as controlled (or at least observing)
+  const isControlled = setDate !== undefined
+  const selectedDate = isControlled ? date : internalDate
+
+  const handleSelect = (newDate: DateRange | undefined) => {
+    if (setDate) {
+      setDate(newDate)
+    } else {
+      setInternalDate(newDate)
+    }
+  }
 
   return (
     <div className={cn("grid gap-2", className)}>
@@ -40,11 +45,11 @@ export function DatePickerWithRange({
             id="date"
             variant={"outline"}
             className={cn(
-              "w-[260px] justify-start text-left font-normal",
+              "w-full justify-start text-left font-normal truncate",
               !selectedDate && "text-muted-foreground"
             )}
           >
-            <CalendarIcon className="mr-2 h-4 w-4" />
+            <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
             {selectedDate?.from ? (
               selectedDate.to ? (
                 <>
@@ -65,7 +70,7 @@ export function DatePickerWithRange({
             mode="range"
             defaultMonth={selectedDate?.from}
             selected={selectedDate}
-            onSelect={onSelect}
+            onSelect={handleSelect}
             numberOfMonths={2}
           />
         </PopoverContent>
