@@ -18,20 +18,24 @@ export function DatePickerWithRange({
   className,
   date,
   setDate,
+  onDateChange,
 }: React.HTMLAttributes<HTMLDivElement> & {
   date?: DateRange
   setDate?: (date: DateRange | undefined) => void
+  onDateChange?: (date: DateRange | undefined) => void
 }) {
   const [internalDate, setInternalDate] = React.useState<DateRange | undefined>()
 
-  // Logic to handle controlled vs uncontrolled state
-  // If setDate is provided, we treat it as controlled (or at least observing)
-  const isControlled = setDate !== undefined
+  // Handle both prop naming conventions found in the app
+  const isControlled = date !== undefined
   const selectedDate = isControlled ? date : internalDate
-
+  
+  // Use either setDate OR onDateChange if provided, otherwise internal state
   const handleSelect = (newDate: DateRange | undefined) => {
     if (setDate) {
       setDate(newDate)
+    } else if (onDateChange) {
+      onDateChange(newDate)
     } else {
       setInternalDate(newDate)
     }
