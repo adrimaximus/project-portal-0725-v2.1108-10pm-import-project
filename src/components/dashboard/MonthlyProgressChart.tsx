@@ -3,12 +3,17 @@ import { Project } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { format, getMonth } from 'date-fns';
+import { format, getMonth, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProjectStatuses } from '@/hooks/useProjectStatuses';
 import { usePaymentStatuses } from '@/hooks/usePaymentStatuses';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
+import { DateRange } from 'react-day-picker';
+import { Button } from '@/components/ui/button';
+import { Download } from 'lucide-react';
+import { toast } from 'sonner';
 
 type ChartType = 'quantity' | 'value' | 'project_status' | 'payment_status' | 'company_quantity' | 'company_value';
 
@@ -135,6 +140,7 @@ const MonthlyProgressChart = ({ projects: initialProjects }: MonthlyProgressChar
   const { hasPermission } = useAuth();
   const canViewValue = hasPermission('projects:view_value');
   const [chartType, setChartType] = useState<ChartType>('quantity');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   
   const { data: projectStatuses = [], isLoading: isLoadingProjectStatuses } = useProjectStatuses();
   const { data: paymentStatuses = [], isLoading: isLoadingPaymentStatuses } = usePaymentStatuses();
@@ -165,13 +171,38 @@ const MonthlyProgressChart = ({ projects: initialProjects }: MonthlyProgressChar
     }
   }, [canViewValue, chartType]);
 
+  const filteredProjects = useMemo(() => {
+    if (!dateRange?.from) return projectsToUse;
+
+    return projectsToUse.filter(project => {
+      if (!project.start_date) return false;
+      const projectDate = new Date(project.start_date);
+      
+      // If only 'from' is selected (single day or start of range)
+      if (dateRange.from && !dateRange.to) {
+        // Show projects on or after start date
+        return projectDate >= startOfDay(dateRange.from);
+      }
+      
+      // If range is selected
+      if (dateRange.from && dateRange.to) {
+        return isWithinInterval(projectDate, { 
+          start: startOfDay(dateRange.from), 
+          end: endOfDay(dateRange.to) 
+        });
+      }
+      
+      return true;
+    });
+  }, [projectsToUse, dateRange]);
+
   const chartData = useMemo(() => {
-    if (!projectsToUse) return [];
+    if (!filteredProjects) return [];
 
     if (chartType === 'company_quantity' || chartType === 'company_value') {
       const companies = new Map<string, { name: string; quantity: number; value: number }>();
 
-      projectsToUse.forEach(project => {
+      filteredProjects.forEach(project => {
         const p = project as any;
         const companyName = p.client_company_name || 'No Company';
         
@@ -222,7 +253,7 @@ const MonthlyProgressChart = ({ projects: initialProjects }: MonthlyProgressChar
       return { ...base, ...projectStatusCounts, ...paymentStatusCounts };
     });
 
-    projectsToUse.forEach(project => {
+    filteredProjects.forEach(project => {
       if (project.start_date) {
         const monthIndex = getMonth(new Date(project.start_date));
         if (months[monthIndex]) {
@@ -250,7 +281,75 @@ const MonthlyProgressChart = ({ projects: initialProjects }: MonthlyProgressChar
     });
 
     return months;
-  }, [projectsToUse, chartType, projectStatuses, paymentStatuses]);
+  }, [filteredProjects, chartType, projectStatuses, paymentStatuses]);
+
+  const handleDownloadReport = () => {
+    if (!filteredProjects || filteredProjects.length === 0) {
+      toast.error("No projects to download");
+      return;
+    }
+
+    try {
+      // Prepare CSV Headers
+      const headers = [
+        'Project Name',
+        'Slug',
+        'Client',
+        'Company',
+        'Category',
+        'Status',
+        'Payment Status',
+        'Progress',
+        'Budget',
+        'Start Date',
+        'Due Date',
+        'Payment Due Date',
+        'Created At'
+      ];
+
+      // Prepare CSV Rows
+      const rows = filteredProjects.map((p: any) => {
+        return [
+          `"${(p.name || '').replace(/"/g, '""')}"`,
+          `"${p.slug || ''}"`,
+          `"${(p.client_name || '').replace(/"/g, '""')}"`,
+          `"${(p.client_company_name || '').replace(/"/g, '""')}"`,
+          `"${(p.category || '').replace(/"/g, '""')}"`,
+          `"${p.status || ''}"`,
+          `"${p.payment_status || ''}"`,
+          `${p.progress || 0}%`,
+          `${p.budget || 0}`,
+          `"${p.start_date ? format(new Date(p.start_date), 'yyyy-MM-dd') : ''}"`,
+          `"${p.due_date ? format(new Date(p.due_date), 'yyyy-MM-dd') : ''}"`,
+          `"${p.payment_due_date ? format(new Date(p.payment_due_date), 'yyyy-MM-dd') : ''}"`,
+          `"${p.created_at ? format(new Date(p.created_at), 'yyyy-MM-dd HH:mm:ss') : ''}"`
+        ].join(',');
+      });
+
+      // Combine Headers and Rows
+      const csvContent = [headers.join(','), ...rows].join('\n');
+
+      // Create Download Link
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      const dateStr = dateRange?.from 
+        ? `${format(dateRange.from, 'yyyyMMdd')}${dateRange.to ? '-' + format(dateRange.to, 'yyyyMMdd') : ''}`
+        : format(new Date(), 'yyyyMMdd');
+        
+      link.setAttribute('href', url);
+      link.setAttribute('download', `project_report_${dateStr}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success("Report downloaded successfully");
+    } catch (error) {
+      console.error("Download failed:", error);
+      toast.error("Failed to generate report");
+    }
+  };
 
   const isCompanyView = chartType.startsWith('company_');
 
@@ -398,21 +497,41 @@ const MonthlyProgressChart = ({ projects: initialProjects }: MonthlyProgressChar
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-          <CardTitle>{cardTitle}</CardTitle>
-          <Select value={chartType} onValueChange={(value) => setChartType(value as ChartType)}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <SelectValue placeholder="Select view" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="quantity">Project Quantity</SelectItem>
-              {canViewValue && <SelectItem value="value">Project Value</SelectItem>}
-              <SelectItem value="project_status">Project Status</SelectItem>
-              <SelectItem value="payment_status">Payment Status (Count)</SelectItem>
-              <SelectItem value="company_quantity">Company Project Qty</SelectItem>
-              {canViewValue && <SelectItem value="company_value">Company Project Value</SelectItem>}
-            </SelectContent>
-          </Select>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            <CardTitle className="whitespace-nowrap">{cardTitle}</CardTitle>
+            
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={handleDownloadReport}
+                  title="Download Report"
+                  className="shrink-0"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+                <div className="flex-1 sm:w-auto">
+                  <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+                </div>
+              </div>
+              
+              <Select value={chartType} onValueChange={(value) => setChartType(value as ChartType)}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Select view" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="quantity">Project Quantity</SelectItem>
+                  {canViewValue && <SelectItem value="value">Project Value</SelectItem>}
+                  <SelectItem value="project_status">Project Status</SelectItem>
+                  <SelectItem value="payment_status">Payment Status (Count)</SelectItem>
+                  <SelectItem value="company_quantity">Company Project Qty</SelectItem>
+                  {canViewValue && <SelectItem value="company_value">Company Project Value</SelectItem>}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="h-[400px] p-0 sm:p-6">
